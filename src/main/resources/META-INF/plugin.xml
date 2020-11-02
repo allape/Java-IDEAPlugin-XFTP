@@ -1,0 +1,29 @@
+<idea-plugin>
+    <id>net.allape.XFTP</id>
+    <name>XFTP</name>
+    <vendor email="allensnape@qq.com" url="http://www.allensnape.com">ALLAPE</vendor>
+
+    <description><![CDATA[
+        File manage with SFTP using <a href="jetbrains://idea/settings?name=Tools--SSH+Configurations">SSH Configurations of IDE Settings</a>.<br>
+    ]]></description>
+
+    <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+         on how to target different products -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="XFTPExplorerWindow"
+                    secondary="true"
+                    anchor="right"
+                    factoryClass="net.allape.windows.XFTPExplorerWindowFactory">
+        </toolWindow>
+    </extensions>
+
+    <actions>
+        <action id="ShowXftpToolWindow" class="net.allape.actions.MenuOpenAction" text="Open XFTP Explorer"
+                description="Goal ! ! ! ! ! ! !">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl meta X"/>
+        </action>
+    </actions>
+</idea-plugin>
