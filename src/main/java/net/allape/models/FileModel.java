@@ -10,6 +10,15 @@ public class FileModel implements Serializable {
 
     private Boolean isFolder;
 
+    public FileModel() {
+    }
+
+    public FileModel(String path, String name, Boolean isFolder) {
+        this.path = path;
+        this.name = name;
+        this.isFolder = isFolder;
+    }
+
     public String getPath() {
         return path;
     }

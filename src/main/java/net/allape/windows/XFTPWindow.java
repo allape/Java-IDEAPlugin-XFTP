@@ -4,7 +4,9 @@ import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationDisplayType;
 import com.intellij.notification.NotificationGroup;
 import com.intellij.notification.Notifications;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.MessageType;
+import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.ui.JBColor;
 import net.allape.models.FileModel;
 
@@ -19,7 +21,15 @@ public class XFTPWindow {
 
     static final protected String USER_HOME = System.getProperty("user.home");
 
-    static final protected long DOUBLE_CLICK_INTERVAL = 100;
+    static final protected long DOUBLE_CLICK_INTERVAL = 200;
+
+    final protected Project project;
+    final protected ToolWindow toolWindow;
+
+    public XFTPWindow (Project project, ToolWindow toolWindow) {
+        this.project = project;
+        this.toolWindow = toolWindow;
+    }
 
     /**
      * 设置为IDE自带的样式
@@ -57,12 +67,14 @@ public class XFTPWindow {
                 filesOnly.add(model);
             }
         }
+        List<FileModel> sortedList = new ArrayList<>(files.size());
+        sortedList.addAll(foldersOnly);
+        sortedList.addAll(filesOnly);
 
         // 清空列表后将现在的内容添加进去
         ui.clearSelection();
-        ((DefaultListModel<FileModel>) ui.getModel()).removeAllElements();
-        ui.setListData(foldersOnly.toArray(new FileModel[]{}));
-        ui.setListData(filesOnly.toArray(new FileModel[]{}));
+        ui.setModel(new DefaultListModel<>());
+        ui.setListData(sortedList.toArray(new FileModel[]{}));
     }
 
 }
