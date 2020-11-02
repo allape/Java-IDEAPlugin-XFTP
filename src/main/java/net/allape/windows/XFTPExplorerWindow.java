@@ -1,9 +1,5 @@
 package net.allape.windows;
 
-import com.intellij.notification.Notification;
-import com.intellij.notification.NotificationDisplayType;
-import com.intellij.notification.NotificationGroup;
-import com.intellij.notification.Notifications;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.MessageType;
 import com.intellij.openapi.wm.ToolWindow;
@@ -16,13 +12,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-public class XFTPExplorerWindow {
-
-    static final private String WINDOW_GROUP = "xftp";
-
-    static final private String USER_HOME = System.getProperty("user.home");
-
-    static final private long DOUBLE_CLICK_INTERVAL = 100;
+public class XFTPExplorerWindow extends XFTPWindow {
 
     // region UI objects
 
@@ -40,14 +30,37 @@ public class XFTPExplorerWindow {
     private long localFileClickWatcher = System.currentTimeMillis();
 
     public XFTPExplorerWindow(Project project, ToolWindow toolWindow) {
+        this.initUIStyle(project, toolWindow);
+        this.initUIAction(project, toolWindow);
+
+        this.loadLocal(this.localPath);
+    }
+
+    /**
+     * 初始化UI样式
+     */
+    private void initUIStyle (Project project, ToolWindow toolWindow) {
+        this.setDefaultTheme(this.panel);
+        this.setDefaultTheme(this.localFs);
+        this.setDefaultTheme(this.localFiles);
+
+        this.setDefaultTheme(this.remoteFs);
+    }
+
+    /**
+     * 初始化UI行为
+     */
+    private void initUIAction (Project project, ToolWindow toolWindow) {
+        this.localFiles.setCellRenderer(new XFTPExplorerWindowListCellRenderer());
         this.localFiles.addListSelectionListener(e -> {
-            XFTPExplorerWindow.this.currentLocalModel = (FileModel) e.getSource();
+            XFTPExplorerWindow.this.currentLocalModel = XFTPExplorerWindow.this.localFiles.getSelectedValue();
         });
         this.localFiles.addMouseListener(new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (System.currentTimeMillis() - XFTPExplorerWindow.this.localFileClickWatcher < DOUBLE_CLICK_INTERVAL) {
                     XFTPExplorerWindow.this.loadLocal(XFTPExplorerWindow.this.currentLocalModel.getPath());
+                    System.out.println("打开" + XFTPExplorerWindow.this.currentLocalModel.getPath());
                 }
                 XFTPExplorerWindow.this.localFileClickWatcher = System.currentTimeMillis();
             }
@@ -72,8 +85,6 @@ public class XFTPExplorerWindow {
 
             }
         });
-
-        this.loadLocal(this.localPath);
     }
 
     /**
@@ -103,21 +114,11 @@ public class XFTPExplorerWindow {
                 fileModels.add(model);
             }
 
-            this.reloadList(this.localFiles, fileModels);
+            rerenderFileList(this.localFiles, fileModels);
         } catch (Exception e) {
             e.printStackTrace();
             message(e.getMessage(), MessageType.WARNING);
         }
-    }
-
-    /**
-     * 将文件内容放入ListUI
-     * @param ui 使用的UI
-     * @param files 展示的文件列表
-     */
-    private void reloadList (JList<FileModel> ui, List<FileModel> files) {
-        ui.clearSelection();
-        ui.setListData(files.toArray(new FileModel[]{}));
     }
 
     /**
@@ -126,16 +127,6 @@ public class XFTPExplorerWindow {
      */
     public JPanel getPanel () {
         return this.panel;
-    }
-
-    /**
-     * 消息提醒
-     * @param message 提示的消息
-     */
-    public static void message (String message, MessageType type) {
-        NotificationGroup notificationGroup = new NotificationGroup(WINDOW_GROUP, NotificationDisplayType.BALLOON, false);
-        Notification notification = notificationGroup.createNotification(message, type);
-        Notifications.Bus.notify(notification);
     }
 
 }

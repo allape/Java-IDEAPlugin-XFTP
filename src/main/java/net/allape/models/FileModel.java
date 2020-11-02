@@ -36,7 +36,7 @@ public class FileModel implements Serializable {
 
     @Override
     public String toString() {
-        return this.isFolder ? "📁" : "📃" + " " + this.name;
+        return (this.isFolder ? "📁" : "📃") + " " + this.name;
     }
 
 }

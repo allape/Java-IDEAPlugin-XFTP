@@ -12,9 +12,9 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow id="XFTPExplorerWindow"
+        <toolWindow id="XFTP"
                     secondary="true"
-                    anchor="right"
+                    anchor="bottom"
                     factoryClass="net.allape.windows.XFTPExplorerWindowFactory">
         </toolWindow>
     </extensions>
