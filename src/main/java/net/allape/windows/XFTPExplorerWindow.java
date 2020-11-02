@@ -26,6 +26,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
 
     private JScrollPane localFs;
     private JList<FileModel> localFiles;
+    private JTextField localFsPath;
 
     private JScrollPane remoteFs;
 
@@ -51,7 +52,11 @@ public class XFTPExplorerWindow extends XFTPWindow {
         this.setDefaultTheme(this.localFs);
         this.localFs.setBorder(null);
         this.setDefaultTheme(this.localFiles);
-        this.localFiles.setSelectionBackground(JBColor.namedColor("Plugins.lightSelectionBackground", DarculaColors.BLUE));
+        this.localFiles.setSelectionBackground(JBColor.namedColor(
+                "Plugins.lightSelectionBackground",
+                DarculaColors.BLUE
+        ));
+        this.setDefaultTheme(this.localFsPath);
 
         this.setDefaultTheme(this.remoteFs);
         this.remoteFs.setBorder(null);
@@ -117,6 +122,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
 //                message(file.getAbsolutePath() + " id not a folder!", MessageType.WARNING);
             } else {
                 path = file.getAbsolutePath();
+                this.localFsPath.setText(path);
 
                 File[] files = file.listFiles();
                 List<FileModel> fileModels = new ArrayList<>(file.length() == 0 ? 1 : (file.length() > Integer.MAX_VALUE ?
