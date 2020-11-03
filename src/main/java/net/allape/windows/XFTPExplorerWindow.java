@@ -153,9 +153,9 @@ public class XFTPExplorerWindow extends XFTPWindow {
             } else {
                 File[] files = file.listFiles();
                 if (files == null) {
-                    new Confirm(
+                    DialogWrapper dialog = new Confirm(
                         new Confirm.ConfirmOptions()
-                            .title("It is a N/A folder")
+                            .title("It is an unavailable folder!")
                             .content("This folder is not available, do you want to open it in system file manager?")
                             .onOk(e -> {
                                 try {
@@ -166,6 +166,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
                                 }
                             })
                     );
+                    dialog.show();
                     return;
                 }
 
