@@ -9,6 +9,7 @@ import com.intellij.openapi.ui.MessageType;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.ui.JBColor;
 import net.allape.models.FileModel;
+import net.allape.models.FileTableModel;
 
 import javax.swing.*;
 import java.util.ArrayList;
@@ -21,7 +22,7 @@ public class XFTPWindow {
 
     static final protected String USER_HOME = System.getProperty("user.home");
 
-    static final protected long DOUBLE_CLICK_INTERVAL = 200;
+    static final protected long DOUBLE_CLICK_INTERVAL = 350;
 
     final protected Project project;
     final protected ToolWindow toolWindow;
@@ -51,11 +52,10 @@ public class XFTPWindow {
     }
 
     /**
-     * 将文件内容放入ListUI
-     * @param ui 使用的UI
-     * @param files 展示的文件列表
+     * 排序文件
+     * @param files 需要排序的文件
      */
-    static protected void rerenderFileList(JList<FileModel> ui, List<FileModel> files) {
+    static protected List<FileModel> sortFiles (List<FileModel> files) {
         // 将文件根据文件夹->文件、文件名称排序
         files.sort(Comparator.comparing(FileModel::getName));
         List<FileModel> filesOnly = new ArrayList<>(files.size());
@@ -71,10 +71,33 @@ public class XFTPWindow {
         sortedList.addAll(foldersOnly);
         sortedList.addAll(filesOnly);
 
+        return sortedList;
+    }
+
+    /**
+     * 将文件内容放入ListUI
+     * @param ui 使用的UI
+     * @param files 展示的文件列表
+     */
+    static protected void rerenderFileList (JList<FileModel> ui, List<FileModel> files) {
         // 清空列表后将现在的内容添加进去
         ui.clearSelection();
-        ui.setModel(new DefaultListModel<>());
-        ui.setListData(sortedList.toArray(new FileModel[]{}));
+        if (!(ui.getModel() instanceof DefaultListModel)) {
+            ui.setModel(new DefaultListModel<>());
+        }
+        ui.setListData(sortFiles(files).toArray(new FileModel[]{}));
+    }
+
+    /**
+     * 将文件内容放入TableUI
+     * @param ui 使用的UI
+     * @param files 展示的文件列表
+     */
+    static protected void rerenderFileTable (JTable ui, List<FileModel> files) {
+        if (!(ui.getModel() instanceof FileTableModel)) {
+            ui.setModel(new FileTableModel());
+        }
+        ((FileTableModel) (ui.getModel())).resetData(files);
     }
 
 }
