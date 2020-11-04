@@ -5,8 +5,6 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionListener;
-import java.util.concurrent.Future;
 
 public class Confirm extends DialogWrapper {
 
@@ -21,6 +19,11 @@ public class Confirm extends DialogWrapper {
 
         this.options = options;
         this.setTitle(this.options.getTitle());
+        this.setOKButtonText(this.options.getOkText());
+        this.setCancelButtonText(this.options.getCancelText());
+
+        this.setButtonsAlignment(SwingConstants.CENTER);
+        this.setResizable(false);
 
         this.init();
     }
@@ -38,21 +41,6 @@ public class Confirm extends DialogWrapper {
         return centerPanel;
     }
 
-    @Override
-    protected JComponent createSouthPanel() {
-        JPanel southPanel = new JPanel(new FlowLayout());
-
-        JButton ok = new JButton(this.options.getOkText());
-        ok.addActionListener(this.options.getOnOk());
-
-        JButton cancel = new JButton(this.options.getCancelText());
-        ok.addActionListener(this.options.getOnCancel());
-
-        southPanel.add(ok);
-        southPanel.add(cancel);
-        return southPanel;
-    }
-
     public static final class ConfirmOptions {
 
         private String title = "Confirming";
@@ -62,10 +50,6 @@ public class Confirm extends DialogWrapper {
         private String okText = "OK";
 
         private String cancelText = "Cancel";
-
-        private ActionListener onOk = e -> {};
-
-        private ActionListener onCancel = e -> {};
 
         public String getTitle() {
             return title;
@@ -96,29 +80,6 @@ public class Confirm extends DialogWrapper {
 
         public String getCancelText() {
             return cancelText;
-        }
-
-        public ConfirmOptions cancelText(String cancelText) {
-            this.cancelText = cancelText;
-            return this;
-        }
-
-        public ActionListener getOnOk() {
-            return onOk;
-        }
-
-        public ConfirmOptions onOk(ActionListener onOk) {
-            this.onOk = onOk;
-            return this;
-        }
-
-        public ActionListener getOnCancel() {
-            return onCancel;
-        }
-
-        public ConfirmOptions onCancel(ActionListener onCancel) {
-            this.onCancel = onCancel;
-            return this;
         }
 
     }

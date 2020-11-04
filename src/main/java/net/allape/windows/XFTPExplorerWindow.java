@@ -157,16 +157,15 @@ public class XFTPExplorerWindow extends XFTPWindow {
                         new Confirm.ConfirmOptions()
                             .title("It is an unavailable folder!")
                             .content("This folder is not available, do you want to open it in system file manager?")
-                            .onOk(e -> {
-                                try {
-                                    Desktop.getDesktop().open(file);
-                                } catch (IOException ioException) {
-                                    ioException.printStackTrace();
-                                    message("Failed to open file in system file manager", MessageType.INFO);
-                                }
-                            })
                     );
-                    dialog.show();
+                    if (dialog.showAndGet()) {
+                        try {
+                            Desktop.getDesktop().open(file);
+                        } catch (IOException ioException) {
+                            ioException.printStackTrace();
+                            message("Failed to open file in system file manager", MessageType.INFO);
+                        }
+                    }
                     return;
                 }
 
