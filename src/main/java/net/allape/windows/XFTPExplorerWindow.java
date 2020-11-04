@@ -202,6 +202,13 @@ public class XFTPExplorerWindow extends XFTPWindow {
     }
 
     /**
+     * 获取IDE的ssh config
+     */
+    public void getSshConfigs () {
+        // TODO
+    }
+
+    /**
      * 获取JPanel
      * @return JPanel
      */

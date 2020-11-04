@@ -97,7 +97,7 @@ public class XFTPWindow {
         if (!(ui.getModel() instanceof FileTableModel)) {
             ui.setModel(new FileTableModel());
         }
-        ((FileTableModel) (ui.getModel())).resetData(files);
+        ((FileTableModel) (ui.getModel())).resetData(sortFiles(files));
     }
 
 }

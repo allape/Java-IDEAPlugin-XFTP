@@ -28,6 +28,8 @@ public class FileTableModel extends AbstractTableModel {
         return COL_NAMES[column];
     }
 
+
+
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
         try {
