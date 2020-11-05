@@ -22,9 +22,9 @@
     </extensions>
 
     <actions>
-        <action id="ShowXftpToolWindow" class="net.allape.actions.MenuOpenAction" text="Open XFTP Explorer"
+        <action id="ShowXftpToolWindow" class="net.allape.actions.MenuOpenAction" text="New XFTP Explorer"
                 description="Goal ! ! ! ! ! ! !">
-            <add-to-group group-id="ToolsMenu" anchor="last"/>
+            <add-to-group group-id="ToolsMenu" anchor="first"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl meta X"/>
         </action>
     </actions>

@@ -12,6 +12,8 @@ import net.allape.models.FileModel;
 import net.allape.models.FileTableModel;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableColumn;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -96,8 +98,15 @@ public class XFTPWindow {
     static protected void rerenderFileTable (JTable ui, List<FileModel> files) {
         if (!(ui.getModel() instanceof FileTableModel)) {
             ui.setModel(new FileTableModel());
+
+            TableColumn typeColumn = ui.getColumnModel().getColumn(0);
+            DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+            centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+            typeColumn.setCellRenderer(centerRenderer);
+            typeColumn.setMaxWidth(25);
         }
-        ((FileTableModel) (ui.getModel())).resetData(sortFiles(files));
+        FileTableModel model = ((FileTableModel) (ui.getModel()));
+        model.resetData(sortFiles(files));
     }
 
 }

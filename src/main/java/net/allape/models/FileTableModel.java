@@ -7,7 +7,7 @@ import java.util.List;
 public class FileTableModel extends AbstractTableModel {
 
     static final private String[] COL_NAMES = new String[]{
-            "type",
+            "",
             "name",
     };
 

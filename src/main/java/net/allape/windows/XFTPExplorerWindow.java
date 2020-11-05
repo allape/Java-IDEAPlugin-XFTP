@@ -11,11 +11,13 @@ import com.intellij.ui.DarculaColors;
 import com.intellij.ui.JBColor;
 import net.allape.dialogs.Confirm;
 import net.allape.models.FileModel;
-import net.allape.models.FileTableModel;
-import org.jetbrains.annotations.Nullable;
+import net.allape.models.XftpSshConfig;
 
 import javax.swing.*;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import java.awt.*;
+import java.awt.event.ItemEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
@@ -37,6 +39,12 @@ public class XFTPExplorerWindow extends XFTPWindow {
     private JScrollPane remoteFs;
     private JTextField remoteFsPath;
     private JTable remoteFiles;
+    private JPanel remoteFsWrapper;
+    private JPanel sshConfigCBWrapper;
+    // com.jetbrains.plugins.remotesdk.ui.RemoteSdkBySshConfigForm
+    // com.intellij.ssh.ui.unified.SshConfigComboBox
+    private JComboBox<XftpSshConfig> sshConfigComboBox;
+    private JButton exploreButton;
 
     // endregion
 
@@ -72,7 +80,10 @@ public class XFTPExplorerWindow extends XFTPWindow {
 
         this.setDefaultTheme(this.remoteFs);
         this.remoteFs.setBorder(null);
+        this.setDefaultTheme(this.remoteFsWrapper);
         this.setDefaultTheme(this.remoteFsPath);
+        this.setDefaultTheme(this.sshConfigCBWrapper);
+        this.setDefaultTheme(this.sshConfigComboBox);
         this.setDefaultTheme(this.remoteFiles);
         this.remoteFiles.setSelectionBackground(JBColor.namedColor(
                 "Plugins.lightSelectionBackground",
@@ -128,7 +139,33 @@ public class XFTPExplorerWindow extends XFTPWindow {
             }
         });
 
-        this.remoteFiles.setModel(new FileTableModel());
+        // 弹出的时候获取ssh配置
+        this.sshConfigComboBox.addPopupMenuListener(new PopupMenuListener() {
+            @Override
+            public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
+                final XFTPExplorerWindow self = XFTPExplorerWindow.this;
+                List<XftpSshConfig> configs = XftpSshConfig.getConfigs();
+                self.sshConfigComboBox.removeAllItems();
+                configs.forEach(config -> self.sshConfigComboBox.addItem(config));
+            }
+
+            @Override
+            public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
+
+            }
+
+            @Override
+            public void popupMenuCanceled(PopupMenuEvent e) {
+
+            }
+        });
+        this.sshConfigComboBox.addItemListener(e -> {
+            if (e.getStateChange() == ItemEvent.SELECTED) {
+                final XFTPExplorerWindow self = XFTPExplorerWindow.this;
+                XftpSshConfig config = (XftpSshConfig) self.sshConfigComboBox.getSelectedItem();
+                System.out.println(config);
+            }
+        });
     }
 
     /**
