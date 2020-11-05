@@ -48,9 +48,6 @@ public class XFTPExplorerWindow extends XFTPWindow {
     private JTextField remoteFsPath;
     private JPanel remoteFsWrapper;
     private JPanel sshConfigCBWrapper;
-    // com.jetbrains.plugins.remotesdk.ui.RemoteSdkBySshConfigForm
-    // com.intellij.ssh.ui.unified.SshConfigComboBox
-    private JComboBox<XftpSshConfig> sshConfigComboBox;
     private JButton exploreButton;
     private JButton disconnectButton;
     private JTable remoteFiles;
@@ -64,8 +61,6 @@ public class XFTPExplorerWindow extends XFTPWindow {
     // 当前选中的所有文件
     private List<FileModel> selectedLocalModels = new ArrayList<>(0);
 
-    // 当前选中的ssh配置
-    private XftpSshConfig xftpSshConfig = null;
     // 当前开启的channel
     private SftpChannel sftpChannel = null;
 
@@ -107,7 +102,6 @@ public class XFTPExplorerWindow extends XFTPWindow {
         this.setDefaultTheme(this.remoteFsWrapper);
         this.setDefaultTheme(this.remoteFsPath);
         this.setDefaultTheme(this.sshConfigCBWrapper);
-        this.setDefaultTheme(this.sshConfigComboBox);
         this.setDefaultTheme(this.remoteFiles);
         this.setDefaultTheme(this.exploreButton);
         this.setDefaultTheme(this.disconnectButton);
@@ -168,41 +162,8 @@ public class XFTPExplorerWindow extends XFTPWindow {
         });
 
         // 弹出的时候获取ssh配置
-        this.sshConfigComboBox.addPopupMenuListener(new PopupMenuListener() {
-            @Override
-            public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
-                final XFTPExplorerWindow self = XFTPExplorerWindow.this;
-                List<XftpSshConfig> configs = XftpSshConfig.getConfigs();
-                self.sshConfigComboBox.removeAllItems();
-                configs.forEach(config -> self.sshConfigComboBox.addItem(config));
-            }
-
-            @Override
-            public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
-
-            }
-
-            @Override
-            public void popupMenuCanceled(PopupMenuEvent e) {
-
-            }
-        });
-        this.sshConfigComboBox.addItemListener(e -> {
-            if (e.getStateChange() == ItemEvent.SELECTED) {
-                this.xftpSshConfig = (XftpSshConfig) this.sshConfigComboBox.getSelectedItem();
-            }
-        });
         this.exploreButton.addActionListener(e -> {
-            if (this.xftpSshConfig == null) {
-                DialogWrapper dialog = new Confirm(new Confirm.ConfirmOptions()
-                        .title("No Config is selected")
-                        .content("Please choose a config to connect")
-                );
-                dialog.setOKActionEnabled(false);
-                dialog.show();
-            } else {
-                this.connectSftp();
-            }
+            this.connectSftp();
         });
         this.disconnectButton.addActionListener(e -> {
             this.disconnect(true);
@@ -310,7 +271,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
                     .withProject(this.project)
                     .produceRemoteData(
                             RemoteConnectionType.SSH_CONFIG,
-                            this.xftpSshConfig.getConfig().getId(),
+                            null,
                             "",
                             data -> {
                                 ConnectionBuilder connectionBuilder = RemoteCredentialsUtil.connectionBuilder(data, this.project);
@@ -382,7 +343,6 @@ public class XFTPExplorerWindow extends XFTPWindow {
      * 设置当前状态为连接中
      */
     public void triggerConnecting () {
-        this.sshConfigComboBox.setEnabled(false);
         this.exploreButton.setEnabled(false);
     }
 
@@ -390,7 +350,6 @@ public class XFTPExplorerWindow extends XFTPWindow {
      * 设置当前状态为已连接
      */
     public void triggerConnected () {
-        this.sshConfigComboBox.setEnabled(false);
         this.exploreButton.setVisible(false);
         this.disconnectButton.setVisible(true);
     }
@@ -399,7 +358,6 @@ public class XFTPExplorerWindow extends XFTPWindow {
      * 设置当前状态为未连接
      */
     public void triggerDisconnected () {
-        this.sshConfigComboBox.setEnabled(true);
         this.exploreButton.setVisible(true);
         this.disconnectButton.setVisible(false);
     }
