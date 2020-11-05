@@ -8,6 +8,9 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.MessageType;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.ui.JBColor;
+import com.intellij.ui.content.Content;
+import com.intellij.ui.content.ContentManagerEvent;
+import com.intellij.ui.content.ContentManagerListener;
 import net.allape.models.FileModel;
 import net.allape.models.FileTableModel;
 
@@ -45,6 +48,12 @@ public class XFTPWindow {
         component.setBackground(JBColor.background());
         component.setForeground(JBColor.foreground());
     }
+
+    /**
+     * 页面关闭时
+     * @param e {@link ContentManagerListener#contentRemoved(ContentManagerEvent)}的参数
+     */
+    public void onClosed (ContentManagerEvent e) { }
 
     /**
      * 消息提醒

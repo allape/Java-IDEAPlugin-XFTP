@@ -5,14 +5,44 @@ import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentFactory;
+import com.intellij.ui.content.ContentManagerEvent;
+import com.intellij.ui.content.ContentManagerListener;
+import net.allape.bus.Data;
 import net.allape.bus.Services;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class XFTPExplorerWindowFactory implements ToolWindowFactory {
+
+    public static final Logger logger = LoggerFactory.getLogger(XFTPExplorerWindowFactory.class);
 
     @Override
     public void init(@NotNull ToolWindow toolWindow) {
         Services.TOOL_WINDOW = toolWindow;
+        toolWindow.addContentManagerListener(new ContentManagerListener() {
+            @Override
+            public void contentRemoved(@NotNull ContentManagerEvent event) {
+                XFTPWindow window = Data.windows.get(event.getContent());
+                if (window == null) {
+                    logger.warn("closed an un-cached window: {}", event.toString());
+                } else {
+                    window.onClosed(event);
+                    Data.windows.remove(event.getContent());
+                }
+
+                if (toolWindow.getContentManager().getContents().length == 0) {
+                    toolWindow.hide();
+                }
+            }
+
+            @Override
+            public void contentAdded(@NotNull ContentManagerEvent event) {
+                if (!toolWindow.isVisible()) {
+                    toolWindow.show();
+                }
+            }
+        });
     }
 
     @Override
@@ -30,6 +60,9 @@ public class XFTPExplorerWindowFactory implements ToolWindowFactory {
         content.setCloseable(true);
         //给toolWindow设置内容
         toolWindow.getContentManager().addContent(content);
+
+        // 放入缓存
+        Data.windows.put(content, window);
     }
 
 }

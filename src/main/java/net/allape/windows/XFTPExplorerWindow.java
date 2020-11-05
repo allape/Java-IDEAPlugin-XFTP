@@ -9,6 +9,7 @@ import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.ui.DarculaColors;
 import com.intellij.ui.JBColor;
+import com.intellij.ui.content.ContentManagerEvent;
 import net.allape.dialogs.Confirm;
 import net.allape.models.FileModel;
 import net.allape.models.XftpSshConfig;
@@ -65,6 +66,14 @@ public class XFTPExplorerWindow extends XFTPWindow {
         this.initUIAction();
 
         this.loadLocal(this.currentLocalModel.getPath());
+    }
+
+    @Override
+    public void onClosed(ContentManagerEvent e) {
+        super.onClosed(e);
+
+
+        System.out.println("啊, 我被关了");
     }
 
     /**
@@ -169,8 +178,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
         this.sshConfigComboBox.addItemListener(e -> {
             if (e.getStateChange() == ItemEvent.SELECTED) {
                 final XFTPExplorerWindow self = XFTPExplorerWindow.this;
-                XftpSshConfig config = (XftpSshConfig) self.sshConfigComboBox.getSelectedItem();
-                System.out.println(config);
+                self.xftpSshConfig = (XftpSshConfig) self.sshConfigComboBox.getSelectedItem();
             }
         });
         this.exploreButton.addActionListener(e -> {
@@ -180,6 +188,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
                         .title("No Config is selected")
                         .content("Please choose a config to connect")
                 );
+                dialog.setOKActionEnabled(false);
                 dialog.show();
             } else {
                 this.loadRemote(null);

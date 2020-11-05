@@ -17,6 +17,7 @@
         <toolWindow id="XFTP"
                     secondary="true"
                     anchor="bottom"
+                    canCloseContents="true"
                     factoryClass="net.allape.windows.XFTPExplorerWindowFactory">
         </toolWindow>
     </extensions>
