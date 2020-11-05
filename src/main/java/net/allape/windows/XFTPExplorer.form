@@ -70,7 +70,8 @@
               <component id="208cf" class="javax.swing.JButton" binding="disconnectButton">
                 <constraints border-constraint="West"/>
                 <properties>
-                  <text value="Button"/>
+                  <text resource-bundle="i18n/default" key="disconnect"/>
+                  <visible value="false"/>
                 </properties>
               </component>
               <component id="f1535" class="javax.swing.JTextField" binding="remoteFsPath">

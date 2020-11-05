@@ -8,7 +8,6 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.MessageType;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.ui.JBColor;
-import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentManagerEvent;
 import com.intellij.ui.content.ContentManagerListener;
 import net.allape.models.FileModel;
@@ -23,11 +22,17 @@ import java.util.List;
 
 public class XFTPWindow {
 
+    // message中用到的group
     static final protected String WINDOW_GROUP = "xftp";
 
+    // 当前用户本地home目录
     static final protected String USER_HOME = System.getProperty("user.home");
 
+    // 双击间隔, 毫秒
     static final protected long DOUBLE_CLICK_INTERVAL = 350;
+
+    // 最大可打开文件
+    static final protected long EDITABLE_FILE_SIZE = 2 * 1024 * 1024;
 
     // 双击监听
     protected long clickWatcher = System.currentTimeMillis();

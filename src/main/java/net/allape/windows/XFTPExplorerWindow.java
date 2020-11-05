@@ -1,11 +1,16 @@
 package net.allape.windows;
 
+import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.MessageType;
 import com.intellij.openapi.vfs.LocalFileSystem;
+import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.openapi.vfs.VirtualFileManager;
+import com.intellij.openapi.vfs.newvfs.BulkFileListener;
+import com.intellij.openapi.vfs.newvfs.events.VFileEvent;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.remote.RemoteConnectionType;
 import com.intellij.ssh.ConnectionBuilder;
@@ -19,13 +24,11 @@ import com.jetbrains.plugins.remotesdk.console.RemoteDataProducer;
 import net.allape.dialogs.Confirm;
 import net.allape.models.FileModel;
 import net.allape.models.FileTableModel;
-import net.allape.models.XftpSshConfig;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
-import javax.swing.event.PopupMenuEvent;
-import javax.swing.event.PopupMenuListener;
 import java.awt.*;
-import java.awt.event.ItemEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
@@ -54,22 +57,27 @@ public class XFTPExplorerWindow extends XFTPWindow {
 
     // endregion
 
-    // 上一次选择的本地文件
-    private FileModel lastLocalModel = new FileModel(USER_HOME, "home sweet home", true);
+    // 上一次选择文件
+    private FileModel lastFile = null;
+
     // 当前选中的本地文件
-    private FileModel currentLocalModel = lastLocalModel;
+    private FileModel currentLocalFile = null;
     // 当前选中的所有文件
-    private List<FileModel> selectedLocalModels = new ArrayList<>(0);
+    private List<FileModel> selectedLocalFiles = new ArrayList<>(0);
 
     // 当前开启的channel
     private SftpChannel sftpChannel = null;
+    // 当前选中的远程文件
+    private FileModel currentRemoteFile = null;
+    // 当前选中的所有文件
+    private List<FileModel> selectedRemoteFiles = new ArrayList<>(0);
 
     public XFTPExplorerWindow(Project project, ToolWindow toolWindow) {
         super(project, toolWindow);
         this.initUIStyle();
         this.initUIAction();
 
-        this.loadLocal(this.currentLocalModel.getPath());
+        this.loadLocal(USER_HOME);
     }
 
     @Override
@@ -105,14 +113,13 @@ public class XFTPExplorerWindow extends XFTPWindow {
         this.setDefaultTheme(this.remoteFiles);
         this.setDefaultTheme(this.exploreButton);
         this.setDefaultTheme(this.disconnectButton);
-        this.disconnectButton.setBackground(DarculaColors.RED);
-        this.disconnectButton.setForeground(JBColor.white);
         this.remoteFiles.setSelectionBackground(JBColor.namedColor(
                 "Plugins.lightSelectionBackground",
                 DarculaColors.BLUE
         ));
         this.remoteFiles.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         this.remoteFiles.setAutoCreateRowSorter(false);
+        this.remoteFiles.setBorder(null);
     }
 
     /**
@@ -123,10 +130,9 @@ public class XFTPExplorerWindow extends XFTPWindow {
         this.localFiles.setCellRenderer(new XFTPExplorerWindowListCellRenderer());
         // 设置当前选中的内容
         this.localFiles.addListSelectionListener(e -> {
-            final XFTPExplorerWindow self = XFTPExplorerWindow.this;
-            self.selectedLocalModels = self.localFiles.getSelectedValuesList();
-            self.lastLocalModel = self.currentLocalModel;
-            self.currentLocalModel = self.localFiles.getSelectedValue();
+            this.selectedLocalFiles = this.localFiles.getSelectedValuesList();
+            this.lastFile = this.currentLocalFile;
+            this.currentLocalFile = this.localFiles.getSelectedValue();
         });
         // 监听双击, 双击后打开文件或文件夹
         this.localFiles.addMouseListener(new MouseListener() {
@@ -134,8 +140,8 @@ public class XFTPExplorerWindow extends XFTPWindow {
             public void mouseClicked(MouseEvent e) {
                 final XFTPExplorerWindow self = XFTPExplorerWindow.this;
                 long now = System.currentTimeMillis();
-                if (self.lastLocalModel == self.currentLocalModel && now - self.clickWatcher < DOUBLE_CLICK_INTERVAL) {
-                    self.loadLocal(self.currentLocalModel.getPath());
+                if (self.lastFile == self.currentLocalFile && now - self.clickWatcher < DOUBLE_CLICK_INTERVAL) {
+                    self.loadLocal(self.currentLocalFile.getPath());
                 }
                 self.clickWatcher = now;
             }
@@ -162,11 +168,54 @@ public class XFTPExplorerWindow extends XFTPWindow {
         });
 
         // 弹出的时候获取ssh配置
-        this.exploreButton.addActionListener(e -> {
-            this.connectSftp();
+        this.exploreButton.addActionListener(e -> this.connectSftp());
+        this.disconnectButton.addActionListener(e -> this.disconnect(true));
+        this.remoteFiles.getSelectionModel().addListSelectionListener(e -> {
+            List<FileModel> allRemoteFiles = ((FileTableModel) this.remoteFiles.getModel()).getData();
+
+            int[] selectedRows = this.remoteFiles.getSelectedRows();
+            this.selectedRemoteFiles = new ArrayList<>(selectedRows.length);
+            for (int i : selectedRows) {
+                this.selectedRemoteFiles.add(allRemoteFiles.get(i));
+            }
+
+            int currentSelectRow = this.remoteFiles.getSelectedRow();
+            if (currentSelectRow != -1) {
+                this.lastFile = this.currentRemoteFile;
+                this.currentRemoteFile = allRemoteFiles.get(currentSelectRow);
+            }
         });
-        this.disconnectButton.addActionListener(e -> {
-            this.disconnect(true);
+        this.remoteFiles.addMouseListener(new MouseListener() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                final XFTPExplorerWindow self = XFTPExplorerWindow.this;
+                long now = System.currentTimeMillis();
+                if (self.lastFile == self.currentRemoteFile && now - self.clickWatcher < DOUBLE_CLICK_INTERVAL) {
+                    self.loadRemote(self.currentRemoteFile.getPath());
+                }
+
+                self.clickWatcher = now;
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+
+            }
         });
     }
 
@@ -180,15 +229,16 @@ public class XFTPExplorerWindow extends XFTPWindow {
             if (!file.exists()) {
                 message(path + " does not exist!", MessageType.WARNING);
             } else if (!file.isDirectory()) {
-                FileEditorManager.getInstance(this.project).openTextEditor(
-                        new OpenFileDescriptor(
-                                this.project,
-                                Objects.requireNonNull(LocalFileSystem.getInstance().findFileByIoFile(file)),
-                                0
-                        ),
-                        true
-                );
-//                message(file.getAbsolutePath() + " id not a folder!", MessageType.WARNING);
+                if (file.length() > EDITABLE_FILE_SIZE) {
+                    DialogWrapper dialog = new Confirm(new Confirm.ConfirmOptions()
+                            .title("This file is too large for text editor")
+                            .content("Do you still want to edit it?"));
+                    if (dialog.showAndGet()) {
+                        this.openFileInEditor(file, null);
+                    }
+                } else {
+                    this.openFileInEditor(file, null);
+                }
             } else {
                 File[] files = file.listFiles();
                 if (files == null) {
@@ -263,10 +313,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
         //      (data) -> {}
         //    )
         // com.jetbrains.plugins.remotesdk.console.RemoteDataProducer
-
-        this.triggerConnecting();
         try {
-            this.disconnect(false);
             (new RemoteDataProducer())
                     .withProject(this.project)
                     .produceRemoteData(
@@ -274,6 +321,9 @@ public class XFTPExplorerWindow extends XFTPWindow {
                             null,
                             "",
                             data -> {
+                                this.triggerConnecting();
+                                this.disconnect(false);
+
                                 ConnectionBuilder connectionBuilder = RemoteCredentialsUtil.connectionBuilder(data, this.project);
                                 this.sftpChannel = connectionBuilder.openSftpChannel();
                                 this.triggerConnected();
@@ -304,7 +354,17 @@ public class XFTPExplorerWindow extends XFTPWindow {
         if (!file.exists()) {
             message(path + " does not exist!", MessageType.WARNING);
         } if (!file.isDir()) {
-            // TODO 打开文件并监听更改, 更改后自动上传
+            // 如果文件小于2M, 则自动下载到缓存目录并进行监听
+            if (file.size() > EDITABLE_FILE_SIZE) {
+                DialogWrapper dialog = new Confirm(new Confirm.ConfirmOptions()
+                        .title("This file is too large for text editor")
+                        .content("Do you still want to download and edit it?"));
+                if (dialog.showAndGet()) {
+                    this.downloadFileAndEdit(file);
+                }
+            } else {
+                this.downloadFileAndEdit(file);
+            }
         } else {
             this.remoteFsPath.setText(path);
 
@@ -329,13 +389,15 @@ public class XFTPExplorerWindow extends XFTPWindow {
         if (this.sftpChannel != null && this.sftpChannel.isConnected()) {
             this.sftpChannel.disconnect();
             this.sftpChannel = null;
+        }
 
-            // 清空列表
-            ((FileTableModel) (this.remoteFiles.getModel())).resetData(new ArrayList<>());
+        // 清空列表
+        if (this.remoteFiles.getModel() instanceof FileTableModel) {
+            ((FileTableModel) this.remoteFiles.getModel()).resetData(new ArrayList<>());
+        }
 
-            if (triggerEvent) {
-                this.triggerDisconnected();
-            }
+        if (triggerEvent) {
+            this.triggerDisconnected();
         }
     }
 
@@ -358,8 +420,10 @@ public class XFTPExplorerWindow extends XFTPWindow {
      * 设置当前状态为未连接
      */
     public void triggerDisconnected () {
+        this.exploreButton.setEnabled(true);
         this.exploreButton.setVisible(true);
         this.disconnectButton.setVisible(false);
+        this.remoteFsPath.setText("");
     }
 
     /**
@@ -379,6 +443,76 @@ public class XFTPExplorerWindow extends XFTPWindow {
         int lastIndexOfSep = path.lastIndexOf(File.separator);
         String parentFolder = lastIndexOfSep == -1 ? "" : path.substring(0, lastIndexOfSep);
         return new FileModel(parentFolder.isEmpty() ? File.separator : parentFolder , "..", true);
+    }
+
+    /**
+     * 上传文件, 并通知bus
+     * @param localFile 本地文件
+     * @param remoteFile 线上文件
+     */
+    private void uploadFile (File localFile, RemoteFileObject remoteFile) {
+        // TODO 上传文件
+        System.out.println("上传" + localFile.getAbsolutePath() + " -> " + remoteFile.path());
+    }
+
+    /**
+     * 下载文件并编辑
+     * @param file 远程文件信息
+     */
+    private void downloadFileAndEdit (RemoteFileObject file) {
+        if (file.isDir()) {
+            throw new IllegalArgumentException("Can not edit a folder!");
+        } else if (this.sftpChannel == null || !this.sftpChannel.isConnected()) {
+            message("Please start a sftp session first!", MessageType.INFO);
+            return;
+        }
+
+        try {
+            this.panel.setEnabled(false);
+            final File localFile = File.createTempFile("jb-ide-xftp", file.name());
+            this.sftpChannel.downloadFileOrDir(file.path(), localFile.getAbsolutePath());
+
+            this.openFileInEditor(localFile, new BulkFileListener() {
+                @Override
+                public void before(@NotNull List<? extends VFileEvent> events) {
+                    for (VFileEvent e : events) {
+                        if (e.isFromSave()) {
+                            VirtualFile virtualFile = e.getFile();
+                            if (virtualFile != null) {
+                                if (localFile.getAbsolutePath().equals(virtualFile.getPath())) {
+                                    // 上传文件
+                                    XFTPExplorerWindow.this.uploadFile(localFile, file);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (Exception e) {
+            e.printStackTrace();
+            message("error occurred while downloading file [" + file.path() + "], " + e.getMessage(), MessageType.ERROR);
+        }
+        this.panel.setEnabled(true);
+    }
+
+    /**
+     * 打开文件
+     * @param file 文件
+     */
+    private void openFileInEditor (@NotNull File file, @Nullable BulkFileListener listener) {
+        Editor editor = FileEditorManager.getInstance(this.project).openTextEditor(
+                new OpenFileDescriptor(
+                        this.project,
+                        Objects.requireNonNull(LocalFileSystem.getInstance().findFileByIoFile(file)),
+                        0
+                ),
+                true
+        );
+
+        // 设置文件监听
+        if (listener != null) {
+            this.project.getMessageBus().connect().subscribe(VirtualFileManager.VFS_CHANGES, listener);
+        }
     }
 
 }

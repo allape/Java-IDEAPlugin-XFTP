@@ -61,4 +61,7 @@ public class FileTableModel extends AbstractTableModel {
         fireTableDataChanged();
     }
 
+    public List<FileModel> getData() {
+        return data;
+    }
 }
