@@ -3,6 +3,7 @@ package net.allape.actions;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.ui.DialogWrapper;
+import com.intellij.openapi.wm.ToolWindow;
 import net.allape.bus.Services;
 import net.allape.dialogs.Confirm;
 import net.allape.windows.XFTPExplorerWindowFactory;
@@ -12,8 +13,9 @@ public class MenuOpenAction extends AnAction {
 
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
-        if (Services.TOOL_WINDOW != null) {
-            XFTPExplorerWindowFactory.createTheToolWindowContent(e.getProject(), Services.TOOL_WINDOW);
+        ToolWindow toolWindow = Services.TOOL_WINDOW;
+        if (toolWindow != null) {
+            toolWindow.show(() -> XFTPExplorerWindowFactory.createTheToolWindowContent(e.getProject(), toolWindow));
         } else {
             DialogWrapper notInitYet = new Confirm(
                     new Confirm.ConfirmOptions()

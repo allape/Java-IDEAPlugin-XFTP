@@ -3,10 +3,7 @@ package net.allape.windows;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
-import com.intellij.ui.content.Content;
-import com.intellij.ui.content.ContentFactory;
-import com.intellij.ui.content.ContentManagerEvent;
-import com.intellij.ui.content.ContentManagerListener;
+import com.intellij.ui.content.*;
 import net.allape.bus.Data;
 import net.allape.bus.Services;
 import org.jetbrains.annotations.NotNull;
@@ -35,13 +32,6 @@ public class XFTPExplorerWindowFactory implements ToolWindowFactory {
                     toolWindow.hide();
                 }
             }
-
-            @Override
-            public void contentAdded(@NotNull ContentManagerEvent event) {
-                if (!toolWindow.isVisible()) {
-                    toolWindow.show();
-                }
-            }
         });
     }
 
@@ -59,7 +49,9 @@ public class XFTPExplorerWindowFactory implements ToolWindowFactory {
         Content content = contentFactory.createContent(window.getPanel(), "Explorer", false);
         content.setCloseable(true);
         //给toolWindow设置内容
-        toolWindow.getContentManager().addContent(content);
+        ContentManager contentManager = toolWindow.getContentManager();
+        contentManager.addContent(content);
+        contentManager.setSelectedContent(content);
 
         // 放入缓存
         Data.windows.put(content, window);
