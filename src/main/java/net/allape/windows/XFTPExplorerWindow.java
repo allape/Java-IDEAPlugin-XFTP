@@ -7,13 +7,19 @@ import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.MessageType;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.wm.ToolWindow;
+import com.intellij.remote.RemoteConnectionType;
+import com.intellij.ssh.ConnectionBuilder;
+import com.intellij.ssh.RemoteCredentialsUtil;
+import com.intellij.ssh.RemoteFileObject;
+import com.intellij.ssh.channels.SftpChannel;
 import com.intellij.ui.DarculaColors;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.content.ContentManagerEvent;
+import com.jetbrains.plugins.remotesdk.console.RemoteDataProducer;
 import net.allape.dialogs.Confirm;
 import net.allape.models.FileModel;
+import net.allape.models.FileTableModel;
 import net.allape.models.XftpSshConfig;
-import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import javax.swing.event.PopupMenuEvent;
@@ -46,6 +52,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
     // com.intellij.ssh.ui.unified.SshConfigComboBox
     private JComboBox<XftpSshConfig> sshConfigComboBox;
     private JButton exploreButton;
+    private JButton disconnectButton;
     private JTable remoteFiles;
 
     // endregion
@@ -59,6 +66,8 @@ public class XFTPExplorerWindow extends XFTPWindow {
 
     // 当前选中的ssh配置
     private XftpSshConfig xftpSshConfig = null;
+    // 当前开启的channel
+    private SftpChannel sftpChannel = null;
 
     public XFTPExplorerWindow(Project project, ToolWindow toolWindow) {
         super(project, toolWindow);
@@ -101,6 +110,9 @@ public class XFTPExplorerWindow extends XFTPWindow {
         this.setDefaultTheme(this.sshConfigComboBox);
         this.setDefaultTheme(this.remoteFiles);
         this.setDefaultTheme(this.exploreButton);
+        this.setDefaultTheme(this.disconnectButton);
+        this.disconnectButton.setBackground(DarculaColors.RED);
+        this.disconnectButton.setForeground(JBColor.white);
         this.remoteFiles.setSelectionBackground(JBColor.namedColor(
                 "Plugins.lightSelectionBackground",
                 DarculaColors.BLUE
@@ -177,13 +189,11 @@ public class XFTPExplorerWindow extends XFTPWindow {
         });
         this.sshConfigComboBox.addItemListener(e -> {
             if (e.getStateChange() == ItemEvent.SELECTED) {
-                final XFTPExplorerWindow self = XFTPExplorerWindow.this;
-                self.xftpSshConfig = (XftpSshConfig) self.sshConfigComboBox.getSelectedItem();
+                this.xftpSshConfig = (XftpSshConfig) this.sshConfigComboBox.getSelectedItem();
             }
         });
         this.exploreButton.addActionListener(e -> {
-            final XFTPExplorerWindow self = XFTPExplorerWindow.this;
-            if (self.xftpSshConfig == null) {
+            if (this.xftpSshConfig == null) {
                 DialogWrapper dialog = new Confirm(new Confirm.ConfirmOptions()
                         .title("No Config is selected")
                         .content("Please choose a config to connect")
@@ -191,8 +201,11 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 dialog.setOKActionEnabled(false);
                 dialog.show();
             } else {
-                this.loadRemote(null);
+                this.connectSftp();
             }
+        });
+        this.disconnectButton.addActionListener(e -> {
+            this.disconnect(true);
         });
     }
 
@@ -236,7 +249,6 @@ public class XFTPExplorerWindow extends XFTPWindow {
 
                 path = file.getAbsolutePath();
                 this.localFsPath.setText(path);
-                this.remoteFsPath.setText(path); // FIXME 测试
 
                 List<FileModel> fileModels = new ArrayList<>(file.length() == 0 ? 1 : (file.length() > Integer.MAX_VALUE ?
                         Integer.MAX_VALUE :
@@ -244,9 +256,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 ));
 
                 // 添加返回上一级目录
-                int lastIndexOfSep = path.lastIndexOf(File.separator);
-                String parentFolder = lastIndexOfSep == -1 ? "" : path.substring(0, lastIndexOfSep);
-                fileModels.add(new FileModel(parentFolder.isEmpty() ? File.separator : parentFolder , "..", true));
+                fileModels.add(this.getLastFolder(path));
 
                 for (File currentFile : files) {
                     FileModel model = new FileModel();
@@ -258,7 +268,6 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 }
 
                 rerenderFileList(this.localFiles, fileModels);
-                rerenderFileTable(this.remoteFiles, fileModels); // FIXME 测试
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -267,11 +276,132 @@ public class XFTPExplorerWindow extends XFTPWindow {
     }
 
     /**
+     * 使用当前选择的配置进行连接
+     */
+    public void connectSftp () {
+        // SftpChannel connection = ConnectionBuilder.openSftpChannel$default(
+        //   RemoteCredentialsUtil.connectionBuilder$default(
+        //     this.credentials,
+        //     (Project)null,
+        //     (ProgressIndicator)null,
+        //     3,
+        //     (Object)null
+        //   ),
+        //   0,
+        //   1,
+        //   (Object)null
+        // );
+
+        // (new RemoteDataProducer())
+        //   .withActionEvent(event)
+        //   .withShowProjectLevelServers(true)
+        //   .produceRemoteData(
+        //      optionsProvider.getConnectionType(),
+        //      optionsProvider.getConnectionId(),
+        //      optionsProvider.getAdditionalData(),
+        //      (data) -> {}
+        //    )
+        // com.jetbrains.plugins.remotesdk.console.RemoteDataProducer
+
+        this.triggerConnecting();
+        try {
+            this.disconnect(false);
+            (new RemoteDataProducer())
+                    .withProject(this.project)
+                    .produceRemoteData(
+                            RemoteConnectionType.SSH_CONFIG,
+                            this.xftpSshConfig.getConfig().getId(),
+                            "",
+                            data -> {
+                                ConnectionBuilder connectionBuilder = RemoteCredentialsUtil.connectionBuilder(data, this.project);
+                                this.sftpChannel = connectionBuilder.openSftpChannel();
+                                this.triggerConnected();
+
+                                this.loadRemote(this.sftpChannel.getHome());
+                            }
+                    );
+        } catch (Exception e) {
+            e.printStackTrace();
+            this.triggerDisconnected();
+            message(e.getMessage(), MessageType.ERROR);
+        }
+    }
+
+    /**
      * 获取远程文件目录
      * @param path 默认地址, 为null时自动使用sftp默认文件夹
      */
-    public void loadRemote (@Nullable String path) {
+    public void loadRemote (String path) {
+        if (this.sftpChannel == null) {
+            message("Please connect to server first!", MessageType.INFO);
+        } else if (!this.sftpChannel.isConnected()) {
+            message("SFTP lost connection, retrying...", MessageType.ERROR);
+            this.connectSftp();
+        }
 
+        RemoteFileObject file = this.sftpChannel.file(path);
+        if (!file.exists()) {
+            message(path + " does not exist!", MessageType.WARNING);
+        } if (!file.isDir()) {
+            // TODO 打开文件并监听更改, 更改后自动上传
+        } else {
+            this.remoteFsPath.setText(path);
+
+            List<RemoteFileObject> files = file.list();
+            List<FileModel> fileModels = new ArrayList<>(files.size());
+
+            // 添加返回上一级目录
+            fileModels.add(this.getLastFolder(path));
+
+            for (RemoteFileObject f : files) {
+                fileModels.add(new FileModel(f.path(), f.name(), f.isDir()));
+            }
+
+            rerenderFileTable(this.remoteFiles, fileModels);
+        }
+    }
+
+    /**
+     * 断开当前连接
+     */
+    public void disconnect (boolean triggerEvent) {
+        if (this.sftpChannel != null && this.sftpChannel.isConnected()) {
+            this.sftpChannel.disconnect();
+            this.sftpChannel = null;
+
+            // 清空列表
+            ((FileTableModel) (this.remoteFiles.getModel())).resetData(new ArrayList<>());
+
+            if (triggerEvent) {
+                this.triggerDisconnected();
+            }
+        }
+    }
+
+    /**
+     * 设置当前状态为连接中
+     */
+    public void triggerConnecting () {
+        this.sshConfigComboBox.setEnabled(false);
+        this.exploreButton.setEnabled(false);
+    }
+
+    /**
+     * 设置当前状态为已连接
+     */
+    public void triggerConnected () {
+        this.sshConfigComboBox.setEnabled(false);
+        this.exploreButton.setVisible(false);
+        this.disconnectButton.setVisible(true);
+    }
+
+    /**
+     * 设置当前状态为未连接
+     */
+    public void triggerDisconnected () {
+        this.sshConfigComboBox.setEnabled(true);
+        this.exploreButton.setVisible(true);
+        this.disconnectButton.setVisible(false);
     }
 
     /**
@@ -280,6 +410,17 @@ public class XFTPExplorerWindow extends XFTPWindow {
      */
     public JPanel getPanel () {
         return this.panel;
+    }
+
+    /**
+     * 获取上一级目录
+     * @param path 当前目录
+     */
+    private FileModel getLastFolder (String path) {
+        // 添加返回上一级目录
+        int lastIndexOfSep = path.lastIndexOf(File.separator);
+        String parentFolder = lastIndexOfSep == -1 ? "" : path.substring(0, lastIndexOfSep);
+        return new FileModel(parentFolder.isEmpty() ? File.separator : parentFolder , "..", true);
     }
 
 }

@@ -46,7 +46,7 @@
           </component>
         </children>
       </scrollpane>
-      <grid id="184ef" binding="remoteFsWrapper" layout-manager="GridLayoutManager" row-count="2" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+      <grid id="184ef" binding="remoteFsWrapper" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
         <margin top="0" left="0" bottom="0" right="0"/>
         <constraints>
           <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
@@ -54,16 +54,6 @@
         <properties/>
         <border type="none"/>
         <children>
-          <component id="f1535" class="javax.swing.JTextField" binding="remoteFsPath">
-            <constraints>
-              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                <preferred-size width="150" height="-1"/>
-              </grid>
-            </constraints>
-            <properties>
-              <editable value="false"/>
-            </properties>
-          </component>
           <grid id="836b8" binding="sshConfigCBWrapper" layout-manager="BorderLayout" hgap="0" vgap="0">
             <constraints>
               <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
@@ -71,14 +61,22 @@
             <properties/>
             <border type="none"/>
             <children>
-              <component id="7585c" class="javax.swing.JComboBox" binding="sshConfigComboBox">
-                <constraints border-constraint="Center"/>
-                <properties/>
-              </component>
               <component id="2f651" class="javax.swing.JButton" binding="exploreButton">
                 <constraints border-constraint="East"/>
                 <properties>
                   <text resource-bundle="i18n/default" key="explore"/>
+                </properties>
+              </component>
+              <component id="208cf" class="javax.swing.JButton" binding="disconnectButton">
+                <constraints border-constraint="West"/>
+                <properties>
+                  <text value="Button"/>
+                </properties>
+              </component>
+              <component id="f1535" class="javax.swing.JTextField" binding="remoteFsPath">
+                <constraints border-constraint="Center"/>
+                <properties>
+                  <editable value="false"/>
                 </properties>
               </component>
             </children>
