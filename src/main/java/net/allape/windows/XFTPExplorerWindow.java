@@ -12,6 +12,7 @@ import com.intellij.ui.JBColor;
 import net.allape.dialogs.Confirm;
 import net.allape.models.FileModel;
 import net.allape.models.XftpSshConfig;
+import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import javax.swing.event.PopupMenuEvent;
@@ -33,25 +34,30 @@ public class XFTPExplorerWindow extends XFTPWindow {
     private JPanel panel;
 
     private JScrollPane localFs;
-    private JList<FileModel> localFiles;
     private JTextField localFsPath;
+    private JList<FileModel> localFiles;
 
     private JScrollPane remoteFs;
     private JTextField remoteFsPath;
-    private JTable remoteFiles;
     private JPanel remoteFsWrapper;
     private JPanel sshConfigCBWrapper;
     // com.jetbrains.plugins.remotesdk.ui.RemoteSdkBySshConfigForm
     // com.intellij.ssh.ui.unified.SshConfigComboBox
     private JComboBox<XftpSshConfig> sshConfigComboBox;
     private JButton exploreButton;
+    private JTable remoteFiles;
 
     // endregion
 
+    // 上一次选择的本地文件
     private FileModel lastLocalModel = new FileModel(USER_HOME, "home sweet home", true);
+    // 当前选中的本地文件
     private FileModel currentLocalModel = lastLocalModel;
+    // 当前选中的所有文件
     private List<FileModel> selectedLocalModels = new ArrayList<>(0);
-    private long localFileClickWatcher = System.currentTimeMillis();
+
+    // 当前选中的ssh配置
+    private XftpSshConfig xftpSshConfig = null;
 
     public XFTPExplorerWindow(Project project, ToolWindow toolWindow) {
         super(project, toolWindow);
@@ -85,6 +91,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
         this.setDefaultTheme(this.sshConfigCBWrapper);
         this.setDefaultTheme(this.sshConfigComboBox);
         this.setDefaultTheme(this.remoteFiles);
+        this.setDefaultTheme(this.exploreButton);
         this.remoteFiles.setSelectionBackground(JBColor.namedColor(
                 "Plugins.lightSelectionBackground",
                 DarculaColors.BLUE
@@ -112,10 +119,10 @@ public class XFTPExplorerWindow extends XFTPWindow {
             public void mouseClicked(MouseEvent e) {
                 final XFTPExplorerWindow self = XFTPExplorerWindow.this;
                 long now = System.currentTimeMillis();
-                if (self.lastLocalModel == self.currentLocalModel && now - self.localFileClickWatcher < DOUBLE_CLICK_INTERVAL) {
+                if (self.lastLocalModel == self.currentLocalModel && now - self.clickWatcher < DOUBLE_CLICK_INTERVAL) {
                     self.loadLocal(self.currentLocalModel.getPath());
                 }
-                self.localFileClickWatcher = now;
+                self.clickWatcher = now;
             }
 
             @Override
@@ -164,6 +171,18 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 final XFTPExplorerWindow self = XFTPExplorerWindow.this;
                 XftpSshConfig config = (XftpSshConfig) self.sshConfigComboBox.getSelectedItem();
                 System.out.println(config);
+            }
+        });
+        this.exploreButton.addActionListener(e -> {
+            final XFTPExplorerWindow self = XFTPExplorerWindow.this;
+            if (self.xftpSshConfig == null) {
+                DialogWrapper dialog = new Confirm(new Confirm.ConfirmOptions()
+                        .title("No Config is selected")
+                        .content("Please choose a config to connect")
+                );
+                dialog.show();
+            } else {
+                this.loadRemote(null);
             }
         });
     }
@@ -239,10 +258,11 @@ public class XFTPExplorerWindow extends XFTPWindow {
     }
 
     /**
-     * 获取IDE的ssh config
+     * 获取远程文件目录
+     * @param path 默认地址, 为null时自动使用sftp默认文件夹
      */
-    public void getSshConfigs () {
-        // TODO
+    public void loadRemote (@Nullable String path) {
+
     }
 
     /**

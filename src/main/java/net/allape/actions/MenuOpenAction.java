@@ -21,6 +21,7 @@ public class MenuOpenAction extends AnAction {
                             .content("IPlease wait for a while.😊")
             );
             notInitYet.setOKActionEnabled(false);
+            notInitYet.show();
         }
     }
 }

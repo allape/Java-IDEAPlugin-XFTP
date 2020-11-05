@@ -26,6 +26,9 @@ public class XFTPWindow {
 
     static final protected long DOUBLE_CLICK_INTERVAL = 350;
 
+    // 双击监听
+    protected long clickWatcher = System.currentTimeMillis();
+
     final protected Project project;
     final protected ToolWindow toolWindow;
 
