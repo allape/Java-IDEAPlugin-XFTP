@@ -270,12 +270,16 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 fileModels.add(this.getLastFolder(path));
 
                 for (File currentFile : files) {
-                    FileModel model = new FileModel();
-                    model.setName(currentFile.getName());
-                    model.setPath(currentFile.getAbsolutePath());
-                    model.setFolder(currentFile.isDirectory());
-
-                    fileModels.add(model);
+                    // FIXME 完善文件权限换算
+                    fileModels.add(new FileModel(
+                            currentFile.getAbsolutePath(),
+                            currentFile.getName(),
+                            currentFile.isDirectory(),
+                            currentFile.length(),
+                            (currentFile.canRead() ? 1 : 0) |
+                                    (currentFile.canWrite() ? 2 : 0) |
+                                    (currentFile.canExecute() ? 4 : 0)
+                    ));
                 }
 
                 rerenderFileList(this.localFiles, fileModels);
@@ -375,7 +379,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
             fileModels.add(this.getLastFolder(path));
 
             for (RemoteFileObject f : files) {
-                fileModels.add(new FileModel(f.path(), f.name(), f.isDir()));
+                fileModels.add(new FileModel(f.path(), f.name(), f.isDir(), f.size(), f.getPermissions()));
             }
 
             rerenderFileTable(this.remoteFiles, fileModels);
@@ -442,7 +446,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
         // 添加返回上一级目录
         int lastIndexOfSep = path.lastIndexOf(File.separator);
         String parentFolder = lastIndexOfSep == -1 ? "" : path.substring(0, lastIndexOfSep);
-        return new FileModel(parentFolder.isEmpty() ? File.separator : parentFolder , "..", true);
+        return new FileModel(parentFolder.isEmpty() ? File.separator : parentFolder , "..", true, null, null);
     }
 
     /**

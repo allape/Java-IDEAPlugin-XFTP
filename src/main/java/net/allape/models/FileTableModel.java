@@ -1,5 +1,7 @@
 package net.allape.models;
 
+import org.apache.commons.io.FileUtils;
+
 import javax.swing.table.AbstractTableModel;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,6 +11,8 @@ public class FileTableModel extends AbstractTableModel {
     static final private String[] COL_NAMES = new String[]{
             "",
             "name",
+            "size",
+            "permissions",
     };
 
     private List<FileModel> data;
@@ -28,8 +32,6 @@ public class FileTableModel extends AbstractTableModel {
         return COL_NAMES[column];
     }
 
-
-
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
         try {
@@ -37,6 +39,8 @@ public class FileTableModel extends AbstractTableModel {
             switch (columnIndex) {
                 case 0: return model.getFolder() ? "📁" : "📃";
                 case 1: return model.getName();
+                case 2: return model.getSize() == null ? "" : FileUtils.byteCountToDisplaySize(model.getSize());
+                case 3: return model.getPermissions() == null ? "" : Integer.toHexString(model.getPermissions());
             }
         } catch (Exception e) {
             e.printStackTrace();
