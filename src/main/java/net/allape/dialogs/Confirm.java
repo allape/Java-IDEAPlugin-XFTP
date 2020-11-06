@@ -1,6 +1,7 @@
 package net.allape.dialogs;
 
 import com.intellij.openapi.ui.DialogWrapper;
+import com.intellij.util.ui.JBUI;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
@@ -9,10 +10,6 @@ import java.awt.*;
 public class Confirm extends DialogWrapper {
 
     final private Options options;
-
-    public Confirm () {
-        this(new Options());
-    }
 
     public Confirm (Options options) {
         super(true);
@@ -30,14 +27,27 @@ public class Confirm extends DialogWrapper {
 
     @Override
     protected @Nullable JComponent createCenterPanel() {
-        // 创建一个面板，设置其布局为边界布局
-        JPanel centerPanel = new JPanel(new BorderLayout());
-        // 创建一个文字标签，来承载内容
-        JLabel label = new JLabel(this.options.getContent());
-        // 设置首先大小
-        label.setPreferredSize(new Dimension(100, 100));
-        // 将文字标签添加的面板的正中间
-        centerPanel.add(label, BorderLayout.CENTER);
+        JPanel centerPanel = new JPanel(new GridBagLayout());
+
+        String[] lines = this.options.getContent().split("\n");
+        for (int i = 0; i < lines.length; i++) {
+            JLabel label = new JLabel(lines[i], SwingConstants.CENTER);
+
+            GridBagConstraints constraints = new GridBagConstraints();
+            constraints.gridx = 1;
+            constraints.gridy = i;
+            if (i == 0) {
+                constraints.insets = JBUI.insets(10, 10, 0, 10);
+            }
+            if (i > 0) {
+                constraints.insets = JBUI.insets(5, 10, 0, 10);
+            }
+            if (i == lines.length - 1) {
+                constraints.insets = JBUI.insets(5, 10, 10, 10);
+            }
+            centerPanel.add(label, constraints);
+        }
+
         return centerPanel;
     }
 
@@ -82,6 +92,10 @@ public class Confirm extends DialogWrapper {
             return cancelText;
         }
 
+        public Options cancelText(String cancelText) {
+            this.cancelText = cancelText;
+            return this;
+        }
     }
 
 }

@@ -538,16 +538,21 @@ public class XFTPExplorerWindow extends XFTPWindow {
             throw new IllegalArgumentException("Can not edit a folder!");
         }
 
-        // 如果当前远程文件已经在编辑器中打开了, 则关闭之前的 TODO 测试
+        // 如果当前远程文件已经在编辑器中打开了, 则关闭之前的
         if (this.remoteEditingFiles.containsKey(file.path())) {
             File oldCachedFile = new File(this.remoteEditingFiles.get(file.path()));
             if (oldCachedFile.exists()) {
                 DialogWrapper dialog = new Confirm(new Confirm.Options()
                         .title("This file is editing")
-                        .content("Do you want to replace current editing file?")
+                        .okText("Replace")
+                        .cancelText("Open")
+                        .content("Do you want to replace current editing file? \n" +
+                                "Press \"Open\" to open/focus an/the editor for/of existing file. \n" +
+                                "Press \"Replace\" to discard downloaded file and re-download the file from remote.")
                 );
                 if (!dialog.showAndGet()) {
                     this.openFileInEditor(oldCachedFile);
+                    return;
                 }
             }
         }
@@ -562,7 +567,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
         this.openFileInEditor(localFile);
 
         // 加入文件监听队列
-        this.remoteEditingFiles.put(localFile.getAbsolutePath(), file.path());
+        this.remoteEditingFiles.put(file.path(), localFile.getAbsolutePath());
     }
 
     /**
