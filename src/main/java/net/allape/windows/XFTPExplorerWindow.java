@@ -16,6 +16,7 @@ import com.intellij.ssh.ConnectionBuilder;
 import com.intellij.ssh.RemoteCredentialsUtil;
 import com.intellij.ssh.RemoteFileObject;
 import com.intellij.ssh.channels.SftpChannel;
+import com.intellij.ui.AnimatedIcon;
 import com.intellij.ui.DarculaColors;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.content.ContentManagerEvent;
@@ -112,8 +113,8 @@ public class XFTPExplorerWindow extends XFTPWindow {
     public void onClosed(ContentManagerEvent e) {
         super.onClosed(e);
 
-
-        System.out.println("啊, 我被关了");
+        // 关闭连接
+        this.disconnect(true);
     }
 
     /**
@@ -448,6 +449,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
      */
     public void triggerConnecting () {
         this.exploreButton.setEnabled(false);
+        this.exploreButton.setIcon(AnimatedIcon.Default.INSTANCE);
     }
 
     /**
@@ -455,6 +457,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
      */
     public void triggerConnected () {
         this.exploreButton.setVisible(false);
+        this.exploreButton.setIcon(null);
         this.disconnectButton.setVisible(true);
     }
 
