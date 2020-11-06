@@ -72,7 +72,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
     // 当前选中的所有文件
     private List<FileModel> selectedRemoteFiles = new ArrayList<>(COLLECTION_SIZE);
 
-    // 修改中的远程文件, 用于文件修改后自动上传 key: local file, value: remote file
+    // 修改中的远程文件, 用于文件修改后自动上传 key: remote file, value: local file
     private Map<String, String> remoteEditingFiles = new HashMap<>(COLLECTION_SIZE);
 
     public XFTPExplorerWindow(Project project, ToolWindow toolWindow) {
@@ -94,7 +94,13 @@ public class XFTPExplorerWindow extends XFTPWindow {
                             VirtualFile virtualFile = e.getFile();
                             if (virtualFile != null) {
                                 String localFile = virtualFile.getPath();
-                                String remoteFile = self.remoteEditingFiles.get(localFile);
+                                String remoteFile = null;
+                                for (Map.Entry<String, String> entry : self.remoteEditingFiles.entrySet()) {
+                                    if (entry.getValue().equals(localFile)) {
+                                        remoteFile = entry.getKey();
+                                        break;
+                                    }
+                                }
                                 if (remoteFile != null) {
                                     // 上传文件
                                     self.uploadFile(localFile, remoteFile);
@@ -501,31 +507,62 @@ public class XFTPExplorerWindow extends XFTPWindow {
     }
 
     /**
+     * 下载文件
+     * @param file 远程文件
+     * @return 本地文件
+     */
+    private File downloadFile (RemoteFileObject file) {
+        if (this.sftpChannel == null || !this.sftpChannel.isConnected()) {
+            message("Please start a sftp session first!", MessageType.INFO);
+            return null;
+        }
+
+        try {
+            final File localFile = File.createTempFile("jb-ide-xftp", file.name());
+            this.sftpChannel.downloadFileOrDir(file.path(), localFile.getAbsolutePath());
+            return localFile;
+        } catch (Exception e) {
+            e.printStackTrace();
+            message("error occurred while downloading file [" + file.path() + "], " + e.getMessage(), MessageType.ERROR);
+        }
+
+        return null;
+    }
+
+    /**
      * 下载文件并编辑
      * @param file 远程文件信息
      */
     private void downloadFileAndEdit (RemoteFileObject file) {
         if (file.isDir()) {
             throw new IllegalArgumentException("Can not edit a folder!");
-        } else if (this.sftpChannel == null || !this.sftpChannel.isConnected()) {
-            message("Please start a sftp session first!", MessageType.INFO);
+        }
+
+        // 如果当前远程文件已经在编辑器中打开了, 则关闭之前的 TODO 测试
+        if (this.remoteEditingFiles.containsKey(file.path())) {
+            File oldCachedFile = new File(this.remoteEditingFiles.get(file.path()));
+            if (oldCachedFile.exists()) {
+                DialogWrapper dialog = new Confirm(new Confirm.Options()
+                        .title("This file is editing")
+                        .content("Do you want to replace current editing file?")
+                );
+                if (!dialog.showAndGet()) {
+                    this.openFileInEditor(oldCachedFile);
+                }
+            }
+        }
+
+        this.panel.setEnabled(false);
+        File localFile = this.downloadFile(file);
+        this.panel.setEnabled(true);
+        if (localFile == null) {
             return;
         }
 
-        try {
-            this.panel.setEnabled(false);
-            final File localFile = File.createTempFile("jb-ide-xftp", file.name());
-            this.sftpChannel.downloadFileOrDir(file.path(), localFile.getAbsolutePath());
+        this.openFileInEditor(localFile);
 
-            this.openFileInEditor(localFile);
-
-            // 加入文件监听队列
-            this.remoteEditingFiles.put(localFile.getAbsolutePath(), file.path());
-        } catch (Exception e) {
-            e.printStackTrace();
-            message("error occurred while downloading file [" + file.path() + "], " + e.getMessage(), MessageType.ERROR);
-        }
-        this.panel.setEnabled(true);
+        // 加入文件监听队列
+        this.remoteEditingFiles.put(localFile.getAbsolutePath(), file.path());
     }
 
     /**
