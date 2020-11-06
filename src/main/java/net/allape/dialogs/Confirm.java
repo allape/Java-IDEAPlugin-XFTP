@@ -8,13 +8,13 @@ import java.awt.*;
 
 public class Confirm extends DialogWrapper {
 
-    final private ConfirmOptions options;
+    final private Options options;
 
     public Confirm () {
-        this(new ConfirmOptions());
+        this(new Options());
     }
 
-    public Confirm (ConfirmOptions options) {
+    public Confirm (Options options) {
         super(true);
 
         this.options = options;
@@ -41,7 +41,7 @@ public class Confirm extends DialogWrapper {
         return centerPanel;
     }
 
-    public static final class ConfirmOptions {
+    public static final class Options {
 
         private String title = "Confirming";
 
@@ -55,7 +55,7 @@ public class Confirm extends DialogWrapper {
             return title;
         }
 
-        public ConfirmOptions title(String title) {
+        public Options title(String title) {
             this.title = title;
             return this;
         }
@@ -64,7 +64,7 @@ public class Confirm extends DialogWrapper {
             return content;
         }
 
-        public ConfirmOptions content(String content) {
+        public Options content(String content) {
             this.content = content;
             return this;
         }
@@ -73,7 +73,7 @@ public class Confirm extends DialogWrapper {
             return okText;
         }
 
-        public ConfirmOptions okText(String okText) {
+        public Options okText(String okText) {
             this.okText = okText;
             return this;
         }

@@ -18,7 +18,7 @@ public class MenuOpenAction extends AnAction {
             toolWindow.show(() -> XFTPExplorerWindowFactory.createTheToolWindowContent(e.getProject(), toolWindow));
         } else {
             DialogWrapper notInitYet = new Confirm(
-                    new Confirm.ConfirmOptions()
+                    new Confirm.Options()
                             .title("Initialing...")
                             .content("IPlease wait for a while.😊")
             );

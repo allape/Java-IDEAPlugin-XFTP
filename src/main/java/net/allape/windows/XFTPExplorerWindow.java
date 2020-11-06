@@ -197,7 +197,15 @@ public class XFTPExplorerWindow extends XFTPWindow {
 
         // 弹出的时候获取ssh配置
         this.exploreButton.addActionListener(e -> this.connectSftp());
-        this.disconnectButton.addActionListener(e -> this.disconnect(true));
+        this.disconnectButton.addActionListener(e -> {
+            DialogWrapper dialog = new Confirm(new Confirm.Options()
+                    .title("Disconnecting")
+                    .content("Do you really want to close this session?")
+            );
+            if (dialog.showAndGet()) {
+                this.disconnect(true);
+            }
+        });
         this.remoteFiles.getSelectionModel().addListSelectionListener(e -> {
             List<FileModel> allRemoteFiles = ((FileTableModel) this.remoteFiles.getModel()).getData();
 
@@ -258,7 +266,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 message(path + " does not exist!", MessageType.WARNING);
             } else if (!file.isDirectory()) {
                 if (file.length() > EDITABLE_FILE_SIZE) {
-                    DialogWrapper dialog = new Confirm(new Confirm.ConfirmOptions()
+                    DialogWrapper dialog = new Confirm(new Confirm.Options()
                             .title("This file is too large for text editor")
                             .content("Do you still want to edit it?"));
                     if (dialog.showAndGet()) {
@@ -271,7 +279,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 File[] files = file.listFiles();
                 if (files == null) {
                     DialogWrapper dialog = new Confirm(
-                        new Confirm.ConfirmOptions()
+                        new Confirm.Options()
                             .title("It is an unavailable folder!")
                             .content("This folder is not available, do you want to open it in system file manager?")
                     );
@@ -388,7 +396,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
         } if (!file.isDir()) {
             // 如果文件小于2M, 则自动下载到缓存目录并进行监听
             if (file.size() > EDITABLE_FILE_SIZE) {
-                DialogWrapper dialog = new Confirm(new Confirm.ConfirmOptions()
+                DialogWrapper dialog = new Confirm(new Confirm.Options()
                         .title("This file is too large for text editor")
                         .content("Do you still want to download and edit it?"));
                 if (dialog.showAndGet()) {
