@@ -1,5 +1,6 @@
 package net.allape.windows;
 
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
@@ -7,12 +8,10 @@ import com.intellij.ui.content.*;
 import net.allape.bus.Data;
 import net.allape.bus.Services;
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class XFTPExplorerWindowFactory implements ToolWindowFactory {
 
-    public static final Logger logger = LoggerFactory.getLogger(XFTPExplorerWindowFactory.class);
+    public static final Logger logger = Logger.getInstance(XFTPExplorerWindowFactory.class);
 
     @Override
     public void init(@NotNull ToolWindow toolWindow) {
@@ -22,7 +21,7 @@ public class XFTPExplorerWindowFactory implements ToolWindowFactory {
             public void contentRemoved(@NotNull ContentManagerEvent event) {
                 XFTPWindow window = Data.windows.get(event.getContent());
                 if (window == null) {
-                    logger.warn("closed an un-cached window: {}", event.toString());
+                    logger.warn("closed an un-cached window: " + event.toString());
                 } else {
                     window.onClosed(event);
                     Data.windows.remove(event.getContent());

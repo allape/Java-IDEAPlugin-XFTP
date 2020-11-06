@@ -1,6 +1,5 @@
 package net.allape.windows;
 
-import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
@@ -25,7 +24,6 @@ import net.allape.dialogs.Confirm;
 import net.allape.models.FileModel;
 import net.allape.models.FileTableModel;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.awt.*;
@@ -33,11 +31,12 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Objects;
 
 public class XFTPExplorerWindow extends XFTPWindow {
+
+    private static final int COLLECTION_SIZE = 100;
 
     // region UI objects
 
@@ -63,14 +62,17 @@ public class XFTPExplorerWindow extends XFTPWindow {
     // 当前选中的本地文件
     private FileModel currentLocalFile = null;
     // 当前选中的所有文件
-    private List<FileModel> selectedLocalFiles = new ArrayList<>(0);
+    private List<FileModel> selectedLocalFiles = new ArrayList<>(COLLECTION_SIZE);
 
     // 当前开启的channel
     private SftpChannel sftpChannel = null;
     // 当前选中的远程文件
     private FileModel currentRemoteFile = null;
     // 当前选中的所有文件
-    private List<FileModel> selectedRemoteFiles = new ArrayList<>(0);
+    private List<FileModel> selectedRemoteFiles = new ArrayList<>(COLLECTION_SIZE);
+
+    // 修改中的远程文件, 用于文件修改后自动上传 key: local file, value: remote file
+    private Map<String, String> remoteEditingFiles = new HashMap<>(COLLECTION_SIZE);
 
     public XFTPExplorerWindow(Project project, ToolWindow toolWindow) {
         super(project, toolWindow);
@@ -78,6 +80,32 @@ public class XFTPExplorerWindow extends XFTPWindow {
         this.initUIAction();
 
         this.loadLocal(USER_HOME);
+
+        final XFTPExplorerWindow self = XFTPExplorerWindow.this;
+
+        // 初始化文件监听
+        if (this.project != null) {
+            this.project.getMessageBus().connect().subscribe(VirtualFileManager.VFS_CHANGES, new BulkFileListener() {
+                @Override
+                public void after(@NotNull List<? extends VFileEvent> events) {
+                    for (VFileEvent e : events) {
+                        if (e.isFromSave()) {
+                            VirtualFile virtualFile = e.getFile();
+                            if (virtualFile != null) {
+                                String localFile = virtualFile.getPath();
+                                String remoteFile = self.remoteEditingFiles.get(localFile);
+                                if (remoteFile != null) {
+                                    // 上传文件
+                                    self.uploadFile(localFile, remoteFile);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            message("Failed to initial file change listener", MessageType.ERROR);
+        }
     }
 
     @Override
@@ -234,10 +262,10 @@ public class XFTPExplorerWindow extends XFTPWindow {
                             .title("This file is too large for text editor")
                             .content("Do you still want to edit it?"));
                     if (dialog.showAndGet()) {
-                        this.openFileInEditor(file, null);
+                        this.openFileInEditor(file);
                     }
                 } else {
-                    this.openFileInEditor(file, null);
+                    this.openFileInEditor(file);
                 }
             } else {
                 File[] files = file.listFiles();
@@ -267,7 +295,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 ));
 
                 // 添加返回上一级目录
-                fileModels.add(this.getLastFolder(path));
+                fileModels.add(this.getLastFolder(path, File.separator));
 
                 for (File currentFile : files) {
                     // FIXME 完善文件权限换算
@@ -376,7 +404,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
             List<FileModel> fileModels = new ArrayList<>(files.size());
 
             // 添加返回上一级目录
-            fileModels.add(this.getLastFolder(path));
+            fileModels.add(this.getLastFolder(path, "/"));
 
             for (RemoteFileObject f : files) {
                 fileModels.add(new FileModel(f.path(), f.name(), f.isDir(), f.size(), f.getPermissions()));
@@ -399,6 +427,8 @@ public class XFTPExplorerWindow extends XFTPWindow {
         if (this.remoteFiles.getModel() instanceof FileTableModel) {
             ((FileTableModel) this.remoteFiles.getModel()).resetData(new ArrayList<>());
         }
+        // 清空文件列表
+        this.remoteEditingFiles = new HashMap<>();
 
         if (triggerEvent) {
             this.triggerDisconnected();
@@ -442,11 +472,11 @@ public class XFTPExplorerWindow extends XFTPWindow {
      * 获取上一级目录
      * @param path 当前目录
      */
-    private FileModel getLastFolder (String path) {
+    private FileModel getLastFolder (String path, String separator) {
         // 添加返回上一级目录
-        int lastIndexOfSep = path.lastIndexOf(File.separator);
+        int lastIndexOfSep = path.lastIndexOf(separator);
         String parentFolder = lastIndexOfSep == -1 ? "" : path.substring(0, lastIndexOfSep);
-        return new FileModel(parentFolder.isEmpty() ? File.separator : parentFolder , "..", true, null, null);
+        return new FileModel(parentFolder.isEmpty() ? separator : parentFolder , "..", true, null, null);
     }
 
     /**
@@ -454,9 +484,9 @@ public class XFTPExplorerWindow extends XFTPWindow {
      * @param localFile 本地文件
      * @param remoteFile 线上文件
      */
-    private void uploadFile (File localFile, RemoteFileObject remoteFile) {
+    private void uploadFile (String localFile, String remoteFile) {
         // TODO 上传文件
-        System.out.println("上传" + localFile.getAbsolutePath() + " -> " + remoteFile.path());
+        System.out.println("上传" + localFile + " -> " + remoteFile);
     }
 
     /**
@@ -476,22 +506,10 @@ public class XFTPExplorerWindow extends XFTPWindow {
             final File localFile = File.createTempFile("jb-ide-xftp", file.name());
             this.sftpChannel.downloadFileOrDir(file.path(), localFile.getAbsolutePath());
 
-            this.openFileInEditor(localFile, new BulkFileListener() {
-                @Override
-                public void before(@NotNull List<? extends VFileEvent> events) {
-                    for (VFileEvent e : events) {
-                        if (e.isFromSave()) {
-                            VirtualFile virtualFile = e.getFile();
-                            if (virtualFile != null) {
-                                if (localFile.getAbsolutePath().equals(virtualFile.getPath())) {
-                                    // 上传文件
-                                    XFTPExplorerWindow.this.uploadFile(localFile, file);
-                                }
-                            }
-                        }
-                    }
-                }
-            });
+            this.openFileInEditor(localFile);
+
+            // 加入文件监听队列
+            this.remoteEditingFiles.put(localFile.getAbsolutePath(), file.path());
         } catch (Exception e) {
             e.printStackTrace();
             message("error occurred while downloading file [" + file.path() + "], " + e.getMessage(), MessageType.ERROR);
@@ -503,8 +521,8 @@ public class XFTPExplorerWindow extends XFTPWindow {
      * 打开文件
      * @param file 文件
      */
-    private void openFileInEditor (@NotNull File file, @Nullable BulkFileListener listener) {
-        Editor editor = FileEditorManager.getInstance(this.project).openTextEditor(
+    private void openFileInEditor (@NotNull File file) {
+        FileEditorManager.getInstance(this.project).openTextEditor(
                 new OpenFileDescriptor(
                         this.project,
                         Objects.requireNonNull(LocalFileSystem.getInstance().findFileByIoFile(file)),
@@ -512,11 +530,6 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 ),
                 true
         );
-
-        // 设置文件监听
-        if (listener != null) {
-            this.project.getMessageBus().connect().subscribe(VirtualFileManager.VFS_CHANGES, listener);
-        }
     }
 
 }
