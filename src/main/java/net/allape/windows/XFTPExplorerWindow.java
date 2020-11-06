@@ -15,16 +15,22 @@ import com.intellij.remote.RemoteConnectionType;
 import com.intellij.ssh.ConnectionBuilder;
 import com.intellij.ssh.RemoteCredentialsUtil;
 import com.intellij.ssh.RemoteFileObject;
+import com.intellij.ssh.SftpProgressTracker;
 import com.intellij.ssh.channels.SftpChannel;
 import com.intellij.ui.AnimatedIcon;
 import com.intellij.ui.DarculaColors;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.content.ContentManagerEvent;
 import com.jetbrains.plugins.remotesdk.console.RemoteDataProducer;
+import net.allape.bus.Data;
+import net.allape.bus.Services;
 import net.allape.dialogs.Confirm;
 import net.allape.models.FileModel;
 import net.allape.models.FileTableModel;
+import net.allape.models.Transfer;
+import net.allape.utils.Maps;
 import org.jetbrains.annotations.NotNull;
+import org.omg.CORBA.TRANSACTION_MODE;
 
 import javax.swing.*;
 import java.awt.*;
@@ -73,7 +79,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
     private List<FileModel> selectedRemoteFiles = new ArrayList<>(COLLECTION_SIZE);
 
     // 修改中的远程文件, 用于文件修改后自动上传 key: remote file, value: local file
-    private Map<String, String> remoteEditingFiles = new HashMap<>(COLLECTION_SIZE);
+    private Map<RemoteFileObject, String> remoteEditingFiles = new HashMap<>(COLLECTION_SIZE);
 
     public XFTPExplorerWindow(Project project, ToolWindow toolWindow) {
         super(project, toolWindow);
@@ -94,13 +100,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
                             VirtualFile virtualFile = e.getFile();
                             if (virtualFile != null) {
                                 String localFile = virtualFile.getPath();
-                                String remoteFile = null;
-                                for (Map.Entry<String, String> entry : self.remoteEditingFiles.entrySet()) {
-                                    if (entry.getValue().equals(localFile)) {
-                                        remoteFile = entry.getKey();
-                                        break;
-                                    }
-                                }
+                                RemoteFileObject remoteFile = Maps.getFirstKeyByValue(self.remoteEditingFiles, localFile);
                                 if (remoteFile != null) {
                                     // 上传文件
                                     self.uploadFile(localFile, remoteFile);
@@ -111,7 +111,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 }
             });
         } else {
-            message("Failed to initial file change listener", MessageType.ERROR);
+            Services.message("Failed to initial file change listener", MessageType.ERROR);
         }
     }
 
@@ -270,7 +270,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
         try {
             File file = new File(path);
             if (!file.exists()) {
-                message(path + " does not exist!", MessageType.WARNING);
+                Services.message(path + " does not exist!", MessageType.WARNING);
             } else if (!file.isDirectory()) {
                 if (file.length() > EDITABLE_FILE_SIZE) {
                     DialogWrapper dialog = new Confirm(new Confirm.Options()
@@ -295,7 +295,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
                             Desktop.getDesktop().open(file);
                         } catch (IOException ioException) {
                             ioException.printStackTrace();
-                            message("Failed to open file in system file manager", MessageType.INFO);
+                            Services.message("Failed to open file in system file manager", MessageType.INFO);
                         }
                     }
                     return;
@@ -329,7 +329,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            message(e.getMessage(), MessageType.WARNING);
+            Services.message(e.getMessage(), MessageType.WARNING);
         }
     }
 
@@ -381,7 +381,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
         } catch (Exception e) {
             e.printStackTrace();
             this.triggerDisconnected();
-            message(e.getMessage(), MessageType.ERROR);
+            Services.message(e.getMessage(), MessageType.ERROR);
         }
     }
 
@@ -391,15 +391,15 @@ public class XFTPExplorerWindow extends XFTPWindow {
      */
     public void loadRemote (String path) {
         if (this.sftpChannel == null) {
-            message("Please connect to server first!", MessageType.INFO);
+            Services.message("Please connect to server first!", MessageType.INFO);
         } else if (!this.sftpChannel.isConnected()) {
-            message("SFTP lost connection, retrying...", MessageType.ERROR);
+            Services.message("SFTP lost connection, retrying...", MessageType.ERROR);
             this.connectSftp();
         }
 
         RemoteFileObject file = this.sftpChannel.file(path);
         if (!file.exists()) {
-            message(path + " does not exist!", MessageType.WARNING);
+            Services.message(path + " does not exist!", MessageType.WARNING);
         } if (!file.isDir()) {
             // 如果文件小于2M, 则自动下载到缓存目录并进行监听
             if (file.size() > EDITABLE_FILE_SIZE) {
@@ -501,9 +501,64 @@ public class XFTPExplorerWindow extends XFTPWindow {
      * @param localFile 本地文件
      * @param remoteFile 线上文件
      */
-    private void uploadFile (String localFile, String remoteFile) {
-        // TODO 上传文件
-        System.out.println("上传" + localFile + " -> " + remoteFile);
+    private void uploadFile (String localFile, RemoteFileObject remoteFile) {
+        System.out.println("上传" + localFile + ":" + remoteFile.path());
+
+        File file = new File(localFile);
+
+        Transfer transfer = new Transfer();
+        transfer.setType(Transfer.Type.UPLOAD);
+        transfer.setResult(Transfer.Result.TRANSFERRING);
+        transfer.setSource(localFile);
+        transfer.setSize(file.length());
+        transfer.setTarget(remoteFile.path());
+
+        Runnable runnable = () -> {
+            if (!file.exists()) {
+                Services.message("Can't find file " + localFile, MessageType.ERROR);
+                throw new IllegalStateException(localFile + " does not exists!");
+            }
+            try {
+                //noinspection UnstableApiUsage
+                this.sftpChannel.uploadFileOrDir(file, remoteFile.path(), "", new SftpProgressTracker() {
+                    @Override
+                    public boolean isCanceled() {
+    //                    transfer.setResult(Transfer.Result.FAIL);
+    //                    transfer.setException("Cancelled");
+    //                    this.removeFromQueue();
+                        return false;
+                    }
+
+                    @Override
+                    public void onFileCopied(@NotNull File file) {
+                        transfer.setResult(Transfer.Result.SUCCESS);
+                        transfer.setException(null);
+                        this.removeFromQueue();
+                    }
+
+                    @Override
+                    public void onBytesTransferred(long l) {
+                        transfer.setTransferred(l);
+                    }
+
+                    /**
+                     * 从队列中移除
+                     */
+                    private void removeFromQueue () {
+                        Runnable r = Maps.getFirstKeyByValue(Data.TRANSFERRING, transfer);
+                        Data.TRANSFERRING.remove(r);
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+                Runnable r = Maps.getFirstKeyByValue(Data.TRANSFERRING, transfer);
+                Data.TRANSFERRING.remove(r);
+                Services.message("Error occurred while uploading " + localFile + " to " + remoteFile.path(), MessageType.ERROR);
+            }
+        };
+        Data.TRANSFERRING.put(runnable, transfer);
+        Data.HISTORY.add(transfer);
+        Services.UPLOAD_POOL.execute(runnable);
     }
 
     /**
@@ -513,7 +568,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
      */
     private File downloadFile (RemoteFileObject file) {
         if (this.sftpChannel == null || !this.sftpChannel.isConnected()) {
-            message("Please start a sftp session first!", MessageType.INFO);
+            Services.message("Please start a sftp session first!", MessageType.INFO);
             return null;
         }
 
@@ -523,7 +578,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
             return localFile;
         } catch (Exception e) {
             e.printStackTrace();
-            message("error occurred while downloading file [" + file.path() + "], " + e.getMessage(), MessageType.ERROR);
+            Services.message("error occurred while downloading file [" + file.path() + "], " + e.getMessage(), MessageType.ERROR);
         }
 
         return null;
@@ -539,8 +594,13 @@ public class XFTPExplorerWindow extends XFTPWindow {
         }
 
         // 如果当前远程文件已经在编辑器中打开了, 则关闭之前的
-        if (this.remoteEditingFiles.containsKey(file.path())) {
-            File oldCachedFile = new File(this.remoteEditingFiles.get(file.path()));
+        RemoteFileObject existsRemoteFile = this.remoteEditingFiles
+                .keySet().stream()
+                .filter(rf -> rf.path().equals(file.path()))
+                .findFirst()
+                .orElse(null);
+        if (existsRemoteFile != null) {
+            File oldCachedFile = new File(this.remoteEditingFiles.get(existsRemoteFile));
             if (oldCachedFile.exists()) {
                 DialogWrapper dialog = new Confirm(new Confirm.Options()
                         .title("This file is editing")
@@ -553,6 +613,8 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 if (!dialog.showAndGet()) {
                     this.openFileInEditor(oldCachedFile);
                     return;
+                } else {
+                    this.remoteEditingFiles.remove(existsRemoteFile);
                 }
             }
         }
@@ -567,7 +629,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
         this.openFileInEditor(localFile);
 
         // 加入文件监听队列
-        this.remoteEditingFiles.put(file.path(), localFile.getAbsolutePath());
+        this.remoteEditingFiles.put(file, localFile.getAbsolutePath());
     }
 
     /**

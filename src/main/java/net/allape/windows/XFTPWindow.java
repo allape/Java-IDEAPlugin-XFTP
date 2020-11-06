@@ -22,9 +22,6 @@ import java.util.List;
 
 public class XFTPWindow {
 
-    // message中用到的group
-    static final protected String WINDOW_GROUP = "xftp";
-
     // 当前用户本地home目录
     static final protected String USER_HOME = System.getProperty("user.home");
 
@@ -59,16 +56,6 @@ public class XFTPWindow {
      * @param e {@link ContentManagerListener#contentRemoved(ContentManagerEvent)}的参数
      */
     public void onClosed (ContentManagerEvent e) { }
-
-    /**
-     * 消息提醒
-     * @param message 提示的消息
-     */
-    static protected void message (String message, MessageType type) {
-        NotificationGroup notificationGroup = new NotificationGroup(WINDOW_GROUP, NotificationDisplayType.BALLOON, false);
-        Notification notification = notificationGroup.createNotification(message, type);
-        Notifications.Bus.notify(notification);
-    }
 
     /**
      * 排序文件
