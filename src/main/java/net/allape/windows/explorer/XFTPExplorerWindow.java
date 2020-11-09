@@ -38,7 +38,10 @@ import net.schmizz.sshj.xfer.TransferListener;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
 import java.awt.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -257,6 +260,32 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             @Override
             public void mouseExited(MouseEvent e) {
 
+            }
+        });
+        this.remoteFileList.setDragEnabled(true);
+        this.remoteFileList.setDropMode(DropMode.ON);
+        this.remoteFileList.setTransferHandler(new TransferHandler() {
+            @Override
+            public boolean canImport(TransferSupport support) {
+                if (!support.isDrop()) {
+                    return false;
+                }
+
+                return support.isDataFlavorSupported(DataFlavor.javaFileListFlavor);
+            }
+
+            @Override
+            public boolean importData(TransferSupport support) {
+                try {
+                    //noinspection unchecked
+                    List<File> files = (List<File>) support.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
+                    for (File file : files) {
+                        self.uploadFile(file.getAbsolutePath(), self.sftpChannel.file(self.currentRemotePath));
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return false;
             }
         });
     }
