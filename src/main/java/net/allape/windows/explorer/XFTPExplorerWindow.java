@@ -417,9 +417,10 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             this.connectSftp();
         }
 
+        this.remoteFileList.setEnabled(false);
+        this.remotePath.setEnabled(false);
         try {
             path = path == null || path.isEmpty() ? this.sftpChannel.getHome() : path;
-            this.remotePath.setEnabled(false);
             RemoteFileObject file = this.sftpChannel.file(path);
             if (!file.exists()) {
                 Services.message(path + " does not exist!", MessageType.INFO);
@@ -455,6 +456,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             e.printStackTrace();
             Services.message("Error eccurred while listing remote files: " + e.getMessage(), MessageType.ERROR);
         } finally {
+            this.remoteFileList.setEnabled(true);
             this.remotePath.setEnabled(true);
         }
     }
