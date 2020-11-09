@@ -1,4 +1,4 @@
-package net.allape.windows;
+package net.allape.windows.explorer;
 
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
@@ -18,8 +18,6 @@ import com.intellij.ssh.RemoteFileObject;
 import com.intellij.ssh.channels.SftpChannel;
 import com.intellij.ssh.impl.sshj.channels.SshjSftpChannel;
 import com.intellij.ui.AnimatedIcon;
-import com.intellij.ui.DarculaColors;
-import com.intellij.ui.JBColor;
 import com.intellij.ui.content.ContentManagerEvent;
 import com.intellij.util.ReflectionUtil;
 import com.jetbrains.plugins.remotesdk.console.RemoteDataProducer;
@@ -29,13 +27,12 @@ import net.allape.dialogs.Confirm;
 import net.allape.models.FileModel;
 import net.allape.models.FileTableModel;
 import net.allape.models.Transfer;
-import net.allape.sftp.TransferListener;
+import net.allape.sftp.XFTPTransferListener;
 import net.allape.utils.Maps;
 import net.schmizz.sshj.sftp.SFTPClient;
 import net.schmizz.sshj.sftp.SFTPFileTransfer;
 import org.jetbrains.annotations.NotNull;
 
-import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -45,43 +42,25 @@ import java.lang.reflect.Field;
 import java.util.*;
 import java.util.List;
 
-public class XFTPExplorerWindow extends XFTPWindow {
-
-    private static final int COLLECTION_SIZE = 100;
-
-    // region UI objects
-
-    private JPanel panel;
-
-    private JScrollPane localFs;
-    private JTextField localFsPath;
-    private JList<FileModel> localFiles;
-
-    private JScrollPane remoteFs;
-    private JTextField remoteFsPath;
-    private JPanel remoteFsWrapper;
-    private JPanel sshConfigCBWrapper;
-    private JButton exploreButton;
-    private JButton disconnectButton;
-    private JTable remoteFiles;
-
-    // endregion
+public class XFTPExplorerWindow extends XFTPExplorerUI {
 
     // 上一次选择文件
     private FileModel lastFile = null;
 
     // 当前选中的本地文件
     private FileModel currentLocalFile = null;
-    // 当前选中的所有文件
+    // 当前选中的所有文件 TODO 拖拽上传
+    @SuppressWarnings("unused")
     private List<FileModel> selectedLocalFiles = new ArrayList<>(COLLECTION_SIZE);
 
     // 当前开启的channel
     private SftpChannel sftpChannel = null;
     // 当前channel中的sftp client
-    private SFTPClient sftpClient = null;
+    private SFTPFileTransfer sftpFileTransfer = null;
     // 当前选中的远程文件
     private FileModel currentRemoteFile = null;
-    // 当前选中的所有文件
+    // 当前选中的所有文件 TODO 拖拽下载
+    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
     private List<FileModel> selectedRemoteFiles = new ArrayList<>(COLLECTION_SIZE);
 
     // 修改中的远程文件, 用于文件修改后自动上传 key: remote file, value: local file
@@ -89,13 +68,10 @@ public class XFTPExplorerWindow extends XFTPWindow {
 
     public XFTPExplorerWindow(Project project, ToolWindow toolWindow) {
         super(project, toolWindow);
-        this.initUIStyle();
-        this.initUIAction();
 
         this.loadLocal(USER_HOME);
 
         final XFTPExplorerWindow self = XFTPExplorerWindow.this;
-
         // 初始化文件监听
         if (this.project != null) {
             this.project.getMessageBus().connect().subscribe(VirtualFileManager.VFS_CHANGES, new BulkFileListener() {
@@ -130,53 +106,19 @@ public class XFTPExplorerWindow extends XFTPWindow {
     }
 
     /**
-     * 初始化UI样式
-     */
-    @SuppressWarnings("unused")
-    private void initUIStyle () {
-        this.setDefaultTheme(this.panel);
-
-        this.setDefaultTheme(this.localFs);
-        this.localFs.setBorder(null);
-        this.setDefaultTheme(this.localFsPath);
-        this.setDefaultTheme(this.localFiles);
-        this.localFiles.setSelectionBackground(JBColor.namedColor(
-                "Plugins.lightSelectionBackground",
-                DarculaColors.BLUE
-        ));
-        this.localFiles.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-
-        this.setDefaultTheme(this.remoteFs);
-        this.remoteFs.setBorder(null);
-        this.setDefaultTheme(this.remoteFsWrapper);
-        this.setDefaultTheme(this.remoteFsPath);
-        this.setDefaultTheme(this.sshConfigCBWrapper);
-        this.setDefaultTheme(this.remoteFiles);
-        this.setDefaultTheme(this.exploreButton);
-        this.setDefaultTheme(this.disconnectButton);
-        this.remoteFiles.setSelectionBackground(JBColor.namedColor(
-                "Plugins.lightSelectionBackground",
-                DarculaColors.BLUE
-        ));
-        this.remoteFiles.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        this.remoteFiles.setAutoCreateRowSorter(false);
-        this.remoteFiles.setBorder(null);
-    }
-
-    /**
      * 初始化UI行为
      */
-    @SuppressWarnings("unused")
-    private void initUIAction () {
-        this.localFiles.setCellRenderer(new XFTPExplorerWindowListCellRenderer());
+    protected void initUI () {
+        super.initUI();
+
         // 设置当前选中的内容
-        this.localFiles.addListSelectionListener(e -> {
-            this.selectedLocalFiles = this.localFiles.getSelectedValuesList();
+        this.localFileList.addListSelectionListener(e -> {
+            this.selectedLocalFiles = this.localFileList.getSelectedValuesList();
             this.lastFile = this.currentLocalFile;
-            this.currentLocalFile = this.localFiles.getSelectedValue();
+            this.currentLocalFile = this.localFileList.getSelectedValue();
         });
         // 监听双击, 双击后打开文件或文件夹
-        this.localFiles.addMouseListener(new MouseListener() {
+        this.localFileList.addMouseListener(new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 final XFTPExplorerWindow self = XFTPExplorerWindow.this;
@@ -219,22 +161,22 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 this.disconnect(true);
             }
         });
-        this.remoteFiles.getSelectionModel().addListSelectionListener(e -> {
-            List<FileModel> allRemoteFiles = ((FileTableModel) this.remoteFiles.getModel()).getData();
+        this.remoteFileList.getSelectionModel().addListSelectionListener(e -> {
+            List<FileModel> allRemoteFiles = ((FileTableModel) this.remoteFileList.getModel()).getData();
 
-            int[] selectedRows = this.remoteFiles.getSelectedRows();
+            int[] selectedRows = this.remoteFileList.getSelectedRows();
             this.selectedRemoteFiles = new ArrayList<>(selectedRows.length);
             for (int i : selectedRows) {
                 this.selectedRemoteFiles.add(allRemoteFiles.get(i));
             }
 
-            int currentSelectRow = this.remoteFiles.getSelectedRow();
+            int currentSelectRow = this.remoteFileList.getSelectedRow();
             if (currentSelectRow != -1) {
                 this.lastFile = this.currentRemoteFile;
                 this.currentRemoteFile = allRemoteFiles.get(currentSelectRow);
             }
         });
-        this.remoteFiles.addMouseListener(new MouseListener() {
+        this.remoteFileList.addMouseListener(new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 final XFTPExplorerWindow self = XFTPExplorerWindow.this;
@@ -308,7 +250,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 }
 
                 path = file.getAbsolutePath();
-                this.localFsPath.setText(path);
+                this.localPath.setText(path);
 
                 List<FileModel> fileModels = new ArrayList<>(file.length() == 0 ? 1 : (file.length() > Integer.MAX_VALUE ?
                         Integer.MAX_VALUE :
@@ -331,7 +273,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
                     ));
                 }
 
-                rerenderFileList(this.localFiles, fileModels);
+                rerenderFileList(this.localFileList, fileModels);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -381,6 +323,25 @@ public class XFTPExplorerWindow extends XFTPWindow {
                                 this.sftpChannel = connectionBuilder.openSftpChannel();
                                 this.triggerConnected();
 
+                                // 获取sftpClient
+                                try {
+                                    // 使用反射获取到 net.schmizz.sshj.sftp.SFTPClient
+                                    Class<SshjSftpChannel> sftpChannelClass = SshjSftpChannel.class;
+
+                                    Field field = ReflectionUtil.findFieldInHierarchy(sftpChannelClass, f -> f.getType() == SFTPClient.class);
+                                    if (field == null) {
+                                        throw new IllegalArgumentException("Unable to upload files!");
+                                    }
+                                    field.setAccessible(true);
+                                    SFTPClient sftpClient = (SFTPClient) field.get(this.sftpChannel);
+                                    this.sftpFileTransfer = sftpClient.getFileTransfer();
+                                    this.sftpFileTransfer.setTransferListener(new XFTPTransferListener(sftpClient.getSFTPEngine().getSubsystem().getLoggerFactory()));
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                    Services.message("Failed to get sftp client for this session, please try it again: "
+                                            + e.getMessage(), MessageType.ERROR);
+                                }
+
                                 this.loadRemote(this.sftpChannel.getHome());
                             }
                     );
@@ -419,7 +380,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 this.downloadFileAndEdit(file);
             }
         } else {
-            this.remoteFsPath.setText(path);
+            this.remotePath.setText(path);
 
             List<RemoteFileObject> files = file.list();
             List<FileModel> fileModels = new ArrayList<>(files.size());
@@ -431,7 +392,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 fileModels.add(new FileModel(f.path(), f.name(), f.isDir(), f.size(), f.getPermissions()));
             }
 
-            rerenderFileTable(this.remoteFiles, fileModels);
+            rerenderFileTable(this.remoteFileList, fileModels);
         }
     }
 
@@ -444,11 +405,11 @@ public class XFTPExplorerWindow extends XFTPWindow {
         }
 
         this.sftpChannel = null;
-        this.sftpClient = null;
+        this.sftpFileTransfer = null;
 
         // 清空列表
-        if (this.remoteFiles.getModel() instanceof FileTableModel) {
-            ((FileTableModel) this.remoteFiles.getModel()).resetData(new ArrayList<>());
+        if (this.remoteFileList.getModel() instanceof FileTableModel) {
+            ((FileTableModel) this.remoteFileList.getModel()).resetData(new ArrayList<>());
         }
         // 清空文件列表
         this.remoteEditingFiles = new HashMap<>();
@@ -482,15 +443,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
         this.exploreButton.setEnabled(true);
         this.exploreButton.setVisible(true);
         this.disconnectButton.setVisible(false);
-        this.remoteFsPath.setText("");
-    }
-
-    /**
-     * 获取JPanel
-     * @return JPanel
-     */
-    public JPanel getPanel () {
-        return this.panel;
+        this.remotePath.setText("");
     }
 
     /**
@@ -527,20 +480,7 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 throw new IllegalStateException(localFile + " does not exists!");
             }
             try {
-                // 使用反射获取到 net.schmizz.sshj.sftp.SFTPClient
-                Class<SshjSftpChannel> sftpChannelClass = SshjSftpChannel.class;
-
-                Field field = ReflectionUtil.findFieldInHierarchy(sftpChannelClass, f -> f.getType() == SFTPClient.class);
-                if (field == null) {
-                    throw new IllegalArgumentException("Unable to upload files!");
-                }
-                field.setAccessible(true);
-                SFTPClient sftpClient = (SFTPClient) field.get(this.sftpChannel);
-
-                SFTPFileTransfer fileTransfer = sftpClient.getFileTransfer();
-                fileTransfer.setTransferListener(new TransferListener(sftpClient.getSFTPEngine().getSubsystem().getLoggerFactory()));
-                fileTransfer.upload(file.getAbsolutePath(), remoteFile.path());
-
+                this.sftpFileTransfer.upload(file.getAbsolutePath(), remoteFile.path());
             } catch (Exception e) {
                 e.printStackTrace();
                 Services.message("Error occurred while uploading " + localFile + " to " + remoteFile.path() + ", " +
@@ -613,9 +553,9 @@ public class XFTPExplorerWindow extends XFTPWindow {
             }
         }
 
-        this.panel.setEnabled(false);
+        this.panelWrapper.setEnabled(false);
         File localFile = this.downloadFile(file);
-        this.panel.setEnabled(true);
+        this.panelWrapper.setEnabled(true);
         if (localFile == null) {
             return;
         }

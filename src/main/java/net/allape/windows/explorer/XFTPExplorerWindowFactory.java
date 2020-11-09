@@ -1,4 +1,4 @@
-package net.allape.windows;
+package net.allape.windows.explorer;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
@@ -7,6 +7,7 @@ import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.ui.content.*;
 import net.allape.bus.Data;
 import net.allape.bus.Services;
+import net.allape.windows.XFTPWindow;
 import org.jetbrains.annotations.NotNull;
 
 public class XFTPExplorerWindowFactory implements ToolWindowFactory {
@@ -45,7 +46,7 @@ public class XFTPExplorerWindowFactory implements ToolWindowFactory {
         //获取内容工厂的实例
         ContentFactory contentFactory = ContentFactory.SERVICE.getInstance();
         //获取用于toolWindow显示的内容
-        Content content = contentFactory.createContent(window.getPanel(), "Explorer", false);
+        Content content = contentFactory.createContent(window.getPanelWrapper(), "Explorer", false);
         content.setCloseable(true);
         //给toolWindow设置内容
         ContentManager contentManager = toolWindow.getContentManager();

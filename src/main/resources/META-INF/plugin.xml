@@ -18,7 +18,7 @@
                     secondary="true"
                     anchor="bottom"
                     canCloseContents="true"
-                    factoryClass="net.allape.windows.XFTPExplorerWindowFactory">
+                    factoryClass="net.allape.windows.explorer.XFTPExplorerWindowFactory">
         </toolWindow>
     </extensions>
 

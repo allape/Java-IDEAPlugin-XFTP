@@ -1,11 +1,6 @@
 package net.allape.windows;
 
-import com.intellij.notification.Notification;
-import com.intellij.notification.NotificationDisplayType;
-import com.intellij.notification.NotificationGroup;
-import com.intellij.notification.Notifications;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.ui.MessageType;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.content.ContentManagerEvent;
@@ -22,14 +17,17 @@ import java.util.List;
 
 public class XFTPWindow {
 
+    // 默认集合大小
+    protected static final int COLLECTION_SIZE = 100;
+
     // 当前用户本地home目录
-    static final protected String USER_HOME = System.getProperty("user.home");
+    protected static final String USER_HOME = System.getProperty("user.home");
 
     // 双击间隔, 毫秒
-    static final protected long DOUBLE_CLICK_INTERVAL = 350;
+    protected static final long DOUBLE_CLICK_INTERVAL = 350;
 
     // 最大可打开文件
-    static final protected long EDITABLE_FILE_SIZE = 2 * 1024 * 1024;
+    protected static final long EDITABLE_FILE_SIZE = 2 * 1024 * 1024;
 
     // 双击监听
     protected long clickWatcher = System.currentTimeMillis();
@@ -40,15 +38,6 @@ public class XFTPWindow {
     public XFTPWindow (Project project, ToolWindow toolWindow) {
         this.project = project;
         this.toolWindow = toolWindow;
-    }
-
-    /**
-     * 设置为IDE自带的样式
-     * @param component 操作的控件
-     */
-    protected void setDefaultTheme (JComponent component) {
-        component.setBackground(JBColor.background());
-        component.setForeground(JBColor.foreground());
     }
 
     /**
@@ -88,9 +77,6 @@ public class XFTPWindow {
     static protected void rerenderFileList (JList<FileModel> ui, List<FileModel> files) {
         // 清空列表后将现在的内容添加进去
         ui.clearSelection();
-        if (!(ui.getModel() instanceof DefaultListModel)) {
-            ui.setModel(new DefaultListModel<>());
-        }
         ui.setListData(sortFiles(files).toArray(new FileModel[]{}));
     }
 
@@ -100,17 +86,7 @@ public class XFTPWindow {
      * @param files 展示的文件列表
      */
     static protected void rerenderFileTable (JTable ui, List<FileModel> files) {
-        if (!(ui.getModel() instanceof FileTableModel)) {
-            ui.setModel(new FileTableModel());
-
-            TableColumn typeColumn = ui.getColumnModel().getColumn(0);
-            DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
-            centerRenderer.setHorizontalAlignment(JLabel.CENTER);
-            typeColumn.setCellRenderer(centerRenderer);
-            typeColumn.setMaxWidth(25);
-        }
-        FileTableModel model = ((FileTableModel) (ui.getModel()));
-        model.resetData(sortFiles(files));
+        ((FileTableModel) (ui.getModel())).resetData(sortFiles(files));
     }
 
 }
