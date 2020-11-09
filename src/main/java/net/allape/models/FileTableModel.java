@@ -1,5 +1,6 @@
 package net.allape.models;
 
+import net.allape.utils.LinuxPermissions;
 import org.apache.commons.io.FileUtils;
 
 import javax.swing.table.AbstractTableModel;
@@ -39,8 +40,9 @@ public class FileTableModel extends AbstractTableModel {
             switch (columnIndex) {
                 case 0: return model.getFolder() ? "📁" : "📃";
                 case 1: return model.getName();
-                case 2: return model.getSize() == null ? "" : FileUtils.byteCountToDisplaySize(model.getSize());
-                case 3: return model.getPermissions() == null ? "" : Integer.toHexString(model.getPermissions());
+                case 2: return model.getFolder() || model.getSize() == null ?
+                        "" : FileUtils.byteCountToDisplaySize(model.getSize());
+                case 3: return model.getPermissions() == null ? "" : LinuxPermissions.humanReadable(model.getPermissions());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -68,4 +70,5 @@ public class FileTableModel extends AbstractTableModel {
     public List<FileModel> getData() {
         return data;
     }
+
 }

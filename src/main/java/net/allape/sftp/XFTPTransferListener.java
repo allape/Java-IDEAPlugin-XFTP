@@ -1,12 +1,18 @@
 package net.allape.sftp;
 
-import net.schmizz.sshj.common.LoggerFactory;
-import net.schmizz.sshj.xfer.LoggingTransferListener;
+import net.schmizz.sshj.common.StreamCopier;
+import net.schmizz.sshj.xfer.TransferListener;
 
-public class XFTPTransferListener extends LoggingTransferListener {
+public class XFTPTransferListener implements TransferListener {
 
-    public XFTPTransferListener(LoggerFactory loggerFactory) {
-        super(loggerFactory);
+    @Override
+    public TransferListener directory(String name) {
+        return this;
+    }
+
+    @Override
+    public StreamCopier.Listener file(String name, long size) {
+        return null;
     }
 
 }

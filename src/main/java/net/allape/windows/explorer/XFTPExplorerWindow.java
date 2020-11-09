@@ -2,6 +2,9 @@ package net.allape.windows.explorer;
 
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
+import com.intellij.openapi.progress.ProgressIndicator;
+import com.intellij.openapi.progress.ProgressManager;
+import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.MessageType;
@@ -29,8 +32,10 @@ import net.allape.models.FileTableModel;
 import net.allape.models.Transfer;
 import net.allape.sftp.XFTPTransferListener;
 import net.allape.utils.Maps;
+import net.schmizz.sshj.common.StreamCopier;
 import net.schmizz.sshj.sftp.SFTPClient;
 import net.schmizz.sshj.sftp.SFTPFileTransfer;
+import net.schmizz.sshj.xfer.TransferListener;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -61,7 +66,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     // 当前开启的channel
     private SftpChannel sftpChannel = null;
     // 当前channel中的sftp client
-    private SFTPFileTransfer sftpFileTransfer = null;
+    private SFTPClient sftpClient = null;
 
     // 当前远程路径
     private String currentRemotePath = null;
@@ -383,9 +388,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                         throw new IllegalArgumentException("Unable to upload files!");
                                     }
                                     field.setAccessible(true);
-                                    SFTPClient sftpClient = (SFTPClient) field.get(this.sftpChannel);
-                                    this.sftpFileTransfer = sftpClient.getFileTransfer();
-                                    this.sftpFileTransfer.setTransferListener(new XFTPTransferListener(sftpClient.getSFTPEngine().getSubsystem().getLoggerFactory()));
+                                    this.sftpClient = (SFTPClient) field.get(this.sftpChannel);
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                     Services.message("Failed to get sftp client for this session, please try it again: "
@@ -465,7 +468,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         }
 
         this.sftpChannel = null;
-        this.sftpFileTransfer = null;
+        this.sftpClient = null;
 
         if (triggerEvent) {
             this.triggerDisconnected();
@@ -559,14 +562,49 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         transfer.setSize(file.length());
         transfer.setTarget(remoteFile.path());
 
+        XFTPExplorerWindow self = XFTPExplorerWindow.this;
+
         Runnable runnable = () -> {
-            if (!file.exists()) {
-                Services.message("Can't find file " + localFile, MessageType.ERROR);
-                throw new IllegalStateException(localFile + " does not exists!");
-            }
             try {
-                this.sftpFileTransfer.upload(file.getAbsolutePath(), remoteFile.path());
-            } catch (Exception e) {
+                if (!file.exists()) {
+                    Services.message("Can't find file " + localFile, MessageType.ERROR);
+                    throw new IllegalStateException(localFile + " does not exists!");
+                }
+
+                ProgressManager.getInstance().run(new Task.Backgroundable(this.project, "Upload " + localFile + " to " + remoteFile.path()) {
+                    @Override
+                    public void run(@NotNull ProgressIndicator indicator) {
+                        try {
+                            SFTPFileTransfer fileTransfer = new SFTPFileTransfer(self.sftpClient.getSFTPEngine());
+                            fileTransfer.setTransferListener(new TransferListener() {
+                                @Override
+                                public TransferListener directory(String name) {
+                                    return this;
+                                }
+
+                                @Override
+                                public StreamCopier.Listener file(String name, long size) {
+                                    return transferred -> {
+                                        double percent = ((double) transferred) / size;
+                                        indicator.setFraction(percent);
+                                        indicator.setText((Math.round(percent * 100) / 100) + "%");
+                                        indicator.setText2("Uploading " + localFile + " to " + remoteFile.path());
+                                    };
+                                }
+                            });
+                            fileTransfer.upload(file.getAbsolutePath(), remoteFile.path());
+                            // Services.message(remoteFile.path() + " Uploaded", MessageType.INFO);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            Services.message("Error occurred while uploading " + localFile + " to " + remoteFile.path() + ", " +
+                                    e.getMessage(), MessageType.ERROR);
+                        } finally {
+                            Runnable r = Maps.getFirstKeyByValue(Data.TRANSFERRING, transfer);
+                            Data.TRANSFERRING.remove(r);
+                        }
+                    }
+                });
+            } catch (IllegalStateException e) {
                 e.printStackTrace();
                 Services.message("Error occurred while uploading " + localFile + " to " + remoteFile.path() + ", " +
                         e.getMessage(), MessageType.ERROR);
@@ -574,6 +612,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 Runnable r = Maps.getFirstKeyByValue(Data.TRANSFERRING, transfer);
                 Data.TRANSFERRING.remove(r);
             }
+
         };
         Data.TRANSFERRING.put(runnable, transfer);
         Data.HISTORY.add(transfer);
