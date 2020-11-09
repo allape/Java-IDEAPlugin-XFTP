@@ -555,6 +555,20 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     private void uploadFile (String localFile, RemoteFileObject remoteFile) {
         System.out.println("上传" + localFile + ":" + remoteFile.path());
 
+        // 检查当前传输的队列, 存在相同target的, 取消上一个任务
+        for (Map.Entry<Runnable, Transfer> entry : Data.TRANSFERRING.entrySet()) {
+            Transfer exists = entry.getValue();
+            if (exists.getTarget().equals(remoteFile.path())) {
+                if (exists.getFuture() != null) {
+                    try {
+                        exists.getFuture().cancel(true);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+
         File file = new File(localFile);
 
         Transfer transfer = new Transfer();
@@ -602,7 +616,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                     e.getMessage(), MessageType.ERROR);
                         } finally {
                             Runnable r = Maps.getFirstKeyByValue(Data.TRANSFERRING, transfer);
-                            Data.TRANSFERRING.remove(r);
+                            if (r != null) Data.TRANSFERRING.remove(r);
                         }
                     }
                 });
@@ -612,13 +626,23 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                         e.getMessage(), MessageType.ERROR);
             } finally {
                 Runnable r = Maps.getFirstKeyByValue(Data.TRANSFERRING, transfer);
-                Data.TRANSFERRING.remove(r);
+                if (r != null) Data.TRANSFERRING.remove(r);
             }
-
         };
+
+        // 添加到线程池队列
+        try {
+            transfer.setFuture(Services.UPLOAD_POOL.submit(runnable));
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        } finally {
+            Runnable r = Maps.getFirstKeyByValue(Data.TRANSFERRING, transfer);
+            if (r != null) Data.TRANSFERRING.remove(r);
+        }
+
         Data.TRANSFERRING.put(runnable, transfer);
         Data.HISTORY.add(transfer);
-        Services.UPLOAD_POOL.execute(runnable);
     }
 
     /**
