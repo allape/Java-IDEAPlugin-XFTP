@@ -30,7 +30,6 @@ import net.allape.dialogs.Confirm;
 import net.allape.models.FileModel;
 import net.allape.models.FileTableModel;
 import net.allape.models.Transfer;
-import net.allape.sftp.XFTPTransferListener;
 import net.allape.utils.Maps;
 import net.schmizz.sshj.common.StreamCopier;
 import net.schmizz.sshj.sftp.SFTPClient;
@@ -553,7 +552,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      * @param remoteFile 线上文件
      */
     private void uploadFile (String localFile, RemoteFileObject remoteFile) {
-        System.out.println("上传" + localFile + ":" + remoteFile.path());
+        // System.out.println("上传" + localFile + ":" + remoteFile.path());
 
         // 检查当前传输的队列, 存在相同target的, 取消上一个任务
         for (Map.Entry<Runnable, Transfer> entry : Data.TRANSFERRING.entrySet()) {
@@ -590,6 +589,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 ProgressManager.getInstance().run(new Task.Backgroundable(this.project, "Upload " + localFile + " to " + remoteFile.path()) {
                     @Override
                     public void run(@NotNull ProgressIndicator indicator) {
+                        indicator.setIndeterminate(false);
                         try {
                             SFTPFileTransfer fileTransfer = new SFTPFileTransfer(self.sftpClient.getSFTPEngine());
                             fileTransfer.setTransferListener(new TransferListener() {
