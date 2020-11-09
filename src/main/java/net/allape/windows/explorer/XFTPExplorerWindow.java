@@ -446,7 +446,11 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 fileModels.add(this.getParentFolder(path, "/"));
 
                 for (RemoteFileObject f : files) {
-                    fileModels.add(new FileModel(f.path(), f.name(), f.isDir(), f.size(), f.getPermissions()));
+                    fileModels.add(new FileModel(
+                            // 处理有些文件夹是//开头的
+                            f.path().startsWith("//") ? f.path().substring(1) : f.path(),
+                            f.name(), f.isDir(), f.size(), f.getPermissions()
+                    ));
                 }
 
                 rerenderFileTable(this.remoteFileList, fileModels);
