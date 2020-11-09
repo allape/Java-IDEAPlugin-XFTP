@@ -344,7 +344,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 fileModels.add(this.getParentFolder(path, File.separator));
 
                 for (File currentFile : files) {
-                    // FIXME 完善文件权限换算
                     fileModels.add(new FileModel(
                             currentFile.getAbsolutePath(),
                             currentFile.getName(),
@@ -472,12 +471,12 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 List<FileModel> fileModels = new ArrayList<>(files.size());
 
                 // 添加返回上一级目录
-                fileModels.add(this.getParentFolder(path, "/"));
+                fileModels.add(this.getParentFolder(path, SERVER_FILE_SYSTEM_SEPARATOR));
 
                 for (RemoteFileObject f : files) {
                     fileModels.add(new FileModel(
                             // 处理有些文件夹是//开头的
-                            f.path().startsWith("//") ? f.path().substring(1) : f.path(),
+                            this.normalizeRemoteFileObjectPath(f),
                             f.name(), f.isDir(), f.size(), f.getPermissions()
                     ));
                 }
@@ -641,7 +640,23 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                     };
                                 }
                             });
-                            fileTransfer.upload(file.getAbsolutePath(), remoteFile.path());
+
+                            String normalizedPath = self.normalizeRemoteFileObjectPath(remoteFile);
+                            fileTransfer.upload(file.getAbsolutePath(), normalizedPath);
+
+                            // 如果上传目录和当前目录相同, 则刷新目录
+                            if (remoteFile.isDir()) {
+                                if (normalizedPath.equals(self.currentRemotePath)) {
+                                    self.loadRemote(self.currentRemotePath);
+                                }
+                            } else {
+                                if (self.getParentFolder(normalizedPath, SERVER_FILE_SYSTEM_SEPARATOR)
+                                        .getPath()
+                                        .equals(self.currentRemotePath)) {
+                                    self.loadRemote(self.currentRemotePath);
+                                }
+                            }
+
                             // Services.message(remoteFile.path() + " Uploaded", MessageType.INFO);
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -762,6 +777,15 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 ),
                 true
         );
+    }
+
+    /**
+     * 格式化远程文件的路径, 因为有的文件开头是//
+     * @param file 远程文件信息
+     * @return 格式化后的文件路径
+     */
+    private String normalizeRemoteFileObjectPath (RemoteFileObject file) {
+        return file.path().startsWith("//") ? file.path().substring(1) : file.path();
     }
 
 }

@@ -2,20 +2,20 @@ package net.allape.windows;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
-import com.intellij.ui.JBColor;
 import com.intellij.ui.content.ContentManagerEvent;
 import com.intellij.ui.content.ContentManagerListener;
 import net.allape.models.FileModel;
 import net.allape.models.FileTableModel;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.TableColumn;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 public class XFTPWindow {
+
+    // 服务器文件系统分隔符
+    protected static final String SERVER_FILE_SYSTEM_SEPARATOR = "/";
 
     // 默认集合大小
     protected static final int COLLECTION_SIZE = 100;
