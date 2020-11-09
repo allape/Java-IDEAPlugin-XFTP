@@ -15,7 +15,6 @@ import com.intellij.remote.RemoteConnectionType;
 import com.intellij.ssh.ConnectionBuilder;
 import com.intellij.ssh.RemoteCredentialsUtil;
 import com.intellij.ssh.RemoteFileObject;
-import com.intellij.ssh.SftpProgressTracker;
 import com.intellij.ssh.channels.SftpChannel;
 import com.intellij.ssh.impl.sshj.channels.SshjSftpChannel;
 import com.intellij.ui.AnimatedIcon;
@@ -35,7 +34,6 @@ import net.allape.utils.Maps;
 import net.schmizz.sshj.sftp.SFTPClient;
 import net.schmizz.sshj.sftp.SFTPFileTransfer;
 import org.jetbrains.annotations.NotNull;
-import org.omg.CORBA.TRANSACTION_MODE;
 
 import javax.swing.*;
 import java.awt.*;
@@ -79,6 +77,8 @@ public class XFTPExplorerWindow extends XFTPWindow {
 
     // 当前开启的channel
     private SftpChannel sftpChannel = null;
+    // 当前channel中的sftp client
+    private SFTPClient sftpClient = null;
     // 当前选中的远程文件
     private FileModel currentRemoteFile = null;
     // 当前选中的所有文件
@@ -441,8 +441,10 @@ public class XFTPExplorerWindow extends XFTPWindow {
     public void disconnect (boolean triggerEvent) {
         if (this.sftpChannel != null && this.sftpChannel.isConnected()) {
             this.sftpChannel.disconnect();
-            this.sftpChannel = null;
         }
+
+        this.sftpChannel = null;
+        this.sftpClient = null;
 
         // 清空列表
         if (this.remoteFiles.getModel() instanceof FileTableModel) {
@@ -525,10 +527,6 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 throw new IllegalStateException(localFile + " does not exists!");
             }
             try {
-                // FIXME 上传存在问题
-                //  1、上传的远程路径被添加了一个斜杠
-                //  2、提示本地文件不存在
-
                 // 使用反射获取到 net.schmizz.sshj.sftp.SFTPClient
                 Class<SshjSftpChannel> sftpChannelClass = SshjSftpChannel.class;
 
@@ -543,33 +541,6 @@ public class XFTPExplorerWindow extends XFTPWindow {
                 fileTransfer.setTransferListener(new TransferListener(sftpClient.getSFTPEngine().getSubsystem().getLoggerFactory()));
                 fileTransfer.upload(file.getAbsolutePath(), remoteFile.path());
 
-                //noinspection UnstableApiUsage
-                /*this.sftpChannel.uploadFileOrDir(file, remoteFile.path(), "", new SftpProgressTracker() {
-                    @Override
-                    public boolean isCanceled() {
-    //                    transfer.setResult(Transfer.Result.FAIL);
-    //                    transfer.setException("Cancelled");
-    //                    this.removeFromQueue();
-                        return false;
-                    }
-
-                    @Override
-                    public void onFileCopied(@NotNull File file) {
-                        transfer.setResult(Transfer.Result.SUCCESS);
-                        transfer.setException(null);
-                        this.removeFromQueue();
-                    }
-
-                    @Override
-                    public void onBytesTransferred(long l) {
-                        transfer.setTransferred(l);
-                    }
-
-                    private void removeFromQueue () {
-                        Runnable r = Maps.getFirstKeyByValue(Data.TRANSFERRING, transfer);
-                        Data.TRANSFERRING.remove(r);
-                    }
-                });*/
             } catch (Exception e) {
                 e.printStackTrace();
                 Services.message("Error occurred while uploading " + localFile + " to " + remoteFile.path() + ", " +
