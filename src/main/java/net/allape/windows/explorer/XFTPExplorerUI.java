@@ -23,9 +23,9 @@ public class XFTPExplorerUI extends XFTPWindow {
 
     @SuppressWarnings("rawtypes")
     protected JBPanel localWrapper = new JBPanel(new GridBagLayout());
-    protected JBScrollPane localFileListWrapper = new JBScrollPane();
     protected JBTextField localPath = new JBTextField();
     protected JBList<FileModel> localFileList = new JBList<>(new DefaultListModel<>());
+    protected JBScrollPane localFileListWrapper = new JBScrollPane(localFileList);
 
     @SuppressWarnings("rawtypes")
     protected JBPanel remoteWrapper = new JBPanel(new GridBagLayout());
@@ -34,8 +34,8 @@ public class XFTPExplorerUI extends XFTPWindow {
     protected JBTextField remotePath = new JBTextField();
     protected JButton exploreButton = new JButton("Explorer");
     protected JButton disconnectButton = new JButton("Disconnect");
-    protected JBScrollPane remoteFileListWrapper = new JBScrollPane();
     protected JBTable remoteFileList = new JBTable(new FileTableModel());
+    protected JBScrollPane remoteFileListWrapper = new JBScrollPane(remoteFileList);
 
     public XFTPExplorerUI(Project project, ToolWindow toolWindow) {
         super(project, toolWindow);
@@ -66,11 +66,12 @@ public class XFTPExplorerUI extends XFTPWindow {
         this.panel.add(this.localWrapper, Grids.X0Y0);
         this.panel.add(this.remoteWrapper, Grids.X1Y0);
 
-        this.localWrapper.add(this.localPath, Grids.X0Y0);
-        this.localWrapper.add(this.localFileListWrapper, Grids.X0Y1);
+        GridBagConstraints noWeight = (GridBagConstraints) Grids.X0Y0.clone();
+        noWeight.weightx = 0;
+        noWeight.weighty = 0;
 
-        this.localFileListWrapper.add(this.localFileList);
-        this.localFileListWrapper.setBorder(null);
+        this.localWrapper.add(this.localPath, noWeight);
+        this.localWrapper.add(this.localFileListWrapper, Grids.X0Y1);
 
         this.localFileList.setCellRenderer(new XFTPExplorerWindowListCellRenderer());
         this.localFileList.setSelectionBackground(JBColor.namedColor(
@@ -79,15 +80,18 @@ public class XFTPExplorerUI extends XFTPWindow {
         ));
         this.localFileList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 
-        this.remoteWrapper.add(this.remoteTopWrapper, Grids.X0Y0);
+        this.localFileListWrapper.setBorder(null);
+
+        this.remoteWrapper.add(this.remoteTopWrapper, noWeight);
         this.remoteWrapper.add(this.remoteFileListWrapper, Grids.X0Y1);
 
         this.remoteTopWrapper.add(this.remotePath, Grids.X0Y0);
-        this.remoteTopWrapper.add(this.exploreButton, Grids.X1Y0);
-        this.remoteTopWrapper.add(this.disconnectButton, Grids.X2Y0);
-
-        this.remoteFileListWrapper.add(this.remoteFileList);
-        this.remoteFileListWrapper.setBorder(null);
+        GridBagConstraints exploreButtonGrid = (GridBagConstraints) Grids.X1Y0.clone();
+        exploreButtonGrid.weightx = 0;
+        this.remoteTopWrapper.add(this.exploreButton, exploreButtonGrid);
+        GridBagConstraints disconnectButtonGrid = (GridBagConstraints) Grids.X2Y0.clone();
+        disconnectButtonGrid.weightx = 0;
+        this.remoteTopWrapper.add(this.disconnectButton, disconnectButtonGrid);
 
         this.remoteFileList.setSelectionBackground(JBColor.namedColor(
                 "Plugins.lightSelectionBackground",
@@ -101,6 +105,8 @@ public class XFTPExplorerUI extends XFTPWindow {
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
         typeColumn.setCellRenderer(centerRenderer);
         typeColumn.setMaxWidth(25);
+
+        this.remoteFileListWrapper.setBorder(null);
     }
 
     /**

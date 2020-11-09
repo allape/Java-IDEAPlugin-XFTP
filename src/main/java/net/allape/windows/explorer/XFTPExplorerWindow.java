@@ -32,8 +32,11 @@ import net.allape.utils.Maps;
 import net.schmizz.sshj.sftp.SFTPClient;
 import net.schmizz.sshj.sftp.SFTPFileTransfer;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
@@ -47,6 +50,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     // 上一次选择文件
     private FileModel lastFile = null;
 
+    // 当前本地路径
+    private String currentLocalPath = null;
     // 当前选中的本地文件
     private FileModel currentLocalFile = null;
     // 当前选中的所有文件 TODO 拖拽上传
@@ -57,6 +62,9 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     private SftpChannel sftpChannel = null;
     // 当前channel中的sftp client
     private SFTPFileTransfer sftpFileTransfer = null;
+
+    // 当前远程路径
+    private String currentRemotePath = null;
     // 当前选中的远程文件
     private FileModel currentRemoteFile = null;
     // 当前选中的所有文件 TODO 拖拽下载
@@ -69,7 +77,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     public XFTPExplorerWindow(Project project, ToolWindow toolWindow) {
         super(project, toolWindow);
 
-        this.loadLocal(USER_HOME);
+        this.loadLocal(null);
 
         final XFTPExplorerWindow self = XFTPExplorerWindow.this;
         // 初始化文件监听
@@ -111,6 +119,27 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     protected void initUI () {
         super.initUI();
 
+        final XFTPExplorerWindow self = XFTPExplorerWindow.this;
+
+        this.localPath.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                // 回车
+                if (e.getKeyChar() == '\n') {
+                    self.loadLocal(self.localPath.getText());
+                }
+            }
+        });
         // 设置当前选中的内容
         this.localFileList.addListSelectionListener(e -> {
             this.selectedLocalFiles = this.localFileList.getSelectedValuesList();
@@ -121,7 +150,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         this.localFileList.addMouseListener(new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                final XFTPExplorerWindow self = XFTPExplorerWindow.this;
                 long now = System.currentTimeMillis();
                 if (self.lastFile == self.currentLocalFile && now - self.clickWatcher < DOUBLE_CLICK_INTERVAL) {
                     self.loadLocal(self.currentLocalFile.getPath());
@@ -151,7 +179,27 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         });
 
         // 弹出的时候获取ssh配置
+        this.remotePath.setEnabled(false);
+        this.remotePath.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (e.getKeyChar() == '\n') {
+                    self.loadRemote(self.remotePath.getText());
+                }
+            }
+        });
         this.exploreButton.addActionListener(e -> this.connectSftp());
+        this.disconnectButton.setVisible(false);
         this.disconnectButton.addActionListener(e -> {
             DialogWrapper dialog = new Confirm(new Confirm.Options()
                     .title("Disconnecting")
@@ -179,7 +227,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         this.remoteFileList.addMouseListener(new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                final XFTPExplorerWindow self = XFTPExplorerWindow.this;
                 long now = System.currentTimeMillis();
                 if (self.lastFile == self.currentRemoteFile && now - self.clickWatcher < DOUBLE_CLICK_INTERVAL) {
                     self.loadRemote(self.currentRemoteFile.getPath());
@@ -212,13 +259,15 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
     /**
      * 获取本地文件目录
-     * @param path 路径
+     * @param path 路径, 为null为空时加载{@link this#USER_HOME}
      */
-    public void loadLocal (String path) {
+    public void loadLocal (@Nullable String path) {
         try {
+            path = path == null || path.isEmpty() ? USER_HOME : path;
             File file = new File(path);
             if (!file.exists()) {
-                Services.message(path + " does not exist!", MessageType.WARNING);
+                Services.message(path + " does not exist!", MessageType.INFO);
+                this.setCurrentLocalPath(this.currentLocalPath);
             } else if (!file.isDirectory()) {
                 if (file.length() > EDITABLE_FILE_SIZE) {
                     DialogWrapper dialog = new Confirm(new Confirm.Options()
@@ -250,7 +299,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 }
 
                 path = file.getAbsolutePath();
-                this.localPath.setText(path);
+
+                this.setCurrentLocalPath(path);
 
                 List<FileModel> fileModels = new ArrayList<>(file.length() == 0 ? 1 : (file.length() > Integer.MAX_VALUE ?
                         Integer.MAX_VALUE :
@@ -258,7 +308,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 ));
 
                 // 添加返回上一级目录
-                fileModels.add(this.getLastFolder(path, File.separator));
+                fileModels.add(this.getParentFolder(path, File.separator));
 
                 for (File currentFile : files) {
                     // FIXME 完善文件权限换算
@@ -354,9 +404,9 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
     /**
      * 获取远程文件目录
-     * @param path 默认地址, 为null时自动使用sftp默认文件夹
+     * @param path 默认地址, 为null为空时使用sftp默认文件夹
      */
-    public void loadRemote (String path) {
+    public void loadRemote (@Nullable String path) {
         if (this.sftpChannel == null) {
             Services.message("Please connect to server first!", MessageType.INFO);
         } else if (!this.sftpChannel.isConnected()) {
@@ -364,35 +414,45 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             this.connectSftp();
         }
 
-        RemoteFileObject file = this.sftpChannel.file(path);
-        if (!file.exists()) {
-            Services.message(path + " does not exist!", MessageType.WARNING);
-        } if (!file.isDir()) {
-            // 如果文件小于2M, 则自动下载到缓存目录并进行监听
-            if (file.size() > EDITABLE_FILE_SIZE) {
-                DialogWrapper dialog = new Confirm(new Confirm.Options()
-                        .title("This file is too large for text editor")
-                        .content("Do you still want to download and edit it?"));
-                if (dialog.showAndGet()) {
+        try {
+            path = path == null || path.isEmpty() ? this.sftpChannel.getHome() : path;
+            this.remotePath.setEnabled(false);
+            RemoteFileObject file = this.sftpChannel.file(path);
+            if (!file.exists()) {
+                Services.message(path + " does not exist!", MessageType.INFO);
+                this.setCurrentRemotePath(this.currentRemotePath);
+            } else if (!file.isDir()) {
+                // 如果文件小于2M, 则自动下载到缓存目录并进行监听
+                if (file.size() > EDITABLE_FILE_SIZE) {
+                    DialogWrapper dialog = new Confirm(new Confirm.Options()
+                            .title("This file is too large for text editor")
+                            .content("Do you still want to download and edit it?"));
+                    if (dialog.showAndGet()) {
+                        this.downloadFileAndEdit(file);
+                    }
+                } else {
                     this.downloadFileAndEdit(file);
                 }
             } else {
-                this.downloadFileAndEdit(file);
+                this.setCurrentRemotePath(path);
+
+                List<RemoteFileObject> files = file.list();
+                List<FileModel> fileModels = new ArrayList<>(files.size());
+
+                // 添加返回上一级目录
+                fileModels.add(this.getParentFolder(path, "/"));
+
+                for (RemoteFileObject f : files) {
+                    fileModels.add(new FileModel(f.path(), f.name(), f.isDir(), f.size(), f.getPermissions()));
+                }
+
+                rerenderFileTable(this.remoteFileList, fileModels);
             }
-        } else {
-            this.remotePath.setText(path);
-
-            List<RemoteFileObject> files = file.list();
-            List<FileModel> fileModels = new ArrayList<>(files.size());
-
-            // 添加返回上一级目录
-            fileModels.add(this.getLastFolder(path, "/"));
-
-            for (RemoteFileObject f : files) {
-                fileModels.add(new FileModel(f.path(), f.name(), f.isDir(), f.size(), f.getPermissions()));
-            }
-
-            rerenderFileTable(this.remoteFileList, fileModels);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Services.message("Error eccurred while listing remote files: " + e.getMessage(), MessageType.ERROR);
+        } finally {
+            this.remotePath.setEnabled(true);
         }
     }
 
@@ -406,13 +466,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
         this.sftpChannel = null;
         this.sftpFileTransfer = null;
-
-        // 清空列表
-        if (this.remoteFileList.getModel() instanceof FileTableModel) {
-            ((FileTableModel) this.remoteFileList.getModel()).resetData(new ArrayList<>());
-        }
-        // 清空文件列表
-        this.remoteEditingFiles = new HashMap<>();
 
         if (triggerEvent) {
             this.triggerDisconnected();
@@ -431,6 +484,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      * 设置当前状态为已连接
      */
     public void triggerConnected () {
+        this.remotePath.setEnabled(true);
         this.exploreButton.setVisible(false);
         this.exploreButton.setIcon(null);
         this.disconnectButton.setVisible(true);
@@ -440,20 +494,51 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      * 设置当前状态为未连接
      */
     public void triggerDisconnected () {
+        // 设置远程路径输入框
+        this.remotePath.setText("");
+        this.remotePath.setEnabled(false);
+
         this.exploreButton.setEnabled(true);
         this.exploreButton.setVisible(true);
         this.disconnectButton.setVisible(false);
-        this.remotePath.setText("");
+
+        // 情况远程选择了的文件
+        this.selectedRemoteFiles = new ArrayList<>(COLLECTION_SIZE);
+
+        // 清空列表
+        if (this.remoteFileList.getModel() instanceof FileTableModel) {
+            ((FileTableModel) this.remoteFileList.getModel()).resetData(new ArrayList<>());
+        }
+        // 清空文件列表
+        this.remoteEditingFiles = new HashMap<>(COLLECTION_SIZE);
+    }
+
+    /**
+     * 设置当前显示的本地路径
+     * @param currentLocalPath 本地文件路径
+     */
+    public void setCurrentLocalPath(String currentLocalPath) {
+        this.localPath.setText(currentLocalPath);
+        this.currentLocalPath = currentLocalPath;
+    }
+
+    /**
+     * 谁当前现实的远程路径
+     * @param currentRemotePath 远程文件路径
+     */
+    public void setCurrentRemotePath(String currentRemotePath) {
+        this.remotePath.setText(currentRemotePath);
+        this.currentRemotePath = currentRemotePath;
     }
 
     /**
      * 获取上一级目录
      * @param path 当前目录
      */
-    private FileModel getLastFolder (String path, String separator) {
+    private FileModel getParentFolder(String path, String separator) {
         // 添加返回上一级目录
         int lastIndexOfSep = path.lastIndexOf(separator);
-        String parentFolder = lastIndexOfSep == -1 ? "" : path.substring(0, lastIndexOfSep);
+        String parentFolder = lastIndexOfSep == -1 || lastIndexOfSep == 0 ? "" : path.substring(0, lastIndexOfSep);
         return new FileModel(parentFolder.isEmpty() ? separator : parentFolder , "..", true, null, null);
     }
 
