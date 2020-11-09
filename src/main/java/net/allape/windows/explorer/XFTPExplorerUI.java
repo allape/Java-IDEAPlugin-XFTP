@@ -18,19 +18,19 @@ import java.awt.*;
 
 public class XFTPExplorerUI extends XFTPWindow {
 
-    protected JBLayeredPane panelWrapper = new JBLayeredPane();
-    protected JPanel panel = new JPanel(new GridLayout());
+    protected JPanel panelWrapper = new JPanel(new BorderLayout());
+    protected JPanel panel = new JPanel(new GridBagLayout());
 
     @SuppressWarnings("rawtypes")
-    protected JBPanel localWrapper = new JBPanel(new GridLayout());
+    protected JBPanel localWrapper = new JBPanel(new GridBagLayout());
     protected JBScrollPane localFileListWrapper = new JBScrollPane();
     protected JBTextField localPath = new JBTextField();
     protected JBList<FileModel> localFileList = new JBList<>(new DefaultListModel<>());
 
     @SuppressWarnings("rawtypes")
-    protected JBPanel remoteWrapper = new JBPanel(new GridLayout());
+    protected JBPanel remoteWrapper = new JBPanel(new GridBagLayout());
     @SuppressWarnings("rawtypes")
-    protected JBPanel remoteTopWrapper = new JBPanel(new GridLayout());
+    protected JBPanel remoteTopWrapper = new JBPanel(new GridBagLayout());
     protected JBTextField remotePath = new JBTextField();
     protected JButton exploreButton = new JButton("Explorer");
     protected JButton disconnectButton = new JButton("Disconnect");
@@ -46,7 +46,22 @@ public class XFTPExplorerUI extends XFTPWindow {
      * 初始化UI样式
      */
     protected void initUI() {
-        this.panelWrapper.add(this.panel, 2, 0);
+        // 使用反射初始化所有组件
+        /*try {
+            Class<JComponent> componentClass = JComponent.class;
+            Class<XFTPExplorerUI> uiClass = XFTPExplorerUI.class;
+            for (Field field : uiClass.getDeclaredFields()) {
+                field.setAccessible(true);
+                if (componentClass.isAssignableFrom(field.getType()) || field.getType() == componentClass) {
+                    this.initSingleUI((JComponent) field.get(this));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Services.message("Error occurred while initialing UI, please re-open a window for retrying..." + e.getMessage(), MessageType.ERROR);
+        }*/
+
+        this.panelWrapper.add(this.panel, BorderLayout.CENTER);
 
         this.panel.add(this.localWrapper, Grids.X0Y0);
         this.panel.add(this.remoteWrapper, Grids.X1Y0);
@@ -89,10 +104,17 @@ public class XFTPExplorerUI extends XFTPWindow {
     }
 
     /**
-     * 获取JPanel
-     * @return JPanel
+     * 对单个组件进行常规化操作
+     * @param component 组件
      */
-    public JLayeredPane getPanelWrapper() {
+    protected void initSingleUI (JComponent component) {
+        component.setPreferredSize(new Dimension(100, 100));
+    }
+
+    /**
+     * 获取当前window的UI内容
+     */
+    public JComponent getUI() {
         return this.panelWrapper;
     }
 

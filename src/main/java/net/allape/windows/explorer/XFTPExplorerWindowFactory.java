@@ -46,7 +46,7 @@ public class XFTPExplorerWindowFactory implements ToolWindowFactory {
         //获取内容工厂的实例
         ContentFactory contentFactory = ContentFactory.SERVICE.getInstance();
         //获取用于toolWindow显示的内容
-        Content content = contentFactory.createContent(window.getPanelWrapper(), "Explorer", false);
+        Content content = contentFactory.createContent(window.getUI(), "Explorer", false);
         content.setCloseable(true);
         //给toolWindow设置内容
         ContentManager contentManager = toolWindow.getContentManager();
