@@ -102,7 +102,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                 RemoteFileObject remoteFile = Maps.getFirstKeyByValue(self.remoteEditingFiles, localFile);
                                 if (remoteFile != null) {
                                     // 上传文件
-                                    self.transfer(new File(localFile), remoteFile, Transfer.Type.UPLOAD).subscribe();
+                                    SwingUtilities.invokeLater(() -> self.transfer(new File(localFile), remoteFile, Transfer.Type.UPLOAD).subscribe());
                                 }
                             }
                         }
