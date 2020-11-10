@@ -4,11 +4,8 @@ import com.intellij.ui.content.Content;
 import net.allape.models.Transfer;
 import net.allape.windows.XFTPWindow;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public final class Data {
 
@@ -19,6 +16,6 @@ public final class Data {
     public static final List<Transfer> HISTORY = new ArrayList<>(100);
 
     // 当前传输中的内容
-    public static final Map<Runnable, Transfer> TRANSFERRING = new ConcurrentHashMap<>(100);
+    public static final Queue<Transfer> TRANSFERRING = new LinkedBlockingQueue<>(100);
 
 }

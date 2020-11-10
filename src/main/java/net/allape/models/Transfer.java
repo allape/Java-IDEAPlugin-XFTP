@@ -1,7 +1,5 @@
 package net.allape.models;
 
-import java.util.concurrent.Future;
-
 public class Transfer {
 
     /**
@@ -25,6 +23,8 @@ public class Transfer {
         FAIL,
         // 传输中
         TRANSFERRING,
+        // 取消
+        CANCELLED,
 
     }
 
@@ -62,13 +62,6 @@ public class Transfer {
      * 错误信息
      */
     private String exception;
-
-    /**
-     * 上传/下载该任务的线程池submit返回的future
-     *
-     */
-    @SuppressWarnings({"rawtypes"})
-    private Future future;
 
     public Type getType() {
         return type;
@@ -124,15 +117,5 @@ public class Transfer {
 
     public void setException(String exception) {
         this.exception = exception;
-    }
-
-    @SuppressWarnings("rawtypes")
-    public Future getFuture() {
-        return future;
-    }
-
-    @SuppressWarnings("rawtypes")
-    public void setFuture(Future future) {
-        this.future = future;
     }
 }
