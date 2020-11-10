@@ -604,45 +604,43 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         }
 
         // 如果当前远程文件已经在编辑器中打开了, 则关闭之前的
-        SwingUtilities.invokeLater(() -> {
-            RemoteFileObject existsRemoteFile = this.remoteEditingFiles
-                    .keySet().stream()
-                    .filter(rf -> rf.path().equals(remoteFile.path()))
-                    .findFirst()
-                    .orElse(null);
-            if (existsRemoteFile != null) {
-                File oldCachedFile = new File(this.remoteEditingFiles.get(existsRemoteFile));
-                if (oldCachedFile.exists()) {
-                    DialogWrapper dialog = new Confirm(new Confirm.Options()
-                            .title("This file is editing")
-                            .okText("Replace")
-                            .cancelText("Open")
-                            .content("Do you want to replace current editing file? \n" +
-                                    "Press \"Open\" to open/focus an/the editor for/of existing file. \n" +
-                                    "Press \"Replace\" to discard downloaded file and re-download the file from remote.")
-                    );
-                    if (!dialog.showAndGet()) {
-                        this.openFileInEditor(oldCachedFile);
-                        return;
-                    } else {
-                        this.remoteEditingFiles.remove(existsRemoteFile);
-                    }
+        RemoteFileObject existsRemoteFile = this.remoteEditingFiles
+                .keySet().stream()
+                .filter(rf -> rf.path().equals(remoteFile.path()))
+                .findFirst()
+                .orElse(null);
+        if (existsRemoteFile != null) {
+            File oldCachedFile = new File(this.remoteEditingFiles.get(existsRemoteFile));
+            if (oldCachedFile.exists()) {
+                DialogWrapper dialog = new Confirm(new Confirm.Options()
+                        .title("This file is editing")
+                        .okText("Replace")
+                        .cancelText("Open")
+                        .content("Do you want to replace current editing file? \n" +
+                                "Press \"Open\" to open/focus an/the editor for/of existing file. \n" +
+                                "Press \"Replace\" to discard downloaded file and re-download the file from remote.")
+                );
+                if (!dialog.showAndGet()) {
+                    this.openFileInEditor(oldCachedFile);
+                    return;
+                } else {
+                    this.remoteEditingFiles.remove(existsRemoteFile);
                 }
             }
+        }
 
-            try {
-                File localFile = File.createTempFile("jb-ide-xftp-", "." + remoteFile.name());
-                //noinspection ResultOfMethodCallIgnored
-                this.transfer(localFile, remoteFile, Transfer.Type.DOWNLOAD).subscribe(t -> {
-                    this.openFileInEditor(localFile);
-                    // 加入文件监听队列
-                    this.remoteEditingFiles.put(remoteFile, localFile.getAbsolutePath());
-                }, e -> {});
-            } catch (IOException e) {
-                e.printStackTrace();
-                Services.message("Unable to create cache file: " + e.getMessage(), MessageType.ERROR);
-            }
-        });
+        try {
+            File localFile = File.createTempFile("jb-ide-xftp-", "." + remoteFile.name());
+            //noinspection ResultOfMethodCallIgnored
+            this.transfer(localFile, remoteFile, Transfer.Type.DOWNLOAD).subscribe(t -> {
+                SwingUtilities.invokeLater(() -> this.openFileInEditor(localFile));
+                // 加入文件监听队列
+                this.remoteEditingFiles.put(remoteFile, localFile.getAbsolutePath());
+            }, Throwable::printStackTrace);
+        } catch (IOException e) {
+            e.printStackTrace();
+            Services.message("Unable to create cache file: " + e.getMessage(), MessageType.ERROR);
+        }
     }
 
     /**
