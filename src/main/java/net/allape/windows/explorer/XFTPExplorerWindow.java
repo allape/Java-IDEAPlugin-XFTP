@@ -28,6 +28,7 @@ import io.reactivex.rxjava3.core.Observable;
 import net.allape.bus.Data;
 import net.allape.bus.Services;
 import net.allape.dialogs.Confirm;
+import net.allape.exception.TransferCancelledException;
 import net.allape.models.FileModel;
 import net.allape.models.FileTableModel;
 import net.allape.models.Transfer;
@@ -740,6 +741,9 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                         public StreamCopier.Listener file(String name, long size) {
                                             String total = FileUtils.byteCountToDisplaySize(size);
                                             return transferred -> {
+                                                if (indicator.isCanceled()) {
+                                                    throw new TransferCancelledException("Operation cancelled!");
+                                                }
                                                 double percent = ((double) transferred) / size;
                                                 indicator.setFraction(percent);
                                                 indicator.setText((Math.round(percent * 10000) / 100) + "% " +
@@ -750,6 +754,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                         }
                                     });
 
+                                    // 开始上传
                                     if (type == Transfer.Type.UPLOAD) {
                                         fileTransfer.upload(transfer.getSource(), transfer.getTarget());
                                     } else {
@@ -783,7 +788,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
                                     emitter.onNext(transfer);
                                     emitter.onComplete();
-                                    // Services.message(normalizedRemotePath + " Uploaded", MessageType.INFO);
+                                } catch (TransferCancelledException e) {
+                                    emitter.onError(e);
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                     Services.message("Error occurred while transferring " + transfer.getSource() + " to " + transfer.getTarget() + ", " +
