@@ -438,9 +438,9 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
     /**
      * 获取远程文件目录
-     * @param path 默认地址, 为null为空时使用sftp默认文件夹
+     * @param remoteFilePath 加载的地址, 为null为空时使用sftp默认文件夹
      */
-    public void loadRemote (@Nullable String path) {
+    public void loadRemote (@Nullable String remoteFilePath) {
         if (this.sftpChannel == null) {
             Services.message("Please connect to server first!", MessageType.INFO);
         } else if (!this.sftpChannel.isConnected()) {
@@ -451,7 +451,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         this.remoteFileList.setEnabled(false);
         this.remotePath.setEnabled(false);
         try {
-            path = path == null || path.isEmpty() ? this.sftpChannel.getHome() : path;
+            String path = remoteFilePath == null || remoteFilePath.isEmpty() ? this.sftpChannel.getHome() : remoteFilePath;
             RemoteFileObject file = this.sftpChannel.file(path);
             if (!file.exists()) {
                 Services.message(path + " does not exist!", MessageType.INFO);
@@ -459,14 +459,12 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             } else if (!file.isDir()) {
                 // 如果文件小于2M, 则自动下载到缓存目录并进行监听
                 if (file.size() > EDITABLE_FILE_SIZE) {
-                    SwingUtilities.invokeLater(() -> {
-                        DialogWrapper dialog = new Confirm(new Confirm.Options()
-                                .title("This file is too large for text editor")
-                                .content("Do you still want to download and edit it?"));
-                        if (dialog.showAndGet()) {
-                            this.downloadFileAndEdit(file);
-                        }
-                    });
+                    DialogWrapper dialog = new Confirm(new Confirm.Options()
+                            .title("This file is too large for text editor")
+                            .content("Do you still want to download and edit it?"));
+                    if (dialog.showAndGet()) {
+                        this.downloadFileAndEdit(file);
+                    }
                 } else {
                     this.downloadFileAndEdit(file);
                 }
@@ -489,9 +487,10 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
                 rerenderFileTable(this.remoteFileList, fileModels);
             }
+
         } catch (Exception e) {
             e.printStackTrace();
-            Services.message("Error eccurred while listing remote files: " + e.getMessage(), MessageType.ERROR);
+            Services.message("Error occurred while listing remote files: " + e.getMessage(), MessageType.ERROR);
         } finally {
             this.remoteFileList.setEnabled(true);
             this.remotePath.setEnabled(true);
@@ -638,7 +637,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                     this.openFileInEditor(localFile);
                     // 加入文件监听队列
                     this.remoteEditingFiles.put(remoteFile, localFile.getAbsolutePath());
-                });
+                }, e -> {});
             } catch (IOException e) {
                 e.printStackTrace();
                 Services.message("Unable to create cache file: " + e.getMessage(), MessageType.ERROR);
