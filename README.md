@@ -10,9 +10,10 @@
 ## Known Issues
 - Non-project file protecting prompt show up before editing cached file.
 - Invoking methods of RemoteFileObject will block UI thread while uploading or downloading. 
-- Determine the downloading files whether contain the double-clicked remote file before editing, if does, do nothing for just double-clicking.
+- Make sure the double-clicked remote file is not in the downloading queue.
 - Folder uploading progress(Task.Backgroundable) calculation error.
 - Folder uploading missing dragging/selecting folder(Only uploaded children files and folders).
+- Download/upload queue is not suitable for multi-XFTPWindow
 
 ## Nuts-pain
 ```java
