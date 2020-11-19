@@ -2,6 +2,8 @@ package net.allape.windows.explorer;
 
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
+import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider;
+import com.intellij.openapi.fileEditor.impl.text.FileDropHandler;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.progress.Task;
@@ -643,14 +645,22 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     }
 
     /**
-     * 打开文件
+     * 打开文件 <br/>
+     * 参考: {@link FileDropHandler#openFiles(com.intellij.openapi.project.Project, java.util.List, com.intellij.openapi.fileEditor.impl.EditorWindow)}
      * @param file 文件
      */
+    @SuppressWarnings("JavadocReference")
     private void openFileInEditor (@NotNull File file) {
+        VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByIoFile(file);
+        if (virtualFile == null) {
+            Services.message(file.getAbsolutePath() + " does not exists!", MessageType.WARNING);
+            return;
+        }
+        NonProjectFileWritingAccessProvider.allowWriting(Collections.singletonList(virtualFile));
         FileEditorManager.getInstance(this.project).openTextEditor(
                 new OpenFileDescriptor(
                         this.project,
-                        Objects.requireNonNull(LocalFileSystem.getInstance().findFileByIoFile(file)),
+                        virtualFile,
                         0
                 ),
                 true

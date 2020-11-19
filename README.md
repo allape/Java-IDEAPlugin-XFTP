@@ -8,7 +8,6 @@
 - ✖️ More operations in file view port: delete, copy, paste, etc...
 
 ## Known Issues
-- Non-project file protecting prompt show up before editing cached file.
 - Invoking methods of RemoteFileObject will block UI thread while uploading or downloading. 
 - Make sure the double-clicked remote file is not in the downloading queue.
 - Folder uploading progress(Task.Backgroundable) calculation error.
