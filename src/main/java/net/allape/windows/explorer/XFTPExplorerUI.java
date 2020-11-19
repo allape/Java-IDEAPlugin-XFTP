@@ -15,6 +15,7 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableColumn;
 import java.awt.*;
+import java.util.Enumeration;
 
 public class XFTPExplorerUI extends XFTPWindow {
 
@@ -101,10 +102,16 @@ public class XFTPExplorerUI extends XFTPWindow {
         this.remoteFileList.setAutoCreateRowSorter(false);
         this.remoteFileList.setBorder(null);
 
-        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        DefaultTableCellRenderer normalRender = new XFTPExplorerWindowTableCellRenderer();
+        Enumeration<TableColumn> allColumns = this.remoteFileList.getColumnModel().getColumns();
+        while (allColumns.hasMoreElements()) {
+            allColumns.nextElement().setCellRenderer(normalRender);
+        }
+
+        DefaultTableCellRenderer centerRenderer = new XFTPExplorerWindowTableCellRenderer();
         centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
 
-        DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
+        DefaultTableCellRenderer rightRenderer = new XFTPExplorerWindowTableCellRenderer();
         rightRenderer.setHorizontalAlignment(SwingConstants.RIGHT);
 
         TableColumn typeColumn = this.remoteFileList.getColumnModel().getColumn(0);
@@ -118,14 +125,6 @@ public class XFTPExplorerUI extends XFTPWindow {
         permissionsColumn.setCellRenderer(centerRenderer);
 
         this.remoteFileListWrapper.setBorder(null);
-    }
-
-    /**
-     * 对单个组件进行常规化操作
-     * @param component 组件
-     */
-    protected void initSingleUI (JComponent component) {
-        component.setPreferredSize(new Dimension(100, 100));
     }
 
     /**
