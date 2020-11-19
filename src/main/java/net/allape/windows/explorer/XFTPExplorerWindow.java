@@ -1,5 +1,7 @@
 package net.allape.windows.explorer;
 
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider;
@@ -174,7 +176,11 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
             @Override
             public void mouseReleased(MouseEvent e) {
-
+                DialogWrapper dialog = new Confirm(new Confirm.Options()
+                        .title("test dialog")
+                        .content("hah?")
+                );
+                dialog.show();
             }
 
             @Override
@@ -657,14 +663,15 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             return;
         }
         NonProjectFileWritingAccessProvider.allowWriting(Collections.singletonList(virtualFile));
-        FileEditorManager.getInstance(this.project).openTextEditor(
+
+        ApplicationManager.getApplication().invokeLater(() -> FileEditorManager.getInstance(this.project).openTextEditor(
                 new OpenFileDescriptor(
                         this.project,
                         virtualFile,
                         0
                 ),
                 true
-        );
+        ));
     }
 
     /**
