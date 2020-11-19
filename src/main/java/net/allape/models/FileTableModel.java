@@ -41,7 +41,7 @@ public class FileTableModel extends AbstractTableModel {
                 case 0: return model.getFolder() ? "📁" : "📃";
                 case 1: return model.getName();
                 case 2: return model.getFolder() || model.getSize() == null ?
-                        "" : byteCountToDisplaySize(BigInteger.valueOf(model.getSize()));
+                        "" : byteCountToDisplaySize(model.getSize());
                 case 3: return model.getPermissions() == null ? "" : LinuxPermissions.humanReadable(model.getPermissions());
             }
         } catch (Exception e) {
@@ -81,7 +81,8 @@ public class FileTableModel extends AbstractTableModel {
     /**
      * see {@link org.apache.commons.io.FileUtils#byteCountToDisplaySize(BigInteger)}
      */
-    public static String byteCountToDisplaySize(BigInteger size) {
+    public static String byteCountToDisplaySize(long longSize) {
+        BigInteger size = BigInteger.valueOf(longSize);
         String displaySize;
         if (size.divide(ONE_EB_BI).compareTo(BigInteger.ZERO) > 0) {
             displaySize = size.divide(ONE_EB_BI) + " E";

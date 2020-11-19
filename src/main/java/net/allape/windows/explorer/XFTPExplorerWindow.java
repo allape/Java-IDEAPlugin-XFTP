@@ -37,7 +37,6 @@ import net.schmizz.sshj.common.StreamCopier;
 import net.schmizz.sshj.sftp.SFTPClient;
 import net.schmizz.sshj.sftp.SFTPFileTransfer;
 import net.schmizz.sshj.xfer.TransferListener;
-import org.apache.commons.io.FileUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -738,7 +737,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
                                     @Override
                                     public StreamCopier.Listener file(String name, long size) {
-                                        String total = FileUtils.byteCountToDisplaySize(size);
+                                        String total = FileTableModel.byteCountToDisplaySize(size);
                                         return transferred -> {
                                             if (indicator.isCanceled() || transfer.getResult() == Transfer.Result.CANCELLED) {
                                                 throw new TransferCancelledException("Operation cancelled!");
@@ -747,7 +746,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                             double percent = ((double) transferred) / size;
                                             indicator.setFraction(percent);
                                             indicator.setText((Math.round(percent * 10000) / 100) + "% " +
-                                                    FileUtils.byteCountToDisplaySize(transferred) + "/" + total);
+                                                    FileTableModel.byteCountToDisplaySize(transferred) + "/" + total);
                                             indicator.setText2((type == Transfer.Type.UPLOAD ? "Uploading" : "Downloading") + " " +
                                                     transfer.getSource() + " to " + transfer.getTarget());
                                         };

@@ -4,7 +4,7 @@
     <vendor email="allensnape@qq.com" url="http://www.allensnape.com">ALLAPE</vendor>
 
     <description><![CDATA[
-        FYI, not test on Windows yet 😊.<br/>
+        FYI, not test on Windows yet.<br/>
         File manage with SFTP using <a href="jetbrains://idea/settings?name=Tools--SSH+Configurations">SSH Configurations of IDE Settings</a>.<br>
     ]]></description>
 
