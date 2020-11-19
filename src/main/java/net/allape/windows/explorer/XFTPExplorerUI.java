@@ -100,11 +100,22 @@ public class XFTPExplorerUI extends XFTPWindow {
         this.remoteFileList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         this.remoteFileList.setAutoCreateRowSorter(false);
         this.remoteFileList.setBorder(null);
-        TableColumn typeColumn = this.remoteFileList.getColumnModel().getColumn(0);
+
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
-        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+        centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
+
+        DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
+        rightRenderer.setHorizontalAlignment(SwingConstants.RIGHT);
+
+        TableColumn typeColumn = this.remoteFileList.getColumnModel().getColumn(0);
         typeColumn.setCellRenderer(centerRenderer);
         typeColumn.setMaxWidth(25);
+
+        TableColumn sizeColumn = this.remoteFileList.getColumnModel().getColumn(2);
+        sizeColumn.setCellRenderer(rightRenderer);
+
+        TableColumn permissionsColumn = this.remoteFileList.getColumnModel().getColumn(3);
+        permissionsColumn.setCellRenderer(centerRenderer);
 
         this.remoteFileListWrapper.setBorder(null);
     }

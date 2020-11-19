@@ -1,9 +1,9 @@
 package net.allape.models;
 
 import net.allape.utils.LinuxPermissions;
-import org.apache.commons.io.FileUtils;
 
 import javax.swing.table.AbstractTableModel;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,7 +41,7 @@ public class FileTableModel extends AbstractTableModel {
                 case 0: return model.getFolder() ? "📁" : "📃";
                 case 1: return model.getName();
                 case 2: return model.getFolder() || model.getSize() == null ?
-                        "" : FileUtils.byteCountToDisplaySize(model.getSize());
+                        "" : byteCountToDisplaySize(BigInteger.valueOf(model.getSize()));
                 case 3: return model.getPermissions() == null ? "" : LinuxPermissions.humanReadable(model.getPermissions());
             }
         } catch (Exception e) {
@@ -69,6 +69,37 @@ public class FileTableModel extends AbstractTableModel {
 
     public List<FileModel> getData() {
         return data;
+    }
+
+    public static final BigInteger ONE_KB_BI = BigInteger.valueOf(1024L);
+    public static final BigInteger ONE_MB_BI = ONE_KB_BI.multiply(ONE_KB_BI);
+    public static final BigInteger ONE_GB_BI = ONE_KB_BI.multiply(ONE_MB_BI);
+    public static final BigInteger ONE_TB_BI = ONE_KB_BI.multiply(ONE_GB_BI);
+    public static final BigInteger ONE_PB_BI = ONE_KB_BI.multiply(ONE_TB_BI);
+    public static final BigInteger ONE_EB_BI = ONE_KB_BI.multiply(ONE_PB_BI);
+
+    /**
+     * see {@link org.apache.commons.io.FileUtils#byteCountToDisplaySize(BigInteger)}
+     */
+    public static String byteCountToDisplaySize(BigInteger size) {
+        String displaySize;
+        if (size.divide(ONE_EB_BI).compareTo(BigInteger.ZERO) > 0) {
+            displaySize = size.divide(ONE_EB_BI) + " E";
+        } else if (size.divide(ONE_PB_BI).compareTo(BigInteger.ZERO) > 0) {
+            displaySize = size.divide(ONE_PB_BI) + " P";
+        } else if (size.divide(ONE_TB_BI).compareTo(BigInteger.ZERO) > 0) {
+            displaySize = size.divide(ONE_TB_BI) + " T";
+        } else if (size.divide(ONE_GB_BI).compareTo(BigInteger.ZERO) > 0) {
+            displaySize = size.divide(ONE_GB_BI) + " G";
+        } else if (size.divide(ONE_MB_BI).compareTo(BigInteger.ZERO) > 0) {
+            displaySize = size.divide(ONE_MB_BI) + " M";
+        } else if (size.divide(ONE_KB_BI).compareTo(BigInteger.ZERO) > 0) {
+            displaySize = size.divide(ONE_KB_BI) + " K";
+        } else {
+            displaySize = size + " b";
+        }
+
+        return displaySize;
     }
 
 }
