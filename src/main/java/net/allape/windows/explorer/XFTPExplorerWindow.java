@@ -31,9 +31,7 @@ import net.allape.bus.Data;
 import net.allape.bus.Services;
 import net.allape.dialogs.Confirm;
 import net.allape.exception.TransferCancelledException;
-import net.allape.models.FileModel;
-import net.allape.models.FileTableModel;
-import net.allape.models.Transfer;
+import net.allape.models.*;
 import net.allape.utils.Maps;
 import net.schmizz.sshj.common.StreamCopier;
 import net.schmizz.sshj.sftp.SFTPClient;
@@ -45,6 +43,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -64,9 +63,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     private String currentLocalPath = null;
     // 当前选中的本地文件
     private FileModel currentLocalFile = null;
-    // 当前选中的所有文件 TODO 拖拽上传
-    @SuppressWarnings("unused")
-    private List<FileModel> selectedLocalFiles = new ArrayList<>(COLLECTION_SIZE);
 
     // 当前开启的channel
     private SftpChannel sftpChannel = null;
@@ -151,7 +147,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         });
         // 设置当前选中的内容
         this.localFileList.addListSelectionListener(e -> {
-            this.selectedLocalFiles = this.localFileList.getSelectedValuesList();
             this.lastFile = this.currentLocalFile;
             this.currentLocalFile = this.localFileList.getSelectedValue();
         });
@@ -177,6 +172,42 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
             @Override
             public void mouseExited(MouseEvent e) { }
+        });
+        this.localFileList.setDragEnabled(true);
+        this.localFileList.setTransferHandler(new FileTransferHandler<File>() {
+            @Override
+            protected Transferable createTransferable(JComponent c) {
+                List<FileModel> fileModels = self.localFileList.getSelectedValuesList();
+                List<File> files = new ArrayList<>(fileModels.size());
+                for (FileModel model: fileModels) {
+                    files.add(new File(model.getPath()));
+                }
+                return new FileTransferable<>(files, DataFlavor.javaFileListFlavor);
+            }
+            @Override
+            public boolean canImport(TransferSupport support) {
+                if (!support.isDrop()) {
+                    return false;
+                }
+                return support.isDataFlavorSupported(remoteFileListFlavor);
+            }
+            @Override
+            public boolean importData(TransferSupport support) {
+                try {
+                    //noinspection unchecked
+                    List<RemoteFileObject> files = (List<RemoteFileObject>) support.getTransferable().getTransferData(remoteFileListFlavor);
+                    for (RemoteFileObject file : files) {
+                        self.transfer(
+                                new File(self.currentLocalPath + File.separator + file.name()),
+                                file,
+                                Transfer.Type.DOWNLOAD
+                        ).subscribe();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return false;
+            }
         });
 
         // 弹出的时候获取ssh配置
@@ -258,7 +289,17 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         });
         this.remoteFileList.setDragEnabled(true);
         this.remoteFileList.setDropMode(DropMode.ON);
-        this.remoteFileList.setTransferHandler(new TransferHandler() {
+        this.remoteFileList.setTransferHandler(new FileTransferHandler<RemoteFileObject>() {
+            @Override
+            protected Transferable createTransferable(JComponent c) {
+                int[] rows = self.remoteFileList.getSelectedRows();
+                List<RemoteFileObject> files = new ArrayList<>(rows.length);
+                List<FileModel> fileModels = ((FileTableModel) self.remoteFileList.getModel()).getData();
+                for (int row: rows) {
+                    files.add(self.sftpChannel.file(fileModels.get(row).getPath()));
+                }
+                return new FileTransferable<>(files, remoteFileListFlavor);
+            }
             @Override
             public boolean canImport(TransferSupport support) {
                 if (self.sftpChannel == null || !self.sftpChannel.isConnected()) {
@@ -269,14 +310,17 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
                 return support.isDataFlavorSupported(DataFlavor.javaFileListFlavor);
             }
-
             @Override
             public boolean importData(TransferSupport support) {
                 try {
                     //noinspection unchecked
                     List<File> files = (List<File>) support.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
                     for (File file : files) {
-                        self.transfer(file, self.sftpChannel.file(self.currentRemotePath), Transfer.Type.UPLOAD).subscribe();
+                        self.transfer(
+                                file,
+                                self.sftpChannel.file(self.currentRemotePath + SERVER_FILE_SYSTEM_SEPARATOR + file.getName()),
+                                Transfer.Type.UPLOAD
+                        ).subscribe();
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

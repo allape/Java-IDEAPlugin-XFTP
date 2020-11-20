@@ -4,12 +4,14 @@ import com.intellij.openapi.application.Application;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
+import com.intellij.ssh.RemoteFileObject;
 import com.intellij.ui.content.ContentManagerEvent;
 import com.intellij.ui.content.ContentManagerListener;
 import net.allape.models.FileModel;
 import net.allape.models.FileTableModel;
 
 import javax.swing.*;
+import java.awt.datatransfer.DataFlavor;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -33,6 +35,9 @@ public class XFTPWindow {
 
     // 双击监听
     protected long clickWatcher = System.currentTimeMillis();
+
+    // 远程文件拖拽flavor
+    protected static final DataFlavor remoteFileListFlavor = new DataFlavor(RemoteFileObject.class, "SSH remote file list");
 
     final protected Project project;
     final protected ToolWindow toolWindow;
