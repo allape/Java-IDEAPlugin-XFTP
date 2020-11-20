@@ -5,13 +5,14 @@
 - ✔️ Drop on remote view port to upload (just available for dragging from Finder or Explorer).
 - ✔️️ Dragging from local file view port to remote file view port, and vice versa.
 - ✖️ Transferring history list with re-try button.
-- ✖️ More operations in file view port: delete, copy, paste, etc...
+- ➖️ More operations in file view port: delete, copy, paste, etc...
 
 ## Known Issues
 - Invoking methods of RemoteFileObject will block UI thread while uploading or downloading. 
 - Make sure the double-clicked remote file is not in the downloading queue.
 - Folder uploading progress(Task.Backgroundable) calculation error.
 - Download/upload queue is not suitable for multi-XFTPWindow
+- Deleting remote file will block UI thread
 
 ## Nuts-pain
 ```java

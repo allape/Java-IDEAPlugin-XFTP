@@ -9,6 +9,8 @@ import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
+import com.intellij.openapi.ui.JBMenuItem;
+import com.intellij.openapi.ui.JBPopupMenu;
 import com.intellij.openapi.ui.MessageType;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -41,6 +43,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
@@ -153,8 +157,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                         .getElementAt(self.localFileList.locationToIndex(e.getPoint()));
 
                 long now = System.currentTimeMillis();
-                if (self.lastFile != null && self.currentLocalFile != null)
-                    System.out.println(self.lastFile.toString() + ", " + self.currentLocalFile.toString() + " = " + (now - self.clickWatcher));
                 if (self.lastFile == self.currentLocalFile && now - self.clickWatcher < DOUBLE_CLICK_INTERVAL) {
                     self.loadLocal(self.currentLocalFile.getPath());
                 }
@@ -286,13 +288,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         this.remoteFileList.setTransferHandler(new FileTransferHandler<RemoteFileObject>() {
             @Override
             protected Transferable createTransferable(JComponent c) {
-                int[] rows = self.remoteFileList.getSelectedRows();
-                List<RemoteFileObject> files = new ArrayList<>(rows.length);
-                List<FileModel> fileModels = ((FileTableModel) self.remoteFileList.getModel()).getData();
-                for (int row: rows) {
-                    files.add(self.sftpChannel.file(fileModels.get(row).getPath()));
-                }
-                return new FileTransferable<>(files, remoteFileListFlavor);
+                return new FileTransferable<>(self.getSelectedRemoteFileList(), remoteFileListFlavor);
             }
             @Override
             public boolean canImport(TransferSupport support) {
@@ -322,6 +318,47 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 return false;
             }
         });
+        final JBPopupMenu remoteFileListPopupMenu = new JBPopupMenu();
+        remoteFileListPopupMenu.addPopupMenuListener(new PopupMenuListener() {
+            @Override
+            public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
+                if (self.getSelectedRemoteFileList().size() == 0) {
+                    remoteFileListPopupMenu.setVisible(false);
+                }
+            }
+
+            @Override
+            public void popupMenuWillBecomeInvisible(PopupMenuEvent e) { }
+
+            @Override
+            public void popupMenuCanceled(PopupMenuEvent e) { }
+        });
+        JBMenuItem remoteFileListPopupMenuDelete = new JBMenuItem("rm -Rf");
+        remoteFileListPopupMenuDelete.addActionListener(e -> {
+            DialogWrapper dialog = new Confirm(new Confirm.Options()
+                    .title("Delete Confirm")
+                    .content("This operation is irreversible, continue?")
+                    .okText("Continue"));
+            if (dialog.showAndGet()) {
+                List<RemoteFileObject> files = self.getSelectedRemoteFileList();
+                this.application.invokeLater(() -> {
+                    self.lockRemoteUIs();
+                    for (RemoteFileObject file : files) {
+                        try {
+                            file.rm();
+                        } catch (Exception err) {
+                            err.printStackTrace();
+                            Services.message("Error occurred while delete file: " + file.path(), MessageType.ERROR);
+                        }
+                    }
+                    self.unlockRemoteUIs();
+                    // 刷新当前页面
+                    self.loadRemote(self.currentRemotePath);
+                });
+            }
+        });
+        remoteFileListPopupMenu.add(remoteFileListPopupMenuDelete);
+        this.remoteFileList.setComponentPopupMenu(remoteFileListPopupMenu);
     }
 
     /**
@@ -700,6 +737,26 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      */
     private String normalizeRemoteFileObjectPath (RemoteFileObject file) {
         return file.path().startsWith("//") ? file.path().substring(1) : file.path();
+    }
+
+    /**
+     * 获取当前选中了的远程文件列表
+     * @return 远程文件列表
+     */
+    private List<RemoteFileObject> getSelectedRemoteFileList () {
+        int[] rows = this.remoteFileList.getSelectedRows();
+        List<RemoteFileObject> files = new ArrayList<>(rows.length);
+
+        if (rows.length == 0) {
+            return files;
+        }
+
+        List<FileModel> fileModels = ((FileTableModel) this.remoteFileList.getModel()).getData();
+        for (int row: rows) {
+            files.add(this.sftpChannel.file(fileModels.get(row).getPath()));
+        }
+
+        return files;
     }
 
     // region 上传下载

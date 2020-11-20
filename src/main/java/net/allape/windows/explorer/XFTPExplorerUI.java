@@ -134,4 +134,18 @@ public class XFTPExplorerUI extends XFTPWindow {
         return this.panelWrapper;
     }
 
+    /**
+     * 设置当前远程内容锁定
+     */
+    protected void lockRemoteUIs () {
+        this.remoteWrapper.setEnabled(false);
+    }
+
+    /**
+     * 设置当前远程内容锁定
+     */
+    protected void unlockRemoteUIs () {
+        this.remoteWrapper.setEnabled(true);
+    }
+
 }
