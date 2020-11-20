@@ -8,7 +8,7 @@ public abstract class FileTransferHandler<E> extends TransferHandler {
 
     @Override
     protected Transferable createTransferable(JComponent c) {
-        return new FileTransferable(new ArrayList<E>(0), null);
+        return new FileTransferable<E>(new ArrayList<>(0), null);
     }
 
     @Override

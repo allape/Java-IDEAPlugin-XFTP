@@ -73,9 +73,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     private String currentRemotePath = null;
     // 当前选中的远程文件
     private FileModel currentRemoteFile = null;
-    // 当前选中的所有文件 TODO 拖拽下载
-    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
-    private List<FileModel> selectedRemoteFiles = new ArrayList<>(COLLECTION_SIZE);
 
     // 修改中的远程文件, 用于文件修改后自动上传 key: remote file, value: local file
     private Map<RemoteFileObject, String> remoteEditingFiles = new HashMap<>(COLLECTION_SIZE);
@@ -145,16 +142,19 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 }
             }
         });
-        // 设置当前选中的内容
-        this.localFileList.addListSelectionListener(e -> {
-            this.lastFile = this.currentLocalFile;
-            this.currentLocalFile = this.localFileList.getSelectedValue();
-        });
         // 监听双击, 双击后打开文件或文件夹
         this.localFileList.addMouseListener(new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
+                self.lastFile = self.currentLocalFile;
+                // 获取当前点击的元素
+                self.currentLocalFile = self.localFileList
+                        .getModel()
+                        .getElementAt(self.localFileList.locationToIndex(e.getPoint()));
+
                 long now = System.currentTimeMillis();
+                if (self.lastFile != null && self.currentLocalFile != null)
+                    System.out.println(self.lastFile.toString() + ", " + self.currentLocalFile.toString() + " = " + (now - self.clickWatcher));
                 if (self.lastFile == self.currentLocalFile && now - self.clickWatcher < DOUBLE_CLICK_INTERVAL) {
                     self.loadLocal(self.currentLocalFile.getPath());
                 }
@@ -243,12 +243,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         });
         this.remoteFileList.getSelectionModel().addListSelectionListener(e -> {
             List<FileModel> allRemoteFiles = ((FileTableModel) this.remoteFileList.getModel()).getData();
-
-            int[] selectedRows = this.remoteFileList.getSelectedRows();
-            this.selectedRemoteFiles = new ArrayList<>(selectedRows.length);
-            for (int i : selectedRows) {
-                this.selectedRemoteFiles.add(allRemoteFiles.get(i));
-            }
 
             int currentSelectRow = this.remoteFileList.getSelectedRow();
             if (currentSelectRow != -1) {
@@ -577,9 +571,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         this.exploreButton.setEnabled(true);
         this.exploreButton.setVisible(true);
         this.disconnectButton.setVisible(false);
-
-        // 情况远程选择了的文件
-        this.selectedRemoteFiles = new ArrayList<>(COLLECTION_SIZE);
 
         // 清空列表
         if (this.remoteFileList.getModel() instanceof FileTableModel) {
