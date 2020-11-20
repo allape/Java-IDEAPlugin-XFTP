@@ -1,6 +1,5 @@
 package net.allape.windows.explorer;
 
-import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider;
@@ -53,8 +52,8 @@ import java.awt.event.MouseListener;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 
 public class XFTPExplorerWindow extends XFTPExplorerUI {
 
@@ -88,11 +87,10 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     public XFTPExplorerWindow(Project project, ToolWindow toolWindow) {
         super(project, toolWindow);
 
-        this.loadLocal(null);
-
         final XFTPExplorerWindow self = XFTPExplorerWindow.this;
         // 初始化文件监听
         if (this.project != null) {
+            this.loadLocal(this.project.getBasePath());
             this.project.getMessageBus().connect().subscribe(VirtualFileManager.VFS_CHANGES, new BulkFileListener() {
                 @Override
                 public void after(@NotNull List<? extends VFileEvent> events) {
@@ -104,7 +102,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                 RemoteFileObject remoteFile = Maps.getFirstKeyByValue(self.remoteEditingFiles, localFile);
                                 if (remoteFile != null) {
                                     // 上传文件
-                                    SwingUtilities.invokeLater(() -> self.transfer(new File(localFile), remoteFile, Transfer.Type.UPLOAD).subscribe());
+                                    self.application.invokeLater(() -> self.transfer(new File(localFile), remoteFile, Transfer.Type.UPLOAD).subscribe());
                                 }
                             }
                         }
@@ -169,28 +167,16 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             }
 
             @Override
-            public void mousePressed(MouseEvent e) {
-
-            }
+            public void mousePressed(MouseEvent e) { }
 
             @Override
-            public void mouseReleased(MouseEvent e) {
-                DialogWrapper dialog = new Confirm(new Confirm.Options()
-                        .title("test dialog")
-                        .content("hah?")
-                );
-                dialog.show();
-            }
+            public void mouseReleased(MouseEvent e) { }
 
             @Override
-            public void mouseEntered(MouseEvent e) {
-
-            }
+            public void mouseEntered(MouseEvent e) { }
 
             @Override
-            public void mouseExited(MouseEvent e) {
-
-            }
+            public void mouseExited(MouseEvent e) { }
         });
 
         // 弹出的时候获取ssh配置
@@ -493,7 +479,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
                 rerenderFileTable(this.remoteFileList, fileModels);
             }
-
         } catch (Exception e) {
             e.printStackTrace();
             Services.message("Error occurred while listing remote files: " + e.getMessage(), MessageType.ERROR);
@@ -639,7 +624,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             File localFile = File.createTempFile("jb-ide-xftp-", "." + remoteFile.name());
             //noinspection ResultOfMethodCallIgnored
             this.transfer(localFile, remoteFile, Transfer.Type.DOWNLOAD).subscribe(t -> {
-                SwingUtilities.invokeLater(() -> this.openFileInEditor(localFile));
+                this.openFileInEditor(localFile);
                 // 加入文件监听队列
                 this.remoteEditingFiles.put(remoteFile, localFile.getAbsolutePath());
             }, Throwable::printStackTrace);
@@ -663,7 +648,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         }
         NonProjectFileWritingAccessProvider.allowWriting(Collections.singletonList(virtualFile));
 
-        ApplicationManager.getApplication().invokeLater(() -> FileEditorManager.getInstance(this.project).openTextEditor(
+        this.application.invokeLater(() -> FileEditorManager.getInstance(this.project).openTextEditor(
                 new OpenFileDescriptor(
                         this.project,
                         virtualFile,
@@ -701,7 +686,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             for (Transfer exists : Data.TRANSFERRING) {
                 // 移除非运行中的内容
                 if (exists.getResult() != Transfer.Result.TRANSFERRING) {
-                    SwingUtilities.invokeLater(() -> Data.TRANSFERRING.remove(exists));
+                    this.application.invokeLater(() -> Data.TRANSFERRING.remove(exists));
                 }
                 // 标记相同目标内容为已取消
                 else if (

@@ -1,5 +1,7 @@
 package net.allape.windows;
 
+import com.intellij.openapi.application.Application;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.ui.content.ContentManagerEvent;
@@ -34,10 +36,12 @@ public class XFTPWindow {
 
     final protected Project project;
     final protected ToolWindow toolWindow;
+    final protected Application application;
 
     public XFTPWindow (Project project, ToolWindow toolWindow) {
         this.project = project;
         this.toolWindow = toolWindow;
+        this.application = ApplicationManager.getApplication();
     }
 
     /**
