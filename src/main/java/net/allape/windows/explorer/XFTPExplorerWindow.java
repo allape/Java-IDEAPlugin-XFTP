@@ -19,7 +19,6 @@ import com.intellij.openapi.vfs.newvfs.BulkFileListener;
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.remote.RemoteConnectionType;
-import com.intellij.remote.RemoteCredentials;
 import com.intellij.ssh.ConnectionBuilder;
 import com.intellij.ssh.RemoteCredentialsUtil;
 import com.intellij.ssh.RemoteFileObject;
@@ -73,8 +72,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     // 当前选中的本地文件
     private FileModel currentLocalFile = null;
 
-    // 当前的ssh配置
-    private RemoteCredentials remoteCredentials = null;
+    // 当前配置的连接创建者
+    private ConnectionBuilder connectionBuilder = null;
     // 当前开启的channel
     private SftpChannel sftpChannel = null;
     // 当前channel中的sftp client
@@ -323,13 +322,48 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 return false;
             }
         });
+
+        JBMenuItem remoteFileListPopupMenuDelete = new JBMenuItem("rm -Rf");
+        remoteFileListPopupMenuDelete.addActionListener(e -> {
+            DialogWrapper dialog = new Confirm(new Confirm.Options()
+                    .title("Delete Confirm")
+                    .content("This operation is irreversible, continue?")
+                    .okText("Cancel")
+                    .cancelText("Continue"));
+            if (!dialog.showAndGet()) {
+                List<RemoteFileObject> files = self.getSelectedRemoteFileList();
+                this.application.invokeLater(() -> {
+                    self.lockRemoteUIs();
+                    self.application.invokeLater(() -> {
+                        // 开启一个ExecChannel来删除非空的文件夹
+                        try {
+                            for (RemoteFileObject file : files) {
+                                try {
+                                    this.connectionBuilder.execBuilder("rm -Rf " + file.path()).execute().waitFor();
+                                    // file.rm();
+                                } catch (Exception err) {
+                                    err.printStackTrace();
+                                    Services.message("Error occurred while delete file: " + file.path(), MessageType.ERROR);
+                                }
+                            }
+                        } catch (Exception err) {
+                            err.printStackTrace();
+                            Services.message("Can't delete file or folder right now, please try it later", MessageType.ERROR);
+                        } finally {
+                            self.unlockRemoteUIs();
+                            // 刷新当前页面
+                            self.loadRemote(self.currentRemotePath);
+                        }
+                    });
+                });
+            }
+        });
+
         final JBPopupMenu remoteFileListPopupMenu = new JBPopupMenu();
         remoteFileListPopupMenu.addPopupMenuListener(new PopupMenuListener() {
             @Override
             public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
-                if (self.getSelectedRemoteFileList().size() == 0) {
-                    remoteFileListPopupMenu.setVisible(false);
-                }
+                remoteFileListPopupMenuDelete.setEnabled(self.getSelectedRemoteFileList().size() != 0);
             }
 
             @Override
@@ -337,30 +371,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
             @Override
             public void popupMenuCanceled(PopupMenuEvent e) { }
-        });
-        JBMenuItem remoteFileListPopupMenuDelete = new JBMenuItem("rm -Rf");
-        remoteFileListPopupMenuDelete.addActionListener(e -> {
-            DialogWrapper dialog = new Confirm(new Confirm.Options()
-                    .title("Delete Confirm")
-                    .content("This operation is irreversible, continue?")
-                    .okText("Continue"));
-            if (dialog.showAndGet()) {
-                List<RemoteFileObject> files = self.getSelectedRemoteFileList();
-                this.application.invokeLater(() -> {
-                    self.lockRemoteUIs();
-                    for (RemoteFileObject file : files) {
-                        try {
-                            file.rm();
-                        } catch (Exception err) {
-                            err.printStackTrace();
-                            Services.message("Error occurred while delete file: " + file.path(), MessageType.ERROR);
-                        }
-                    }
-                    self.unlockRemoteUIs();
-                    // 刷新当前页面
-                    self.loadRemote(self.currentRemotePath);
-                });
-            }
         });
         remoteFileListPopupMenu.add(remoteFileListPopupMenuDelete);
         this.remoteFileList.setComponentPopupMenu(remoteFileListPopupMenu);
@@ -477,13 +487,12 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                 this.triggerConnecting();
                                 this.disconnect(false);
 
-                                this.remoteCredentials = data;
-                                ConnectionBuilder connectionBuilder = RemoteCredentialsUtil.connectionBuilder(data, this.project);
-                                this.sftpChannel = connectionBuilder.openSftpChannel();
+                                this.connectionBuilder = RemoteCredentialsUtil.connectionBuilder(data, this.project);
+                                this.sftpChannel = this.connectionBuilder.openSftpChannel();
                                 this.triggerConnected();
 
-                                // 获取sftpClient
                                 try {
+                                    // 获取sftpClient
                                     // 使用反射获取到 net.schmizz.sshj.sftp.SFTPClient
                                     Class<SshjSftpChannel> sftpChannelClass = SshjSftpChannel.class;
 
@@ -573,10 +582,12 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      * 断开当前连接
      */
     public void disconnect (boolean triggerEvent) {
+        // 断开连接
         if (this.sftpChannel != null && this.sftpChannel.isConnected()) {
             this.sftpChannel.disconnect();
         }
 
+        this.connectionBuilder = null;
         this.sftpChannel = null;
         this.sftpClient = null;
 
@@ -781,7 +792,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         }
 
         // 格式化远程路径
-        final String normalizedRemotePath = this.remoteCredentials.getHost() + ":" + this.normalizeRemoteFileObjectPath(remoteFile);
+        final String normalizedRemotePath = this.sftpChannel.getSshSession().getHost() + ":" + this.normalizeRemoteFileObjectPath(remoteFile);
         // 远程路径
         final String remoteFilePath = remoteFile.path();
         // 本地绝对路径
