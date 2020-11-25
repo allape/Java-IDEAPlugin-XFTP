@@ -758,7 +758,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         }
 
         List<FileModel> fileModels = ((FileTableModel) this.remoteFileList.getModel()).getData();
-        for (int row: rows) {
+        for (int row : rows) {
+            if (row == 0) continue;
             files.add(this.sftpChannel.file(fileModels.get(row).getPath()));
         }
 
