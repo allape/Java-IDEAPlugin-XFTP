@@ -535,6 +535,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         try {
             String path = remoteFilePath == null || remoteFilePath.isEmpty() ? this.sftpChannel.getHome() : remoteFilePath;
             RemoteFileObject file = this.sftpChannel.file(path);
+            path = file.path();
             if (!file.exists()) {
                 Services.message(path + " does not exist!", MessageType.INFO);
                 this.setCurrentRemotePath(this.currentRemotePath);
@@ -947,6 +948,10 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 transfer.setResult(Transfer.Result.SUCCESS);
                 sub.onNext(transfer);
                 sub.onComplete();
+                // 是上传至当前目录则刷新
+                if (remoteFilePath.startsWith(self.currentRemotePath)) {
+                    self.application.invokeLater(() -> self.loadRemote(self.currentRemotePath));
+                }
             }, e -> {
                 transfer.setResult(Transfer.Result.FAIL);
                 transfer.setException(e.getMessage());
