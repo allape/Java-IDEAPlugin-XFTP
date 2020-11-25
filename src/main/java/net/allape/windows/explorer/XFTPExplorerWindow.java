@@ -19,6 +19,7 @@ import com.intellij.openapi.vfs.newvfs.BulkFileListener;
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.remote.RemoteConnectionType;
+import com.intellij.remote.RemoteCredentials;
 import com.intellij.ssh.ConnectionBuilder;
 import com.intellij.ssh.RemoteCredentialsUtil;
 import com.intellij.ssh.RemoteFileObject;
@@ -30,6 +31,7 @@ import com.intellij.util.ReflectionUtil;
 import com.jetbrains.plugins.remotesdk.console.RemoteDataProducer;
 import io.reactivex.rxjava3.core.Observable;
 import net.allape.bus.Data;
+import net.allape.bus.HistoryTopicHandler;
 import net.allape.bus.Services;
 import net.allape.dialogs.Confirm;
 import net.allape.exception.TransferCancelledException;
@@ -60,6 +62,9 @@ import java.util.*;
 
 public class XFTPExplorerWindow extends XFTPExplorerUI {
 
+    // 传输历史记录topic的publisher
+    private final HistoryTopicHandler historyTopicHandler;
+
     // 上一次选择文件
     private FileModel lastFile = null;
 
@@ -68,6 +73,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     // 当前选中的本地文件
     private FileModel currentLocalFile = null;
 
+    // 当前的ssh配置
+    private RemoteCredentials remoteCredentials = null;
     // 当前开启的channel
     private SftpChannel sftpChannel = null;
     // 当前channel中的sftp client
@@ -84,31 +91,29 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     public XFTPExplorerWindow(Project project, ToolWindow toolWindow) {
         super(project, toolWindow);
 
+        this.historyTopicHandler = this.project.getMessageBus().syncPublisher(HistoryTopicHandler.HISTORY_TOPIC);
+
         final XFTPExplorerWindow self = XFTPExplorerWindow.this;
         // 初始化文件监听
-        if (this.project != null) {
-            this.loadLocal(this.project.getBasePath());
-            this.project.getMessageBus().connect().subscribe(VirtualFileManager.VFS_CHANGES, new BulkFileListener() {
-                @Override
-                public void after(@NotNull List<? extends VFileEvent> events) {
-                    for (VFileEvent e : events) {
-                        if (e.isFromSave()) {
-                            VirtualFile virtualFile = e.getFile();
-                            if (virtualFile != null) {
-                                String localFile = virtualFile.getPath();
-                                RemoteFileObject remoteFile = Maps.getFirstKeyByValue(self.remoteEditingFiles, localFile);
-                                if (remoteFile != null) {
-                                    // 上传文件
-                                    self.application.invokeLater(() -> self.transfer(new File(localFile), remoteFile, Transfer.Type.UPLOAD).subscribe());
-                                }
+        this.loadLocal(this.project.getBasePath());
+        this.project.getMessageBus().connect().subscribe(VirtualFileManager.VFS_CHANGES, new BulkFileListener() {
+            @Override
+            public void after(@NotNull List<? extends VFileEvent> events) {
+                for (VFileEvent e : events) {
+                    if (e.isFromSave()) {
+                        VirtualFile virtualFile = e.getFile();
+                        if (virtualFile != null) {
+                            String localFile = virtualFile.getPath();
+                            RemoteFileObject remoteFile = Maps.getFirstKeyByValue(self.remoteEditingFiles, localFile);
+                            if (remoteFile != null) {
+                                // 上传文件
+                                self.application.invokeLater(() -> self.transfer(new File(localFile), remoteFile, Transfer.Type.UPLOAD).subscribe());
                             }
                         }
                     }
                 }
-            });
-        } else {
-            Services.message("Failed to initial file change listener", MessageType.ERROR);
-        }
+            }
+        });
     }
 
     @Override
@@ -472,6 +477,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                 this.triggerConnecting();
                                 this.disconnect(false);
 
+                                this.remoteCredentials = data;
                                 ConnectionBuilder connectionBuilder = RemoteCredentialsUtil.connectionBuilder(data, this.project);
                                 this.sftpChannel = connectionBuilder.openSftpChannel();
                                 this.triggerConnected();
@@ -767,59 +773,71 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      * @param remoteFile 远程文件 {@link SftpChannel#file(String)}
      * @param type 传输类型
      */
-    private Observable<Transfer> transfer (File localFile, RemoteFileObject remoteFile, Transfer.Type type) {
+    private synchronized Observable<Transfer> transfer (File localFile, RemoteFileObject remoteFile, Transfer.Type type) {
         if (this.sftpChannel == null || !this.sftpChannel.isConnected()) {
             Services.message("Please start a sftp session first!", MessageType.INFO);
             throw new IllegalStateException("No SFTP session available!");
         }
 
-        return Observable.create(sub -> {
-            // 检查当前传输的队列, 存在相同target的, 取消上一个任务
-            for (Transfer exists : Data.TRANSFERRING) {
-                // 移除非运行中的内容
-                if (exists.getResult() != Transfer.Result.TRANSFERRING) {
-                    this.application.invokeLater(() -> Data.TRANSFERRING.remove(exists));
-                }
-                // 标记相同目标内容为已取消
-                else if (
-                        type == exists.getType() &&
-                        exists.getTarget().equals(type == Transfer.Type.UPLOAD ? remoteFile.path() : localFile.getAbsolutePath())
-                ) {
-                    exists.setResult(Transfer.Result.CANCELLED);
-                }
+        // 格式化远程路径
+        final String normalizedRemotePath = this.remoteCredentials.getHost() + ":" + this.normalizeRemoteFileObjectPath(remoteFile);
+        // 远程路径
+        final String remoteFilePath = remoteFile.path();
+        // 本地绝对路径
+        final String localFileAbsPath = localFile.getAbsolutePath();
+
+        // 检查当前传输的队列, 存在相同target的, 取消上一个任务
+        for (Transfer exists : Data.TRANSFERRING) {
+            // 移除非运行中的内容
+            if (exists.getResult() != Transfer.Result.TRANSFERRING) {
+                this.application.invokeLater(() -> Data.TRANSFERRING.remove(exists));
             }
+            // 标记相同目标内容为已取消
+            else if (
+                    type == exists.getType() &&
+                            exists.getTarget().equals(type == Transfer.Type.UPLOAD ? normalizedRemotePath : localFileAbsPath)
+            ) {
+                exists.setResult(Transfer.Result.CANCELLED);
+            }
+        }
 
-            String normalizedRemotePath = this.normalizeRemoteFileObjectPath(remoteFile);
+        // 设置传输对象
+        Transfer transfer = new Transfer();
+        transfer.setType(type);
+        transfer.setResult(Transfer.Result.TRANSFERRING);
+        transfer.setSize(type == Transfer.Type.UPLOAD ? localFile.length() : remoteFile.size());
+        transfer.setSource(type == Transfer.Type.UPLOAD ? localFileAbsPath : normalizedRemotePath);
+        transfer.setTarget(type == Transfer.Type.UPLOAD ? normalizedRemotePath : localFileAbsPath);
 
-            Transfer transfer = new Transfer();
-            transfer.setType(type);
-            transfer.setResult(Transfer.Result.TRANSFERRING);
-            transfer.setSource(type == Transfer.Type.UPLOAD ? localFile.getAbsolutePath() : normalizedRemotePath);
-            transfer.setSize(type == Transfer.Type.UPLOAD ? localFile.length() : remoteFile.size());
-            transfer.setTarget(type == Transfer.Type.UPLOAD ? normalizedRemotePath : localFile.getAbsolutePath());
+        Data.TRANSFERRING.add(transfer);
+        Data.HISTORY.add(transfer);
+        this.historyTopicHandler.before(HistoryTopicHandler.HAction.RERENDER);
 
-            XFTPExplorerWindow self = XFTPExplorerWindow.this;
+        XFTPExplorerWindow self = this;
 
-            Observable<Transfer> o = Observable.create(emitter -> {
-                try {
-                    if (type == Transfer.Type.UPLOAD) {
-                        if (!localFile.exists()) {
-                            Services.message("Can't find local file " + transfer.getSource(), MessageType.ERROR);
-                            emitter.onError(new IllegalStateException("local file " + transfer.getSource() + " does not exists!"));
-                            return;
-                        }
-                    } else {
-                        if (!remoteFile.exists()) {
-                            Services.message("Can't find remote file " + transfer.getSource(), MessageType.ERROR);
-                            emitter.onError(new IllegalStateException("remote file " + transfer.getSource() + " does not exists!"));
-                            return;
-                        }
+        return Observable.create(sub -> {
+            Observable<Transfer> transferring = Observable.create(emitter -> {
+                if (type == Transfer.Type.UPLOAD) {
+                    if (!localFile.exists()) {
+                        String e = "Can't find local file " + localFileAbsPath;
+                        Services.message(e, MessageType.ERROR);
+                        sub.onError(new IllegalArgumentException(e));
+                        return;
                     }
+                } else {
+                    if (!remoteFile.exists()) {
+                        String e = "Can't find remote file " + remoteFilePath;
+                        Services.message(e, MessageType.ERROR);
+                        sub.onError(new IllegalArgumentException(e));
+                        return;
+                    }
+                }
 
+                try {
                     ProgressManager.getInstance().run(new Task.Backgroundable(this.project, type == Transfer.Type.UPLOAD ? "Uploading" : "Downloading") {
                         @Override
                         public void run(@NotNull ProgressIndicator indicator) {
-                            indicator.setIndeterminate(false);
+                            indicator.setIndeterminate(type == Transfer.Type.UPLOAD ? localFile.isDirectory() : remoteFile.isDir());
                             try {
                                 SFTPFileTransfer fileTransfer = new SFTPFileTransfer(self.sftpClient.getSFTPEngine());
                                 fileTransfer.setTransferListener(new TransferListener() {
@@ -835,22 +853,30 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                             if (indicator.isCanceled() || transfer.getResult() == Transfer.Result.CANCELLED) {
                                                 throw new TransferCancelledException("Operation cancelled!");
                                             }
+
                                             transfer.setTransferred(transferred);
-                                            double percent = ((double) transferred) / size;
-                                            indicator.setFraction(percent);
-                                            indicator.setText((Math.round(percent * 10000) / 100) + "% " +
-                                                    FileTableModel.byteCountToDisplaySize(transferred) + "/" + total);
+                                            self.historyTopicHandler.before(HistoryTopicHandler.HAction.RERENDER);
+
                                             indicator.setText2((type == Transfer.Type.UPLOAD ? "Uploading" : "Downloading") + " " +
                                                     transfer.getSource() + " to " + transfer.getTarget());
+                                            double percent = ((double) transferred) / size;
+
+                                            // 文件夹的不显示百分比进度
+                                            if (!indicator.isIndeterminate()) {
+                                                indicator.setFraction(percent);
+                                            }
+
+                                            indicator.setText((Math.round(percent * 10000) / 100) + "% " +
+                                                    FileTableModel.byteCountToDisplaySize(transferred) + "/" + total);
                                         };
                                     }
                                 });
 
                                 // 开始上传
                                 if (type == Transfer.Type.UPLOAD) {
-                                    fileTransfer.upload(transfer.getSource(), transfer.getTarget());
+                                    fileTransfer.upload(localFileAbsPath, remoteFilePath);
                                 } else {
-                                    fileTransfer.download(transfer.getSource(), transfer.getTarget());
+                                    fileTransfer.download(remoteFilePath, localFileAbsPath);
                                 }
 
                                 // 如果上传目录和当前目录相同, 则刷新目录
@@ -902,12 +928,10 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                     emitter.onError(e);
 
                 }
-                Data.TRANSFERRING.add(transfer);
-                Data.HISTORY.add(transfer);
             });
 
             //noinspection ResultOfMethodCallIgnored
-            o.subscribe(t -> {
+            transferring.subscribe(ignore -> {
                 transfer.setResult(Transfer.Result.SUCCESS);
                 sub.onNext(transfer);
                 sub.onComplete();
@@ -918,6 +942,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             }, () -> {
                 sub.onComplete();
                 Data.TRANSFERRING.remove(transfer);
+                this.historyTopicHandler.before(HistoryTopicHandler.HAction.RERENDER);
             });
         });
     }
