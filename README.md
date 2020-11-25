@@ -11,7 +11,6 @@
 - Invoking methods of RemoteFileObject will block UI thread while uploading or downloading. 
 - Make sure the double-clicked remote file is not in the downloading queue.
 - Folder uploading progress(Task.Backgroundable) calculation error.
-- Download/upload queue is not suitable for multi-XFTPWindow
 - Deleting remote file will block UI thread
 
 ## Nuts-pain
