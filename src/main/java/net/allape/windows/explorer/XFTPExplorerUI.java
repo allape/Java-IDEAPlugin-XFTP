@@ -4,6 +4,8 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.ui.DarculaColors;
 import com.intellij.ui.JBColor;
+import com.intellij.ui.JBSplitter;
+import com.intellij.ui.OnePixelSplitter;
 import com.intellij.ui.components.*;
 import com.intellij.ui.table.JBTable;
 import net.allape.models.FileModel;
@@ -23,7 +25,7 @@ import java.util.List;
 public class XFTPExplorerUI extends XFTPWindow {
 
     protected JPanel panelWrapper = new JPanel(new BorderLayout());
-    protected JPanel panel = new JPanel(new GridBagLayout());
+    protected JBSplitter splitter = new OnePixelSplitter("xftp-main-window", .5f);
 
     @SuppressWarnings("rawtypes")
     protected JBPanel localWrapper = new JBPanel(new GridBagLayout());
@@ -65,10 +67,9 @@ public class XFTPExplorerUI extends XFTPWindow {
             Services.message("Error occurred while initialing UI, please re-open a window for retrying..." + e.getMessage(), MessageType.ERROR);
         }*/
 
-        this.panelWrapper.add(this.panel, BorderLayout.CENTER);
-
-        this.panel.add(this.localWrapper, Grids.X0Y0);
-        this.panel.add(this.remoteWrapper, Grids.X1Y0);
+        this.splitter.setFirstComponent(this.localWrapper);
+        this.splitter.setSecondComponent(this.remoteWrapper);
+        this.panelWrapper.add(this.splitter, BorderLayout.CENTER);
 
         GridBagConstraints noWeight = (GridBagConstraints) Grids.X0Y0.clone();
         noWeight.weightx = 0;
