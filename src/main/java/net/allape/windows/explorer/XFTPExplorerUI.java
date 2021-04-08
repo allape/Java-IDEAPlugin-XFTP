@@ -6,20 +6,20 @@ import com.intellij.ui.DarculaColors;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.JBSplitter;
 import com.intellij.ui.OnePixelSplitter;
-import com.intellij.ui.components.*;
-import com.intellij.ui.table.JBTable;
+import com.intellij.ui.components.JBList;
+import com.intellij.ui.components.JBPanel;
+import com.intellij.ui.components.JBScrollPane;
+import com.intellij.ui.components.JBTextField;
 import net.allape.models.FileModel;
 import net.allape.models.FileTableModel;
 import net.allape.utils.Grids;
 import net.allape.windows.XFTPWindow;
+import net.allape.windows.table.FileTable;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.TableColumn;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Enumeration;
 import java.util.List;
 
 public class XFTPExplorerUI extends XFTPWindow {
@@ -40,7 +40,7 @@ public class XFTPExplorerUI extends XFTPWindow {
     protected JBTextField remotePath = new JBTextField();
     protected JButton exploreButton = new JButton("Explorer");
     protected JButton disconnectButton = new JButton("Disconnect");
-    protected JBTable remoteFileList = new JBTable(new FileTableModel());
+    protected FileTable remoteFileList = new FileTable();
     protected JBScrollPane remoteFileListWrapper = new JBScrollPane(remoteFileList);
 
     public XFTPExplorerUI(Project project, ToolWindow toolWindow) {
@@ -97,36 +97,6 @@ public class XFTPExplorerUI extends XFTPWindow {
         GridBagConstraints disconnectButtonGrid = (GridBagConstraints) Grids.X2Y0.clone();
         disconnectButtonGrid.weightx = 0;
         this.remoteTopWrapper.add(this.disconnectButton, disconnectButtonGrid);
-
-        this.remoteFileList.setSelectionBackground(JBColor.namedColor(
-                "Plugins.lightSelectionBackground",
-                DarculaColors.BLUE
-        ));
-        this.remoteFileList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        this.remoteFileList.setAutoCreateRowSorter(false);
-        this.remoteFileList.setBorder(null);
-
-        DefaultTableCellRenderer normalRender = new XFTPExplorerWindowTableCellRenderer();
-        Enumeration<TableColumn> allColumns = this.remoteFileList.getColumnModel().getColumns();
-        while (allColumns.hasMoreElements()) {
-            allColumns.nextElement().setCellRenderer(normalRender);
-        }
-
-        DefaultTableCellRenderer centerRenderer = new XFTPExplorerWindowTableCellRenderer();
-        centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
-
-        DefaultTableCellRenderer rightRenderer = new XFTPExplorerWindowTableCellRenderer();
-        rightRenderer.setHorizontalAlignment(SwingConstants.RIGHT);
-
-        TableColumn typeColumn = this.remoteFileList.getColumnModel().getColumn(0);
-        typeColumn.setCellRenderer(centerRenderer);
-        typeColumn.setMaxWidth(25);
-
-        TableColumn sizeColumn = this.remoteFileList.getColumnModel().getColumn(2);
-        sizeColumn.setCellRenderer(rightRenderer);
-
-        TableColumn permissionsColumn = this.remoteFileList.getColumnModel().getColumn(3);
-        permissionsColumn.setCellRenderer(centerRenderer);
 
         this.remoteFileListWrapper.setBorder(null);
     }

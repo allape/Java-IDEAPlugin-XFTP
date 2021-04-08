@@ -13,12 +13,12 @@ repositories {
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
     implementation "io.reactivex.rxjava3:rxjava:3.0.7"
-    compileOnly files('/Applications/WebStorm.app/Contents/plugins/remote-run/lib/remote-run.jar')
+    compileOnly files('/Applications/IntelliJ IDEA.app/Contents/plugins/remote-run/lib/remote-run.jar')
 }
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
 intellij {
-    version 'IU-2020.3.2'
+    version "IU-2021.1"
 }
 patchPluginXml {
     changeNotes """

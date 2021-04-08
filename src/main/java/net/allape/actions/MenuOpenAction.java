@@ -6,7 +6,7 @@ import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.wm.ToolWindow;
 import net.allape.bus.Services;
 import net.allape.dialogs.Confirm;
-import net.allape.windows.explorer.XFTPExplorerWindowFactory;
+import net.allape.windows.XFTPExplorerWindowFactory;
 import org.jetbrains.annotations.NotNull;
 
 public class MenuOpenAction extends AnAction {

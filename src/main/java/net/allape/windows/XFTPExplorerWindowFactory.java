@@ -1,4 +1,4 @@
-package net.allape.windows.explorer;
+package net.allape.windows;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
@@ -7,7 +7,7 @@ import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.ui.content.*;
 import net.allape.bus.Data;
 import net.allape.bus.Services;
-import net.allape.windows.XFTPWindow;
+import net.allape.windows.explorer.XFTPExplorerWindow;
 import org.jetbrains.annotations.NotNull;
 
 public class XFTPExplorerWindowFactory implements ToolWindowFactory {
