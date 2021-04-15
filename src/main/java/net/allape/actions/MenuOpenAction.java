@@ -2,10 +2,10 @@ package net.allape.actions;
 
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.ui.DialogWrapper;
+import com.intellij.openapi.ui.MessageDialogBuilder;
 import com.intellij.openapi.wm.ToolWindow;
+import com.intellij.util.ui.UIUtil;
 import net.allape.bus.Services;
-import net.allape.dialogs.Confirm;
 import net.allape.windows.XFTPExplorerWindowFactory;
 import org.jetbrains.annotations.NotNull;
 
@@ -17,13 +17,11 @@ public class MenuOpenAction extends AnAction {
         if (toolWindow != null) {
             toolWindow.show(() -> XFTPExplorerWindowFactory.createTheToolWindowContent(e.getProject(), toolWindow));
         } else {
-            DialogWrapper notInitYet = new Confirm(
-                    new Confirm.Options()
-                            .title("Initialing...")
-                            .content("IPlease wait for a while.😊")
-            );
-            notInitYet.setOKActionEnabled(false);
-            notInitYet.show();
+            MessageDialogBuilder
+                    .okCancel("Initialing...", "Please wait for a while.")
+                    .icon(UIUtil.getInformationIcon())
+                    .yesText("Ok")
+                    .ask(e.getProject());
         }
     }
 }

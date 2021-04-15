@@ -1,6 +1,5 @@
 package net.allape.windows.explorer;
 
-import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider;
@@ -9,9 +8,9 @@ import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.ui.JBMenuItem;
 import com.intellij.openapi.ui.JBPopupMenu;
+import com.intellij.openapi.ui.MessageDialogBuilder;
 import com.intellij.openapi.ui.MessageType;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -20,6 +19,7 @@ import com.intellij.openapi.vfs.newvfs.BulkFileListener;
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.remote.RemoteConnectionType;
+import com.intellij.remote.RemoteCredentials;
 import com.intellij.ssh.ConnectionBuilder;
 import com.intellij.ssh.RemoteCredentialsUtil;
 import com.intellij.ssh.RemoteFileObject;
@@ -30,12 +30,12 @@ import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentManagerEvent;
 import com.intellij.util.ReflectionUtil;
 import com.jetbrains.plugins.remotesdk.console.RemoteDataProducer;
+import com.jetbrains.plugins.remotesdk.console.SshTerminalDirectRunner;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.internal.functions.Functions;
 import net.allape.bus.HistoryTopicHandler;
 import net.allape.bus.Services;
 import net.allape.bus.Windows;
-import net.allape.dialogs.Confirm;
 import net.allape.exception.TransferCancelledException;
 import net.allape.models.*;
 import net.allape.utils.Maps;
@@ -46,6 +46,8 @@ import net.schmizz.sshj.sftp.SFTPFileTransfer;
 import net.schmizz.sshj.xfer.TransferListener;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.plugins.terminal.TerminalTabState;
+import org.jetbrains.plugins.terminal.TerminalView;
 
 import javax.swing.*;
 import javax.swing.event.PopupMenuEvent;
@@ -60,6 +62,7 @@ import java.awt.event.MouseListener;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -85,6 +88,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     // 当前选中的本地文件
     private FileModel currentLocalFile = null;
 
+    // 当前配置
+    private RemoteCredentials credentials = null;
     // 当前配置的连接创建者
     private ConnectionBuilder connectionBuilder = null;
     // 当前开启的channel
@@ -119,8 +124,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                             RemoteFileObject remoteFile = Maps.getFirstKeyByValue(self.remoteEditingFiles, localFile);
                             if (remoteFile != null) {
                                 // 上传文件
-                                //noinspection ResultOfMethodCallIgnored
-                                self.application.invokeLater(() -> self.transfer(new File(localFile), remoteFile, Transfer.Type.UPLOAD)
+                                self.application.executeOnPooledThread(() -> self.transfer(new File(localFile), remoteFile, Transfer.Type.UPLOAD)
                                         .subscribe(Functions.emptyConsumer(), Throwable::printStackTrace)
                                 );
                             }
@@ -233,12 +237,11 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                     //noinspection unchecked
                     List<RemoteFileObject> files = (List<RemoteFileObject>) support.getTransferable().getTransferData(remoteFileListFlavor);
                     for (RemoteFileObject file : files) {
-                        //noinspection ResultOfMethodCallIgnored
-                        self.transfer(
+                        self.application.executeOnPooledThread(() -> self.transfer(
                                 new File(self.currentLocalPath + File.separator + file.name()),
                                 file,
                                 Transfer.Type.DOWNLOAD
-                        ).subscribe(Functions.emptyConsumer(), Throwable::printStackTrace);
+                        ).subscribe(Functions.emptyConsumer(), Throwable::printStackTrace));
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -270,17 +273,20 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         this.exploreButton.addActionListener(e -> this.connectSftp());
         this.disconnectButton.setVisible(false);
         this.disconnectButton.addActionListener(e -> {
-            DialogWrapper dialog = new Confirm(new Confirm.Options()
-                    .title("Disconnecting")
-                    .content("Do you really want to close this session?")
-            );
-            if (dialog.showAndGet()) {
+            if (MessageDialogBuilder
+                    .yesNo("Disconnecting", "Do you really want to close this session?")
+                    .asWarning()
+                    .yesText("Disconnect")
+                    .ask(this.project)) {
                 this.disconnect(true);
             }
         });
         this.newTerminalSessionButton.setVisible(false);
         this.newTerminalSessionButton.addActionListener(e -> {
-            System.out.println("open in new terminal session");
+            TerminalTabState state = new TerminalTabState();
+//            state.myTabName = this.credentials.getUserName() + "@" + this.credentials.getHost();
+            state.myWorkingDirectory = this.remotePath.getText();
+            TerminalView.getInstance(this.project).createNewSession(new SshTerminalDirectRunner(this.project, this.credentials, Charset.defaultCharset()), state);
         });
         this.remoteFileList.getSelectionModel().addListSelectionListener(e -> {
             List<FileModel> allRemoteFiles = this.remoteFileList.getModel().getData();
@@ -347,12 +353,11 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                     //noinspection unchecked
                     List<File> files = (List<File>) support.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
                     for (File file : files) {
-                        //noinspection ResultOfMethodCallIgnored
-                        self.transfer(
+                        self.application.executeOnPooledThread(() -> self.transfer(
                                 file,
                                 self.sftpChannel.file(self.currentRemotePath + SERVER_FILE_SYSTEM_SEPARATOR + file.getName()),
                                 Transfer.Type.UPLOAD
-                        ).subscribe(Functions.emptyConsumer(), Throwable::printStackTrace);
+                        ).subscribe(Functions.emptyConsumer(), Throwable::printStackTrace));
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -363,16 +368,16 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
         JBMenuItem remoteFileListPopupMenuDelete = new JBMenuItem("rm -Rf");
         remoteFileListPopupMenuDelete.addActionListener(e -> {
-            DialogWrapper dialog = new Confirm(new Confirm.Options()
-                    .title("Delete Confirm")
-                    .content("This operation is irreversible, continue?")
-                    .okText("Cancel")
-                    .cancelText("Continue"));
-            if (!dialog.showAndGet()) {
+            if (!MessageDialogBuilder
+                    .yesNo("Delete Confirm", "This operation is irreversible, continue?")
+                    .asWarning()
+                    .yesText("Cancel")
+                    .noText("Continue")
+                    .ask(this.project)) {
                 List<RemoteFileObject> files = self.getSelectedRemoteFileList();
                 this.application.invokeLater(() -> {
                     self.lockRemoteUIs();
-                    self.application.invokeLater(() -> {
+                    self.application.executeOnPooledThread(() -> {
                         // 开启一个ExecChannel来删除非空的文件夹
                         try {
                             for (RemoteFileObject file : files) {
@@ -388,9 +393,11 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                             err.printStackTrace();
                             Services.message("Can't delete file or folder right now, please try it later", MessageType.ERROR);
                         } finally {
-                            self.unlockRemoteUIs();
-                            // 刷新当前页面
-                            self.loadRemote(self.currentRemotePath);
+                            self.application.invokeLater(() -> {
+                                self.unlockRemoteUIs();
+                                // 刷新当前页面
+                                self.loadRemote(self.currentRemotePath);
+                            });
                         }
                     });
                 });
@@ -427,10 +434,11 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 this.setCurrentLocalPath(this.currentLocalPath);
             } else if (!file.isDirectory()) {
                 if (file.length() > EDITABLE_FILE_SIZE) {
-                    DialogWrapper dialog = new Confirm(new Confirm.Options()
-                            .title("This file is too large for text editor")
-                            .content("Do you still want to edit it?"));
-                    if (dialog.showAndGet()) {
+                    if (MessageDialogBuilder
+                            .yesNo("This file is too large for text editor", "Do you still want to edit it?")
+                            .asWarning()
+                            .yesText("Edit it")
+                            .ask(this.project)) {
                         this.openFileInEditor(file);
                     }
                 } else {
@@ -439,12 +447,11 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             } else {
                 File[] files = file.listFiles();
                 if (files == null) {
-                    DialogWrapper dialog = new Confirm(
-                        new Confirm.Options()
-                            .title("It is an unavailable folder!")
-                            .content("This folder is not available, do you want to open it in system file manager?")
-                    );
-                    if (dialog.showAndGet()) {
+                    if (MessageDialogBuilder
+                            .yesNo("It is an unavailable folder!", "This folder is not available, do you want to open it in system file manager?")
+                            .asWarning()
+                            .yesText("Open")
+                            .ask(this.project)) {
                         try {
                             Desktop.getDesktop().open(file);
                         } catch (IOException ioException) {
@@ -522,13 +529,14 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                     null,
                     "",
                     data -> {
+                        this.credentials = data;
                         this.triggerConnecting();
                         this.disconnect(false);
 
                         this.application.executeOnPooledThread(() -> {
                             // com.jetbrains.plugins.remotesdk.tools.RemoteTool.startRemoteProcess
                             //noinspection UnstableApiUsage
-                            this.connectionBuilder = RemoteCredentialsUtil.connectionBuilder(data).withConnectionTimeout(60L);
+                            this.connectionBuilder = RemoteCredentialsUtil.connectionBuilder(this.credentials, this.project).withConnectionTimeout(60L);
                             this.sftpChannel = this.connectionBuilder.openSftpChannel();
                             this.triggerConnected();
 
@@ -549,7 +557,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                         + e.getMessage(), MessageType.ERROR);
                             }
 
-                            this.loadRemote(this.sftpChannel.getHome());
+                            this.application.invokeLater(() -> this.loadRemote(this.sftpChannel.getHome()));
                         });
                     }
                 );
@@ -565,16 +573,16 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      * @param remoteFilePath 加载的地址, 为null为空时使用sftp默认文件夹
      */
     public void loadRemote (@Nullable String remoteFilePath) {
-        if (this.sftpChannel == null) {
-            Services.message("Please connect to server first!", MessageType.INFO);
-        } else if (!this.sftpChannel.isConnected()) {
-            Services.message("SFTP lost connection, retrying...", MessageType.ERROR);
-            this.connectSftp();
-        }
+        this.application.executeOnPooledThread(() -> {
+            if (this.sftpChannel == null) {
+                Services.message("Please connect to server first!", MessageType.INFO);
+            } else if (!this.sftpChannel.isConnected()) {
+                Services.message("SFTP lost connection, retrying...", MessageType.ERROR);
+                this.connectSftp();
+            }
 
-        this.remoteFileList.setEnabled(false);
-        this.remotePath.setEnabled(false);
-        this.application.runReadAction(() -> {
+            this.remoteFileList.setEnabled(false);
+            this.remotePath.setEnabled(false);
             try {
                 String path = remoteFilePath == null || remoteFilePath.isEmpty() ? this.sftpChannel.getHome() : remoteFilePath;
                 RemoteFileObject file = this.sftpChannel.file(path);
@@ -583,17 +591,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                     Services.message(path + " does not exist!", MessageType.INFO);
                     this.setCurrentRemotePath(this.currentRemotePath);
                 } else if (!file.isDir()) {
-                    // 如果文件小于2M, 则自动下载到缓存目录并进行监听
-                    if (file.size() > EDITABLE_FILE_SIZE) {
-                        DialogWrapper dialog = new Confirm(new Confirm.Options()
-                                .title("This file is too large for text editor")
-                                .content("Do you still want to download and edit it?"));
-                        if (dialog.showAndGet()) {
-                            this.downloadFileAndEdit(file);
-                        }
-                    } else {
-                        this.downloadFileAndEdit(file);
-                    }
+                    this.downloadFileAndEdit(file);
                 } else {
                     this.setCurrentRemotePath(path);
 
@@ -670,11 +668,11 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             this.disconnectButton.setVisible(true);
             this.newTerminalSessionButton.setVisible(true);
 
-            if (this.content != null) {
+            if (this.content != null && this.credentials != null) {
                 this.content.setDisplayName(
-                        this.connectionBuilder.buildSessionConfig().getUsername() +
+                        this.credentials.getUserName() +
                         "@" +
-                        this.connectionBuilder.buildSessionConfig().getHost()
+                        this.credentials.getHost()
                 );
             }
         });
@@ -752,44 +750,56 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             throw new IllegalArgumentException("Can not edit a folder!");
         }
 
-        // 如果当前远程文件已经在编辑器中打开了, 则关闭之前的
-        RemoteFileObject existsRemoteFile = this.remoteEditingFiles
-                .keySet().stream()
-                .filter(rf -> rf.path().equals(remoteFile.path()))
-                .findFirst()
-                .orElse(null);
-        if (existsRemoteFile != null) {
-            File oldCachedFile = new File(this.remoteEditingFiles.get(existsRemoteFile));
-            if (oldCachedFile.exists()) {
-                DialogWrapper dialog = new Confirm(new Confirm.Options()
-                        .title("This file is editing")
-                        .okText("Replace")
-                        .cancelText("Open")
-                        .content("Do you want to replace current editing file? \n" +
-                                "Press \"Open\" to open/focus an/the editor for/of existing file. \n" +
-                                "Press \"Replace\" to discard downloaded file and re-download the file from remote.")
-                );
-                if (!dialog.showAndGet()) {
-                    this.openFileInEditor(oldCachedFile);
+        this.application.invokeLater(() -> {
+            // 如果文件小于2M, 则自动下载到缓存目录并进行监听
+            if (remoteFile.size() > EDITABLE_FILE_SIZE) {
+                if (!MessageDialogBuilder
+                        .yesNo("This file is too large for text editor", "Do you still want to download and edit it?")
+                        .asWarning()
+                        .yesText("Do it")
+                        .ask(this.project)) {
                     return;
-                } else {
-                    this.remoteEditingFiles.remove(existsRemoteFile);
                 }
             }
-        }
 
-        try {
-            File localFile = File.createTempFile("jb-ide-xftp-", "." + remoteFile.name());
-            //noinspection ResultOfMethodCallIgnored
-            this.transfer(localFile, remoteFile, Transfer.Type.DOWNLOAD).subscribe(t -> {
-                this.openFileInEditor(localFile);
-                // 加入文件监听队列
-                this.remoteEditingFiles.put(remoteFile, localFile.getAbsolutePath());
-            }, Throwable::printStackTrace);
-        } catch (IOException e) {
-            e.printStackTrace();
-            Services.message("Unable to create cache file: " + e.getMessage(), MessageType.ERROR);
-        }
+            // 如果当前远程文件已经在编辑器中打开了, 则关闭之前的
+            RemoteFileObject existsRemoteFile = this.remoteEditingFiles
+                    .keySet().stream()
+                    .filter(rf -> rf.path().equals(remoteFile.path()))
+                    .findFirst()
+                    .orElse(null);
+            if (existsRemoteFile != null) {
+                File oldCachedFile = new File(this.remoteEditingFiles.get(existsRemoteFile));
+                if (oldCachedFile.exists()) {
+                    if (MessageDialogBuilder
+                            .yesNo("This file is editing", "Do you want to replace current editing file? \n\n" +
+                                    "\"Open\" to reopen/focus the existing file. \n" +
+                                    "\"Replace\" to re-download the file from remote and open it.")
+                            .asWarning()
+                            .noText("Replace")
+                            .yesText("Open")
+                            .ask(this.project)) {
+                        this.openFileInEditor(oldCachedFile);
+                        return;
+                    } else {
+                        this.remoteEditingFiles.remove(existsRemoteFile);
+                    }
+                }
+            }
+
+            try {
+                File localFile = File.createTempFile("jb-ide-xftp-", "." + remoteFile.name());
+                this.application.executeOnPooledThread(() ->
+                        this.transfer(localFile, remoteFile, Transfer.Type.DOWNLOAD).subscribe(t -> {
+                            this.openFileInEditor(localFile);
+                            // 加入文件监听队列
+                            this.remoteEditingFiles.put(remoteFile, localFile.getAbsolutePath());
+                        }, Throwable::printStackTrace));
+            } catch (IOException e) {
+                e.printStackTrace();
+                Services.message("Unable to create cache file: " + e.getMessage(), MessageType.ERROR);
+            }
+        });
     }
 
     /**
