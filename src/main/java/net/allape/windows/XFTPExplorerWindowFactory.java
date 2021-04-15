@@ -5,7 +5,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.ui.content.*;
-import net.allape.bus.Data;
+import net.allape.bus.Windows;
 import net.allape.bus.Services;
 import net.allape.windows.explorer.XFTPExplorerWindow;
 import org.jetbrains.annotations.NotNull;
@@ -20,12 +20,12 @@ public class XFTPExplorerWindowFactory implements ToolWindowFactory {
         toolWindow.addContentManagerListener(new ContentManagerListener() {
             @Override
             public void contentRemoved(@NotNull ContentManagerEvent event) {
-                XFTPWindow window = Data.windows.get(event.getContent());
+                XFTPWindow window = Windows.windows.get(event.getContent());
                 if (window == null) {
                     logger.warn("closed an un-cached window: " + event.toString());
                 } else {
                     window.onClosed(event);
-                    Data.windows.remove(event.getContent());
+                    Windows.windows.remove(event.getContent());
                 }
 
                 if (toolWindow.getContentManager().getContents().length == 0) {
@@ -57,7 +57,7 @@ public class XFTPExplorerWindowFactory implements ToolWindowFactory {
         contentManager.setSelectedContent(content);
 
         // 放入缓存
-        Data.windows.put(content, window);
+        Windows.windows.put(content, window);
     }
 
 }

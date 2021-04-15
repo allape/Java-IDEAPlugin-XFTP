@@ -2,11 +2,8 @@ package net.allape.windows.explorer;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
-import com.intellij.ui.DarculaColors;
-import com.intellij.ui.JBColor;
 import com.intellij.ui.JBSplitter;
 import com.intellij.ui.OnePixelSplitter;
-import com.intellij.ui.components.JBList;
 import com.intellij.ui.components.JBPanel;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextField;
@@ -30,7 +27,7 @@ public class XFTPExplorerUI extends XFTPWindow {
     @SuppressWarnings("rawtypes")
     protected JBPanel localWrapper = new JBPanel(new GridBagLayout());
     protected JBTextField localPath = new JBTextField();
-    protected JBList<FileModel> localFileList = new JBList<>(new DefaultListModel<>());
+    protected FileTable localFileList = new FileTable();
     protected JBScrollPane localFileListWrapper = new JBScrollPane(localFileList);
 
     @SuppressWarnings("rawtypes")
@@ -77,13 +74,6 @@ public class XFTPExplorerUI extends XFTPWindow {
 
         this.localWrapper.add(this.localPath, noWeight);
         this.localWrapper.add(this.localFileListWrapper, Grids.X0Y1);
-
-        this.localFileList.setCellRenderer(new XFTPExplorerWindowListCellRenderer());
-        this.localFileList.setSelectionBackground(JBColor.namedColor(
-                "Plugins.lightSelectionBackground",
-                DarculaColors.BLUE
-        ));
-        this.localFileList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 
         this.localFileListWrapper.setBorder(null);
 
@@ -146,23 +136,12 @@ public class XFTPExplorerUI extends XFTPWindow {
     }
 
     /**
-     * 将文件内容放入ListUI
-     * @param ui 使用的UI
-     * @param files 展示的文件列表
-     */
-    static protected void rerenderFileList (JList<FileModel> ui, java.util.List<FileModel> files) {
-        // 清空列表后将现在的内容添加进去
-        ui.clearSelection();
-        ui.setListData(sortFiles(files).toArray(new FileModel[]{}));
-    }
-
-    /**
      * 将文件内容放入TableUI
      * @param ui 使用的UI
      * @param files 展示的文件列表
      */
-    static protected void rerenderFileTable (JTable ui, List<FileModel> files) {
-        ((FileTableModel) (ui.getModel())).resetData(sortFiles(files));
+    static protected void rerenderFileTable (FileTable ui, List<FileModel> files) {
+        ui.getModel().resetData(sortFiles(files));
     }
 
 }
