@@ -34,6 +34,7 @@ import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.internal.functions.Functions;
 import net.allape.bus.HistoryTopicHandler;
 import net.allape.bus.Services;
+import net.allape.bus.Windows;
 import net.allape.dialogs.Confirm;
 import net.allape.exception.TransferCancelledException;
 import net.allape.models.*;
@@ -517,16 +518,13 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                     null,
                     "",
                     data -> {
-                        if (this.content != null) {
-                            this.content.setDisplayName(data.getUserName() + "@" + data.getHost());
-                        }
-
                         this.triggerConnecting();
                         this.disconnect(false);
 
-                        ReadAction.nonBlocking(() -> {
+                        this.application.executeOnPooledThread(() -> {
+                            // com.jetbrains.plugins.remotesdk.tools.RemoteTool.startRemoteProcess
                             //noinspection UnstableApiUsage
-                            this.connectionBuilder = RemoteCredentialsUtil.connectionBuilder(data, this.project);
+                            this.connectionBuilder = RemoteCredentialsUtil.connectionBuilder(data).withConnectionTimeout(60L);
                             this.sftpChannel = this.connectionBuilder.openSftpChannel();
                             this.triggerConnected();
 
@@ -548,7 +546,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                             }
 
                             this.loadRemote(this.sftpChannel.getHome());
-                        }).executeSynchronously();
+                        });
                     }
                 );
         } catch (Exception e) {
@@ -638,6 +636,10 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         this.sftpChannel = null;
         this.sftpClient = null;
 
+        if (this.content != null) {
+            this.content.setDisplayName(Windows.WINDOW_DEFAULT_NAME);
+        }
+
         if (triggerEvent) {
             this.triggerDisconnected();
         }
@@ -659,6 +661,11 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         this.exploreButton.setVisible(false);
         this.exploreButton.setIcon(null);
         this.disconnectButton.setVisible(true);
+
+        if (this.content != null) {
+            this.application.invokeLater(() ->
+                    this.content.setDisplayName(this.connectionBuilder.buildSessionConfig().getUsername() + "@" + this.connectionBuilder.buildSessionConfig().getHost()));
+        }
     }
 
     /**
