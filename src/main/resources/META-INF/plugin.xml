@@ -1,9 +1,11 @@
 <idea-plugin>
     <id>net.allape.XFTP</id>
     <name>XFTP</name>
-    <vendor email="allensnape@qq.com" url="http://www.allensnape.com">ALLAPE</vendor>
+    <vendor email="allensnape@qq.com" url="https://www.allensnape.com">ALLAPE</vendor>
 
     <description><![CDATA[
+        <a href="https://github.com/ALLAPE/Java-IDEAPlugin-XFTP">Github</a>
+        <br/>
         FYI, not test on Windows yet.<br/>
         File manage with SFTP using <a href="jetbrains://idea/settings?name=Tools--SSH+Configurations">SSH Configurations of IDE Settings</a>.<br>
     ]]></description>
@@ -12,6 +14,7 @@
          on how to target different products -->
     <depends>com.intellij.modules.ultimate</depends>
     <depends>org.jetbrains.plugins.remote-run</depends>
+    <depends>org.jetbrains.plugins.terminal</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow id="XFTP"
