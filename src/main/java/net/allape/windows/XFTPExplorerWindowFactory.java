@@ -1,14 +1,23 @@
 package net.allape.windows;
 
+import com.intellij.icons.AllIcons;
+import com.intellij.ide.IdeBundle;
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.project.DumbAwareAction;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.MessageType;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
+import com.intellij.openapi.wm.ex.ToolWindowEx;
+import com.intellij.terminal.JBTerminalWidget;
 import com.intellij.ui.content.*;
 import net.allape.bus.Windows;
 import net.allape.bus.Services;
 import net.allape.windows.explorer.XFTPExplorerWindow;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.plugins.terminal.TerminalView;
 
 public class XFTPExplorerWindowFactory implements ToolWindowFactory {
 
@@ -22,17 +31,28 @@ public class XFTPExplorerWindowFactory implements ToolWindowFactory {
             public void contentRemoved(@NotNull ContentManagerEvent event) {
                 XFTPWindow window = Windows.windows.get(event.getContent());
                 if (window == null) {
-                    logger.warn("closed an un-cached window: " + event.toString());
+                    logger.warn("closed an un-cached window: " + event);
                 } else {
                     window.onClosed(event);
                     Windows.windows.remove(event.getContent());
                 }
 
-                if (toolWindow.getContentManager().getContents().length == 0) {
-                    toolWindow.hide();
-                }
+//                if (toolWindow.getContentManager().getContents().length == 0) {
+//                    toolWindow.hide();
+//                }
             }
         });
+        if (toolWindow instanceof ToolWindowEx) {
+            ((ToolWindowEx) toolWindow).setTabActions(new DumbAwareAction(() -> "New Explorer", () -> "Open a new explorer", AllIcons.General.Add) {
+                public void actionPerformed(@NotNull AnActionEvent e) {
+                    if (e.getProject() != null) {
+                        XFTPExplorerWindowFactory.this.createToolWindowContent(e.getProject(), toolWindow);
+                    } else {
+                        Services.message("Explorer requires a project!", MessageType.INFO);
+                    }
+                }
+            });
+        }
     }
 
     @Override
@@ -55,6 +75,8 @@ public class XFTPExplorerWindowFactory implements ToolWindowFactory {
         ContentManager contentManager = toolWindow.getContentManager();
         contentManager.addContent(content);
         contentManager.setSelectedContent(content);
+
+        window.setContent(content);
 
         // 放入缓存
         Windows.windows.put(content, window);

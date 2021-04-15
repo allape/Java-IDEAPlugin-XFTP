@@ -1,5 +1,6 @@
 package net.allape.windows.explorer;
 
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider;
@@ -25,6 +26,7 @@ import com.intellij.ssh.RemoteFileObject;
 import com.intellij.ssh.channels.SftpChannel;
 import com.intellij.ssh.impl.sshj.channels.SshjSftpChannel;
 import com.intellij.ui.AnimatedIcon;
+import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentManagerEvent;
 import com.intellij.util.ReflectionUtil;
 import com.jetbrains.plugins.remotesdk.console.RemoteDataProducer;
@@ -70,6 +72,9 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     private final List<Transfer> HISTORY = new ArrayList<>(100);
     // 传输中的
     private final List<Transfer> TRANSFERRING = new ArrayList<>(100);
+
+    // 窗口content
+    private Content content = null;
 
     // 上一次选择文件
     private FileModel lastFile = null;
@@ -505,17 +510,21 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         //    )
         // com.jetbrains.plugins.remotesdk.console.RemoteDataProducer
         try {
-            this.application.invokeLater(() ->
-                new RemoteDataProducer()
-                    .withProject(this.project)
-                    .produceRemoteData(
-                        RemoteConnectionType.SSH_CONFIG,
-                        null,
-                        "",
-                        data -> {
-                            this.triggerConnecting();
-                            this.disconnect(false);
+            new RemoteDataProducer()
+                .withProject(this.project)
+                .produceRemoteData(
+                    RemoteConnectionType.SSH_CONFIG,
+                    null,
+                    "",
+                    data -> {
+                        if (this.content != null) {
+                            this.content.setDisplayName(data.getUserName() + "@" + data.getHost());
+                        }
 
+                        this.triggerConnecting();
+                        this.disconnect(false);
+
+                        ReadAction.nonBlocking(() -> {
                             //noinspection UnstableApiUsage
                             this.connectionBuilder = RemoteCredentialsUtil.connectionBuilder(data, this.project);
                             this.sftpChannel = this.connectionBuilder.openSftpChannel();
@@ -539,9 +548,9 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                             }
 
                             this.loadRemote(this.sftpChannel.getHome());
-                        }
-                    )
-            );
+                        }).executeSynchronously();
+                    }
+                );
         } catch (Exception e) {
             e.printStackTrace();
             this.triggerDisconnected();
@@ -563,51 +572,53 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
         this.remoteFileList.setEnabled(false);
         this.remotePath.setEnabled(false);
-        try {
-            String path = remoteFilePath == null || remoteFilePath.isEmpty() ? this.sftpChannel.getHome() : remoteFilePath;
-            RemoteFileObject file = this.sftpChannel.file(path);
-            path = file.path();
-            if (!file.exists()) {
-                Services.message(path + " does not exist!", MessageType.INFO);
-                this.setCurrentRemotePath(this.currentRemotePath);
-            } else if (!file.isDir()) {
-                // 如果文件小于2M, 则自动下载到缓存目录并进行监听
-                if (file.size() > EDITABLE_FILE_SIZE) {
-                    DialogWrapper dialog = new Confirm(new Confirm.Options()
-                            .title("This file is too large for text editor")
-                            .content("Do you still want to download and edit it?"));
-                    if (dialog.showAndGet()) {
+        this.application.runReadAction(() -> {
+            try {
+                String path = remoteFilePath == null || remoteFilePath.isEmpty() ? this.sftpChannel.getHome() : remoteFilePath;
+                RemoteFileObject file = this.sftpChannel.file(path);
+                path = file.path();
+                if (!file.exists()) {
+                    Services.message(path + " does not exist!", MessageType.INFO);
+                    this.setCurrentRemotePath(this.currentRemotePath);
+                } else if (!file.isDir()) {
+                    // 如果文件小于2M, 则自动下载到缓存目录并进行监听
+                    if (file.size() > EDITABLE_FILE_SIZE) {
+                        DialogWrapper dialog = new Confirm(new Confirm.Options()
+                                .title("This file is too large for text editor")
+                                .content("Do you still want to download and edit it?"));
+                        if (dialog.showAndGet()) {
+                            this.downloadFileAndEdit(file);
+                        }
+                    } else {
                         this.downloadFileAndEdit(file);
                     }
                 } else {
-                    this.downloadFileAndEdit(file);
+                    this.setCurrentRemotePath(path);
+
+                    List<RemoteFileObject> files = file.list();
+                    List<FileModel> fileModels = new ArrayList<>(files.size());
+
+                    // 添加返回上一级目录
+                    fileModels.add(this.getParentFolder(path, SERVER_FILE_SYSTEM_SEPARATOR));
+
+                    for (RemoteFileObject f : files) {
+                        fileModels.add(new FileModel(
+                                // 处理有些文件夹是//开头的
+                                this.normalizeRemoteFileObjectPath(f),
+                                f.name(), f.isDir(), f.size(), f.getPermissions()
+                        ));
+                    }
+
+                    rerenderFileTable(this.remoteFileList, fileModels);
                 }
-            } else {
-                this.setCurrentRemotePath(path);
-
-                List<RemoteFileObject> files = file.list();
-                List<FileModel> fileModels = new ArrayList<>(files.size());
-
-                // 添加返回上一级目录
-                fileModels.add(this.getParentFolder(path, SERVER_FILE_SYSTEM_SEPARATOR));
-
-                for (RemoteFileObject f : files) {
-                    fileModels.add(new FileModel(
-                            // 处理有些文件夹是//开头的
-                            this.normalizeRemoteFileObjectPath(f),
-                            f.name(), f.isDir(), f.size(), f.getPermissions()
-                    ));
-                }
-
-                rerenderFileTable(this.remoteFileList, fileModels);
+            } catch (Exception e) {
+                e.printStackTrace();
+                Services.message("Error occurred while listing remote files: " + e.getMessage(), MessageType.ERROR);
+            } finally {
+                this.remoteFileList.setEnabled(true);
+                this.remotePath.setEnabled(true);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            Services.message("Error occurred while listing remote files: " + e.getMessage(), MessageType.ERROR);
-        } finally {
-            this.remoteFileList.setEnabled(true);
-            this.remotePath.setEnabled(true);
-        }
+        });
     }
 
     /**
@@ -1009,6 +1020,14 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 this.historyTopicHandler.before(HistoryTopicHandler.HAction.RERENDER);
             });
         });
+    }
+
+    // endregion
+
+    // region getter / setter
+
+    public void setContent(Content content) {
+        this.content = content;
     }
 
     // endregion
