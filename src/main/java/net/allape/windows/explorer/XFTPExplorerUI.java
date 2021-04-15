@@ -37,6 +37,7 @@ public class XFTPExplorerUI extends XFTPWindow {
     protected JBTextField remotePath = new JBTextField();
     protected JButton exploreButton = new JButton("Explorer");
     protected JButton disconnectButton = new JButton("Disconnect");
+    protected JButton newTerminalSessionButton = new JButton("TTY");
     protected FileTable remoteFileList = new FileTable();
     protected JBScrollPane remoteFileListWrapper = new JBScrollPane(remoteFileList);
 
@@ -87,6 +88,9 @@ public class XFTPExplorerUI extends XFTPWindow {
         GridBagConstraints disconnectButtonGrid = (GridBagConstraints) Grids.X2Y0.clone();
         disconnectButtonGrid.weightx = 0;
         this.remoteTopWrapper.add(this.disconnectButton, disconnectButtonGrid);
+        GridBagConstraints ttyButtonGrid = (GridBagConstraints) Grids.X3Y0.clone();
+        ttyButtonGrid.weightx = 0;
+        this.remoteTopWrapper.add(this.newTerminalSessionButton, ttyButtonGrid);
 
         this.remoteFileListWrapper.setBorder(null);
     }

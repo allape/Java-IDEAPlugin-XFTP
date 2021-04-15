@@ -278,6 +278,10 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 this.disconnect(true);
             }
         });
+        this.newTerminalSessionButton.setVisible(false);
+        this.newTerminalSessionButton.addActionListener(e -> {
+            System.out.println("open in new terminal session");
+        });
         this.remoteFileList.getSelectionModel().addListSelectionListener(e -> {
             List<FileModel> allRemoteFiles = this.remoteFileList.getModel().getData();
 
@@ -649,43 +653,54 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      * 设置当前状态为连接中
      */
     public void triggerConnecting () {
-        this.exploreButton.setEnabled(false);
-        this.exploreButton.setIcon(AnimatedIcon.Default.INSTANCE);
+        this.application.invokeLater(() -> {
+            this.exploreButton.setEnabled(false);
+            this.exploreButton.setIcon(AnimatedIcon.Default.INSTANCE);
+        });
     }
 
     /**
      * 设置当前状态为已连接
      */
     public void triggerConnected () {
-        this.remotePath.setEnabled(true);
-        this.exploreButton.setVisible(false);
-        this.exploreButton.setIcon(null);
-        this.disconnectButton.setVisible(true);
+        this.application.invokeLater(() -> {
+            this.remotePath.setEnabled(true);
+            this.exploreButton.setVisible(false);
+            this.exploreButton.setIcon(null);
+            this.disconnectButton.setVisible(true);
+            this.newTerminalSessionButton.setVisible(true);
 
-        if (this.content != null) {
-            this.application.invokeLater(() ->
-                    this.content.setDisplayName(this.connectionBuilder.buildSessionConfig().getUsername() + "@" + this.connectionBuilder.buildSessionConfig().getHost()));
-        }
+            if (this.content != null) {
+                this.content.setDisplayName(
+                        this.connectionBuilder.buildSessionConfig().getUsername() +
+                        "@" +
+                        this.connectionBuilder.buildSessionConfig().getHost()
+                );
+            }
+        });
     }
 
     /**
      * 设置当前状态为未连接
      */
     public void triggerDisconnected () {
-        // 设置远程路径输入框
-        this.remotePath.setText("");
-        this.remotePath.setEnabled(false);
+        this.application.invokeLater(() -> {
+            // 设置远程路径输入框
+            this.remotePath.setText("");
+            this.remotePath.setEnabled(false);
 
-        this.exploreButton.setEnabled(true);
-        this.exploreButton.setVisible(true);
-        this.disconnectButton.setVisible(false);
+            this.exploreButton.setEnabled(true);
+            this.exploreButton.setVisible(true);
+            this.disconnectButton.setVisible(false);
+            this.newTerminalSessionButton.setVisible(false);
 
-        // 清空列表
-        if (this.remoteFileList.getModel() != null) {
-            this.remoteFileList.getModel().resetData(new ArrayList<>());
-        }
-        // 清空文件列表
-        this.remoteEditingFiles = new HashMap<>(COLLECTION_SIZE);
+            // 清空列表
+            if (this.remoteFileList.getModel() != null) {
+                this.remoteFileList.getModel().resetData(new ArrayList<>());
+            }
+            // 清空文件列表
+            this.remoteEditingFiles = new HashMap<>(COLLECTION_SIZE);
+        });
     }
 
     /**
