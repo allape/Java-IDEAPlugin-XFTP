@@ -10,7 +10,7 @@ import java.util.List;
 public class FileTableModel extends AbstractTableModel {
 
     static final private String[] COL_NAMES = new String[]{
-            "",
+            "d?",
             "name",
             "size",
             "permissions",
@@ -38,7 +38,7 @@ public class FileTableModel extends AbstractTableModel {
         try {
             FileModel model = this.data.get(rowIndex);
             switch (columnIndex) {
-                case 0: return model.getFolder() ? "📁" : "📃";
+                case 0: return model.getFolder() ? "d" : "-";
                 case 1: return model.getName();
                 case 2: return model.getFolder() || model.getSize() == null ?
                         "" : byteCountToDisplaySize(model.getSize());

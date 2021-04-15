@@ -2,6 +2,7 @@ package net.allape.bus;
 
 import com.intellij.notification.*;
 import com.intellij.openapi.ui.MessageType;
+import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.wm.ToolWindow;
 
 public final class Services {
@@ -22,6 +23,7 @@ public final class Services {
      */
     public static void message (String message, MessageType type) {
         NotificationGroup notificationGroup = NotificationGroupManager.getInstance().getNotificationGroup(GROUP);
+        if (notificationGroup == null) return;
         Notification notification = notificationGroup.createNotification(message, type);
         Notifications.Bus.notify(notification);
     }

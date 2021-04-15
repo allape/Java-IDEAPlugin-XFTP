@@ -480,9 +480,9 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                             currentFile.getName(),
                             currentFile.isDirectory(),
                             currentFile.length(),
-                            (currentFile.canRead() ? 1 : 0) |
-                                    (currentFile.canWrite() ? 2 : 0) |
-                                    (currentFile.canExecute() ? 4 : 0)
+                            (currentFile.canRead() ? 0b100 : 0) |
+                                    (currentFile.canWrite() ? 0b10 : 0) |
+                                    (currentFile.canExecute() ? 0b1 : 0)
                     ));
                 }
 
