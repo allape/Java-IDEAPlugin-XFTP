@@ -342,7 +342,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                             ));
                         }
 
-                        rerenderFileTable(this.remoteFileList, fileModels);
+                        this.application.invokeLater(() -> rerenderFileTable(this.remoteFileList, fileModels));
                     }
                 } catch (Exception ex) {
                     ex.printStackTrace();
