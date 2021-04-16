@@ -43,7 +43,7 @@ public class FileTable extends JBTable {
         sizeColumn.setCellRenderer(sizeCell);
 
         DefaultTableCellRenderer permissionCell = new TableCellRenderer();
-        iconCell.setHorizontalAlignment(SwingConstants.CENTER);
+        permissionCell.setHorizontalAlignment(SwingConstants.CENTER);
         TableColumn permissionsColumn = this.getColumnModel().getColumn(3);
         permissionsColumn.setCellRenderer(permissionCell);
     }
