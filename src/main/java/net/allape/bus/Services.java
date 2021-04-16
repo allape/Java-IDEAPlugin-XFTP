@@ -23,7 +23,6 @@ public final class Services {
      */
     public static void message (String message, MessageType type) {
         NotificationGroup notificationGroup = NotificationGroupManager.getInstance().getNotificationGroup(GROUP);
-        if (notificationGroup == null) return;
         Notification notification = notificationGroup.createNotification(message, type);
         Notifications.Bus.notify(notification);
     }

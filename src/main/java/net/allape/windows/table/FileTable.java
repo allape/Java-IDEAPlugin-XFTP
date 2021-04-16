@@ -31,21 +31,21 @@ public class FileTable extends JBTable {
             allColumns.nextElement().setCellRenderer(normalRender);
         }
 
-        DefaultTableCellRenderer centerRenderer = new TableCellRenderer();
-        centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
-
-        DefaultTableCellRenderer rightRenderer = new TableCellRenderer();
-        rightRenderer.setHorizontalAlignment(SwingConstants.RIGHT);
-
+        DefaultTableCellRenderer iconCell = new TableCellRenderer();
+        iconCell.setHorizontalAlignment(SwingConstants.CENTER);
         TableColumn typeColumn = this.getColumnModel().getColumn(0);
-        typeColumn.setCellRenderer(centerRenderer);
+        typeColumn.setCellRenderer(iconCell);
         typeColumn.setMaxWidth(30);
 
+        DefaultTableCellRenderer sizeCell = new TableCellRenderer();
+        sizeCell.setHorizontalAlignment(SwingConstants.RIGHT);
         TableColumn sizeColumn = this.getColumnModel().getColumn(2);
-        sizeColumn.setCellRenderer(rightRenderer);
+        sizeColumn.setCellRenderer(sizeCell);
 
+        DefaultTableCellRenderer permissionCell = new TableCellRenderer();
+        iconCell.setHorizontalAlignment(SwingConstants.CENTER);
         TableColumn permissionsColumn = this.getColumnModel().getColumn(3);
-        permissionsColumn.setCellRenderer(centerRenderer);
+        permissionsColumn.setCellRenderer(permissionCell);
     }
 
     @Override

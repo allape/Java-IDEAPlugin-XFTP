@@ -23,6 +23,7 @@
                     canCloseContents="true"
                     factoryClass="net.allape.windows.XFTPExplorerWindowFactory">
         </toolWindow>
+        <notificationGroup id="xftp" displayType="BALLOON" key="xftp.notification.group.name"/>
     </extensions>
 
     <actions>
