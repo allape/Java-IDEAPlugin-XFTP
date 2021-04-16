@@ -84,11 +84,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     // 当前选中的本地文件
     private FileModel currentLocalFile = null;
 
-    // 是否正在加载本地文件列表, 避免死循环
-    private boolean loadingLocal = false;
-    // 是否正在加载远程文件列表
-    private boolean loadingRemote = false;
-
     // 当前配置
     private RemoteCredentials credentials = null;
     // 当前配置的连接创建者
@@ -150,80 +145,75 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
         final XFTPExplorerWindow self = XFTPExplorerWindow.this;
 
-        this.localPath.addItemListener(e -> {
-            if (e.getStateChange() == ItemEvent.SELECTED) {
-                if (this.loadingLocal) return;
-                this.loadingLocal = true;
-                String path = (String) e.getItem();
-                if (path == null || path.isEmpty()) {
-                    path = "/";
-                }
-                this.localHistory.add(path);
-                this.rerenderLocalPath();
-                this.loadingLocal = false;
-                try {
-                    File file = new File(path);
-                    if (!file.exists()) {
-                        Services.message(path + " does not exist!", MessageType.INFO);
-                    } else if (!file.isDirectory()) {
-                        if (file.length() > EDITABLE_FILE_SIZE) {
-                            if (MessageDialogBuilder
-                                    .yesNo("This file is too large for text editor", "Do you still want to edit it?")
-                                    .asWarning()
-                                    .yesText("Edit it")
-                                    .ask(this.project)) {
-                                this.openFileInEditor(file);
-                            }
-                        } else {
+        this.localPath.addActionListener(e -> {
+            String path = this.localPath.getItem();
+            if (path == null || path.isEmpty()) {
+                path = "/";
+            }
+            this.localHistory.add(path);
+            this.rerenderLocalPath();
+            try {
+                File file = new File(path);
+                if (!file.exists()) {
+                    Services.message(path + " does not exist!", MessageType.INFO);
+                } else if (!file.isDirectory()) {
+                    if (file.length() > EDITABLE_FILE_SIZE) {
+                        if (MessageDialogBuilder
+                                .yesNo("This file is too large for text editor", "Do you still want to edit it?")
+                                .asWarning()
+                                .yesText("Edit it")
+                                .ask(this.project)) {
                             this.openFileInEditor(file);
                         }
                     } else {
-                        File[] files = file.listFiles();
-                        if (files == null) {
-                            if (MessageDialogBuilder
-                                    .yesNo("It is an unavailable folder!", "This folder is not available, do you want to open it in system file manager?")
-                                    .asWarning()
-                                    .yesText("Open")
-                                    .ask(this.project)) {
-                                try {
-                                    Desktop.getDesktop().open(file);
-                                } catch (IOException ioException) {
-                                    ioException.printStackTrace();
-                                    Services.message("Failed to open file in system file manager", MessageType.INFO);
-                                }
-                            }
-                            return;
-                        }
-
-                        path = file.getAbsolutePath();
-
-                        List<FileModel> fileModels = new ArrayList<>(file.length() == 0 ? 1 : (file.length() > Integer.MAX_VALUE ?
-                                Integer.MAX_VALUE :
-                                Integer.parseInt(String.valueOf(file.length()))
-                        ));
-
-                        // 添加返回上一级目录
-                        fileModels.add(this.getParentFolder(path, File.separator));
-
-                        for (File currentFile : files) {
-                            fileModels.add(new FileModel(
-                                    currentFile.getAbsolutePath(),
-                                    currentFile.getName(),
-                                    currentFile.isDirectory(),
-                                    currentFile.length(),
-                                    (currentFile.canRead() ? 0b100 : 0) |
-                                            (currentFile.canWrite() ? 0b10 : 0) |
-                                            (currentFile.canExecute() ? 0b1 : 0),
-                                    true
-                            ));
-                        }
-
-                        rerenderFileTable(this.localFileList, fileModels);
+                        this.openFileInEditor(file);
                     }
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                    Services.message(ex.getMessage(), MessageType.WARNING);
+                } else {
+                    File[] files = file.listFiles();
+                    if (files == null) {
+                        if (MessageDialogBuilder
+                                .yesNo("It is an unavailable folder!", "This folder is not available, do you want to open it in system file manager?")
+                                .asWarning()
+                                .yesText("Open")
+                                .ask(this.project)) {
+                            try {
+                                Desktop.getDesktop().open(file);
+                            } catch (IOException ioException) {
+                                ioException.printStackTrace();
+                                Services.message("Failed to open file in system file manager", MessageType.INFO);
+                            }
+                        }
+                        return;
+                    }
+
+                    path = file.getAbsolutePath();
+
+                    List<FileModel> fileModels = new ArrayList<>(file.length() == 0 ? 1 : (file.length() > Integer.MAX_VALUE ?
+                            Integer.MAX_VALUE :
+                            Integer.parseInt(String.valueOf(file.length()))
+                    ));
+
+                    // 添加返回上一级目录
+                    fileModels.add(this.getParentFolder(path, File.separator));
+
+                    for (File currentFile : files) {
+                        fileModels.add(new FileModel(
+                                currentFile.getAbsolutePath(),
+                                currentFile.getName(),
+                                currentFile.isDirectory(),
+                                currentFile.length(),
+                                (currentFile.canRead() ? 0b100 : 0) |
+                                        (currentFile.canWrite() ? 0b10 : 0) |
+                                        (currentFile.canExecute() ? 0b1 : 0),
+                                true
+                        ));
+                    }
+
+                    rerenderFileTable(this.localFileList, fileModels);
                 }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                Services.message(ex.getMessage(), MessageType.WARNING);
             }
         });
         this.localFileList.getSelectionModel().addListSelectionListener(e -> {
@@ -309,65 +299,59 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
         // 弹出的时候获取ssh配置
         this.remotePath.setEnabled(false);
-        this.remotePath.addItemListener(e -> {
-            if (e.getStateChange() == ItemEvent.SELECTED) {
-                if (this.loadingRemote) return;
-                this.loadingRemote = true;
-                String remoteFilePath = (String) e.getItem();
+        this.remotePath.addActionListener(e -> {
+            String remoteFilePath = this.remotePath.getItem();
 
-                if (remoteFilePath == null) {
-                    return;
+            if (remoteFilePath == null) {
+                return;
+            }
+
+            this.remoteHistory.add(remoteFilePath);
+            this.rerenderRemotePath();
+
+            this.application.executeOnPooledThread(() -> {
+                if (this.sftpChannel == null) {
+                    Services.message("Please connect to server first!", MessageType.INFO);
+                } else if (!this.sftpChannel.isConnected()) {
+                    Services.message("SFTP lost connection, retrying...", MessageType.ERROR);
+                    this.connectSftp();
                 }
 
-                this.remoteHistory.add(remoteFilePath);
-                this.rerenderRemotePath();
+                this.remoteFileList.setEnabled(false);
+                this.remotePath.setEnabled(false);
+                try {
+                    String path = remoteFilePath.isEmpty() ? "/" : remoteFilePath;
+                    RemoteFileObject file = this.sftpChannel.file(path);
+                    path = file.path();
+                    if (!file.exists()) {
+                        Services.message(path + " does not exist!", MessageType.INFO);
+                    } else if (!file.isDir()) {
+                        this.downloadFileAndEdit(file);
+                    } else {
+                        List<RemoteFileObject> files = file.list();
+                        List<FileModel> fileModels = new ArrayList<>(files.size());
 
-                this.loadingRemote = false;
+                        // 添加返回上一级目录
+                        fileModels.add(this.getParentFolder(path, SERVER_FILE_SYSTEM_SEPARATOR));
 
-                this.application.executeOnPooledThread(() -> {
-                    if (this.sftpChannel == null) {
-                        Services.message("Please connect to server first!", MessageType.INFO);
-                    } else if (!this.sftpChannel.isConnected()) {
-                        Services.message("SFTP lost connection, retrying...", MessageType.ERROR);
-                        this.connectSftp();
-                    }
-
-                    this.remoteFileList.setEnabled(false);
-                    this.remotePath.setEnabled(false);
-                    try {
-                        String path = remoteFilePath.isEmpty() ? "/" : remoteFilePath;
-                        RemoteFileObject file = this.sftpChannel.file(path);
-                        path = file.path();
-                        if (!file.exists()) {
-                            Services.message(path + " does not exist!", MessageType.INFO);
-                        } else if (!file.isDir()) {
-                            this.downloadFileAndEdit(file);
-                        } else {
-                            List<RemoteFileObject> files = file.list();
-                            List<FileModel> fileModels = new ArrayList<>(files.size());
-
-                            // 添加返回上一级目录
-                            fileModels.add(this.getParentFolder(path, SERVER_FILE_SYSTEM_SEPARATOR));
-
-                            for (RemoteFileObject f : files) {
-                                fileModels.add(new FileModel(
-                                        // 处理有些文件夹是//开头的
-                                        this.normalizeRemoteFileObjectPath(f),
-                                        f.name(), f.isDir(), f.size(), f.getPermissions(), false
-                                ));
-                            }
-
-                            rerenderFileTable(this.remoteFileList, fileModels);
+                        for (RemoteFileObject f : files) {
+                            fileModels.add(new FileModel(
+                                    // 处理有些文件夹是//开头的
+                                    this.normalizeRemoteFileObjectPath(f),
+                                    f.name(), f.isDir(), f.size(), f.getPermissions(), false
+                            ));
                         }
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                        Services.message("Error occurred while listing remote files: " + ex.getMessage(), MessageType.ERROR);
-                    } finally {
-                        this.remoteFileList.setEnabled(true);
-                        this.remotePath.setEnabled(true);
+
+                        rerenderFileTable(this.remoteFileList, fileModels);
                     }
-                });
-            }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    Services.message("Error occurred while listing remote files: " + ex.getMessage(), MessageType.ERROR);
+                } finally {
+                    this.remoteFileList.setEnabled(true);
+                    this.remotePath.setEnabled(true);
+                }
+            });
         });
         this.exploreButton.addActionListener(e -> this.connectSftp());
         this.disconnectButton.setVisible(false);
