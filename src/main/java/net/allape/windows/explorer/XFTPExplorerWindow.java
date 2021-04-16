@@ -482,7 +482,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                             currentFile.length(),
                             (currentFile.canRead() ? 0b100 : 0) |
                                     (currentFile.canWrite() ? 0b10 : 0) |
-                                    (currentFile.canExecute() ? 0b1 : 0)
+                                    (currentFile.canExecute() ? 0b1 : 0),
+                            true
                     ));
                 }
 
@@ -605,7 +606,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                         fileModels.add(new FileModel(
                                 // 处理有些文件夹是//开头的
                                 this.normalizeRemoteFileObjectPath(f),
-                                f.name(), f.isDir(), f.size(), f.getPermissions()
+                                f.name(), f.isDir(), f.size(), f.getPermissions(), false
                         ));
                     }
 
@@ -725,8 +726,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      * @param separator 文件系统分隔符
      */
     private FileModel getParentFolder(String path, String separator) {
-
-        return new FileModel(this.getParentFolderPath(path, separator), "..", true, null, null);
+        return new FileModel(this.getParentFolderPath(path, separator), "..", true, 0, 0, false);
     }
 
     /**

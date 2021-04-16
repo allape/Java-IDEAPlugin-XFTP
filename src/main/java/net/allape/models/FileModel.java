@@ -1,73 +1,52 @@
 package net.allape.models;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.jetbrains.annotations.NotNull;
+
 import java.io.Serializable;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class FileModel implements Serializable {
 
+    /**
+     * 路径
+     */
+    @NotNull
     private String path;
 
+    /**
+     * 文件名称
+     */
+    @NotNull
     private String name;
 
-    private Boolean isFolder;
+    /**
+     * 是否为文件夹
+     */
+    private boolean directory = false;
 
-    private Long size;
+    /**
+     * 大小
+     */
+    private long size = 0L;
 
-    private Integer permissions;
+    /**
+     * 权限
+     */
+    private int permissions = 0;
 
-    public FileModel() {
-    }
-
-    public FileModel(String path, String name, Boolean isFolder, Long size, Integer permissions) {
-        this.path = path;
-        this.name = name;
-        this.isFolder = isFolder;
-        this.size = size;
-        this.permissions = permissions;
-    }
-
-    public String getPath() {
-        return path;
-    }
-
-    public void setPath(String path) {
-        this.path = path;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public Boolean getFolder() {
-        return isFolder;
-    }
-
-    public void setFolder(Boolean folder) {
-        isFolder = folder;
-    }
-
-    public Long getSize() {
-        return size;
-    }
-
-    public void setSize(Long size) {
-        this.size = size;
-    }
-
-    public Integer getPermissions() {
-        return permissions;
-    }
-
-    public void setPermissions(Integer permissions) {
-        this.permissions = permissions;
-    }
+    /**
+     * 是否为本地文件
+     */
+    private boolean local = true;
 
     @Override
     public String toString() {
-        return (this.isFolder ? "📁" : "📃") + " " + this.name;
+        return (this.directory ? "📁" : "📃") + " " + this.name;
     }
 
 }

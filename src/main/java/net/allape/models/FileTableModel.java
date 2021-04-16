@@ -1,8 +1,13 @@
 package net.allape.models;
 
+import com.intellij.openapi.vfs.LocalFileSystem;
+import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.util.IconUtil;
 import net.allape.utils.LinuxPermissions;
 
+import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
+import java.io.File;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,7 +15,7 @@ import java.util.List;
 public class FileTableModel extends AbstractTableModel {
 
     static final private String[] COL_NAMES = new String[]{
-            "d?",
+            "",
             "name",
             "size",
             "permissions",
@@ -37,12 +42,19 @@ public class FileTableModel extends AbstractTableModel {
     public Object getValueAt(int rowIndex, int columnIndex) {
         try {
             FileModel model = this.data.get(rowIndex);
+            Icon icon = IconUtil.getEmptyIcon(false);
+            if (model.isLocal()) {
+                VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByIoFile(new File(model.getPath()));
+                if (virtualFile != null) {
+                    icon = IconUtil.computeBaseFileIcon(virtualFile);
+                }
+            }
             switch (columnIndex) {
-                case 0: return model.getFolder() ? "d" : "-";
+                case 0: return icon;
                 case 1: return model.getName();
-                case 2: return model.getFolder() || model.getSize() == null ?
+                case 2: return model.isDirectory() ?
                         "" : byteCountToDisplaySize(model.getSize());
-                case 3: return model.getPermissions() == null ? "" : LinuxPermissions.humanReadable(model.getPermissions());
+                case 3: return LinuxPermissions.humanReadable(model.getPermissions());
             }
         } catch (Exception e) {
             e.printStackTrace();

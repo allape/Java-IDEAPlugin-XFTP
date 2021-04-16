@@ -39,7 +39,7 @@ public class FileTable extends JBTable {
 
         TableColumn typeColumn = this.getColumnModel().getColumn(0);
         typeColumn.setCellRenderer(centerRenderer);
-        typeColumn.setMaxWidth(25);
+        typeColumn.setMaxWidth(30);
 
         TableColumn sizeColumn = this.getColumnModel().getColumn(2);
         sizeColumn.setCellRenderer(rightRenderer);
@@ -59,6 +59,11 @@ public class FileTable extends JBTable {
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
             super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
             setBorder(noFocusBorder);
+            if (value instanceof Icon) {
+                this.setText(null);
+                this.setIcon((Icon) value);
+                this.setHorizontalAlignment(JLabel.CENTER);
+            }
             return this;
         }
 

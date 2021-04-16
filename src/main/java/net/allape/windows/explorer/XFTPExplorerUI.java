@@ -8,7 +8,6 @@ import com.intellij.ui.components.JBPanel;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextField;
 import net.allape.models.FileModel;
-import net.allape.models.FileTableModel;
 import net.allape.utils.Grids;
 import net.allape.windows.XFTPWindow;
 import net.allape.windows.table.FileTable;
@@ -126,7 +125,7 @@ public class XFTPExplorerUI extends XFTPWindow {
         java.util.List<FileModel> filesOnly = new ArrayList<>(files.size());
         java.util.List<FileModel> foldersOnly = new ArrayList<>(files.size());
         for (FileModel model : files) {
-            if (model.getFolder()) {
+            if (model.isDirectory()) {
                 foldersOnly.add(model);
             } else {
                 filesOnly.add(model);
