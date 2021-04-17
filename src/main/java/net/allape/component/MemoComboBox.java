@@ -102,6 +102,16 @@ public class MemoComboBox<E> extends ComboBox<MemoComboBox.MemoComboBoxPersisten
         }
     }
 
+    @Override
+    @SuppressWarnings("unchecked")
+    public MemoComboBoxPersistenceModel<E> getItem() {
+        Object item = this.getSelectedItem();
+        if (item instanceof String) {
+            return new MemoComboBoxPersistenceModel<>((E)item);
+        }
+        return super.getItem();
+    }
+
     /**
      * 获取当前选中的值
      * @param defaultValue 默认值
