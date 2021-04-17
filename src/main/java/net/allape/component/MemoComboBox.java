@@ -88,7 +88,9 @@ public class MemoComboBox<E> extends ComboBox<MemoComboBox.MemoComboBoxPersisten
 
                 DefaultComboBoxModel<MemoComboBoxPersistenceModel<E>> model =
                         (DefaultComboBoxModel<MemoComboBoxPersistenceModel<E>>) this.dataModel;
-                model.insertElementAt(new MemoComboBoxPersistenceModel<>(value), 0);
+                MemoComboBoxPersistenceModel<E> newMemo = new MemoComboBoxPersistenceModel<>(value);
+                model.insertElementAt(newMemo, 0);
+                model.setSelectedItem(newMemo);
 
                 // 持久化
                 PropertiesComponent.getInstance().setValue(this.persistenceKey, new Gson().toJson(vector));
