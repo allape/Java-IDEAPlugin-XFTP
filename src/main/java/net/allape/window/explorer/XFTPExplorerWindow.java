@@ -157,6 +157,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 if (!file.exists()) {
                     Services.message(path + " does not exist!", MessageType.INFO);
                 } else if (!file.isDirectory()) {
+                    // 加载父文件夹
+                    this.setCurrentLocalPath(file.getParent());
                     if (file.length() > EDITABLE_FILE_SIZE) {
                         if (MessageDialogBuilder
                                 .yesNo("This file is too large for text editor", "Do you still want to edit it?")
@@ -317,12 +319,14 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 this.remoteFileList.setEnabled(false);
                 this.remotePath.setEnabled(false);
                 try {
-                    String path = remoteFilePath.isEmpty() ? "/" : remoteFilePath;
+                    String path = remoteFilePath.isEmpty() ? SERVER_FILE_SYSTEM_SEPARATOR : remoteFilePath;
                     RemoteFileObject file = this.sftpChannel.file(path);
                     path = file.path();
                     if (!file.exists()) {
                         Services.message(path + " does not exist!", MessageType.INFO);
                     } else if (!file.isDir()) {
+                        // 加载父文件夹
+                        this.setCurrentRemotePath(this.getParentFolderPath(file.path(), SERVER_FILE_SYSTEM_SEPARATOR));
                         this.downloadFileAndEdit(file);
                     } else {
                         List<RemoteFileObject> files = file.list();
