@@ -36,11 +36,13 @@ import io.reactivex.rxjava3.internal.functions.Functions;
 import net.allape.bus.HistoryTopicHandler;
 import net.allape.bus.Services;
 import net.allape.bus.Windows;
-import net.allape.exception.TransferCancelledException;
-import net.allape.model.*;
-import net.allape.models.*;
-import net.allape.util.Maps;
 import net.allape.component.FileTable;
+import net.allape.exception.TransferCancelledException;
+import net.allape.model.FileModel;
+import net.allape.model.FileTransferHandler;
+import net.allape.model.FileTransferable;
+import net.allape.model.Transfer;
+import net.allape.util.Maps;
 import net.schmizz.sshj.common.StreamCopier;
 import net.schmizz.sshj.sftp.SFTPClient;
 import net.schmizz.sshj.sftp.SFTPFileTransfer;
@@ -146,12 +148,10 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         final XFTPExplorerWindow self = XFTPExplorerWindow.this;
 
         this.localPath.addActionListener(e -> {
-            String path = this.localPath.getItem();
+            String path = this.localPath.getMemoItem();
             if (path == null || path.isEmpty()) {
                 path = "/";
             }
-            this.localHistory.add(path);
-            this.rerenderLocalPath();
             try {
                 File file = new File(path);
                 if (!file.exists()) {
@@ -209,7 +209,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                         ));
                     }
 
-                    rerenderFileTable(this.localFileList, fileModels);
+                    this.localFileList.resetData(fileModels);
                 }
             } catch (Exception ex) {
                 ex.printStackTrace();
@@ -282,7 +282,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 try {
                     //noinspection unchecked
                     List<RemoteFileObject> files = (List<RemoteFileObject>) support.getTransferable().getTransferData(remoteFileListFlavor);
-                    final String currentLocalPath = self.localPath.getItem();
+                    final String currentLocalPath = self.localPath.getMemoItem();
                     for (RemoteFileObject file : files) {
                         self.application.executeOnPooledThread(() -> self.transfer(
                                 new File(currentLocalPath + File.separator + file.name()),
@@ -300,14 +300,11 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         // 弹出的时候获取ssh配置
         this.remotePath.setEnabled(false);
         this.remotePath.addActionListener(e -> {
-            String remoteFilePath = this.remotePath.getItem();
+            String remoteFilePath = this.remotePath.getMemoItem();
 
             if (remoteFilePath == null) {
                 return;
             }
-
-            this.remoteHistory.add(remoteFilePath);
-            this.rerenderRemotePath();
 
             this.application.executeOnPooledThread(() -> {
                 if (this.sftpChannel == null) {
@@ -342,7 +339,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                             ));
                         }
 
-                        this.application.invokeLater(() -> rerenderFileTable(this.remoteFileList, fileModels));
+                        this.application.invokeLater(() -> this.remoteFileList.resetData(fileModels));
                     }
                 } catch (Exception ex) {
                     ex.printStackTrace();
@@ -368,7 +365,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         this.newTerminalSessionButton.addActionListener(e -> {
             TerminalTabState state = new TerminalTabState();
 //            state.myTabName = this.credentials.getUserName() + "@" + this.credentials.getHost();
-            state.myWorkingDirectory = this.remotePath.getItem();
+            state.myWorkingDirectory = this.remotePath.getMemoItem();
             TerminalView.getInstance(this.project).createNewSession(new SshTerminalDirectRunner(this.project, this.credentials, Charset.defaultCharset()), state);
         });
         this.remoteFileList.getSelectionModel().addListSelectionListener(e -> {
@@ -435,7 +432,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 try {
                     //noinspection unchecked
                     List<File> files = (List<File>) support.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
-                    final String currentRemotePath = self.remotePath.getItem();
+                    final String currentRemotePath = self.remotePath.getMemoItem();
                     for (File file : files) {
                         self.application.executeOnPooledThread(() -> self.transfer(
                                 file,
@@ -480,7 +477,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                             self.application.invokeLater(() -> {
                                 self.unlockRemoteUIs();
                                 // 刷新当前页面
-                                self.setCurrentRemotePath(self.remotePath.getItem());
+                                self.setCurrentRemotePath(self.remotePath.getMemoItem());
                             });
                         }
                     });
@@ -664,7 +661,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      * @param currentLocalPath 本地文件路径
      */
     public void setCurrentLocalPath(String currentLocalPath) {
-        this.localPath.setItem(currentLocalPath);
+        this.localPath.push(currentLocalPath);
     }
 
     /**
@@ -672,7 +669,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      * @param currentRemotePath 远程文件路径
      */
     public void setCurrentRemotePath(String currentRemotePath) {
-        this.remotePath.setItem(currentRemotePath);
+        this.remotePath.push(currentRemotePath);
     }
 
     /**
@@ -906,7 +903,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
                                     @Override
                                     public StreamCopier.Listener file(String name, long size) {
-                                        String total = FileTableModel.byteCountToDisplaySize(size);
+                                        String total = FileTable.FileTableModel.byteCountToDisplaySize(size);
                                         return transferred -> {
                                             if (indicator.isCanceled() || transfer.getResult() == Transfer.Result.CANCELLED) {
                                                 throw new TransferCancelledException("Operation cancelled!");
@@ -925,7 +922,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                             }
 
                                             indicator.setText((Math.round(percent * 10000) / 100) + "% " +
-                                                    FileTableModel.byteCountToDisplaySize(transferred) + "/" + total);
+                                                    FileTable.FileTableModel.byteCountToDisplaySize(transferred) + "/" + total);
                                         };
                                     }
                                 });
@@ -939,7 +936,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
                                 // 如果上传目录和当前目录相同, 则刷新目录
                                 if (type == Transfer.Type.UPLOAD) {
-                                    String currentRemotePath = self.remotePath.getItem();
+                                    String currentRemotePath = self.remotePath.getMemoItem();
                                     if (remoteFile.isDir()) {
                                         if (transfer.getTarget().equals(currentRemotePath)) {
                                             self.setCurrentRemotePath(currentRemotePath);
@@ -951,7 +948,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                         }
                                     }
                                 } else {
-                                    String currentLocalPath = self.localPath.getItem();
+                                    String currentLocalPath = self.localPath.getMemoItem();
                                     if (localFile.isDirectory()) {
                                         if (transfer.getTarget().equals(currentLocalPath)) {
                                             self.setCurrentLocalPath(currentLocalPath);
@@ -996,8 +993,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 sub.onNext(transfer);
                 sub.onComplete();
                 // 是上传至当前目录则刷新
-                if (remoteFilePath.startsWith(self.remotePath.getItem())) {
-                    self.application.invokeLater(() -> self.setCurrentRemotePath(self.remotePath.getItem()));
+                if (remoteFilePath.startsWith(self.remotePath.getMemoItem())) {
+                    self.application.invokeLater(() -> self.setCurrentRemotePath(self.remotePath.getMemoItem()));
                 }
             }, e -> {
                 transfer.setResult(Transfer.Result.FAIL);
