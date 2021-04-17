@@ -318,6 +318,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
                 this.remoteFileList.setEnabled(false);
                 this.remotePath.setEnabled(false);
+                // 是否接下来加载父文件夹
+                String loadParent = null;
                 try {
                     String path = remoteFilePath.isEmpty() ? SERVER_FILE_SYSTEM_SEPARATOR : remoteFilePath;
                     RemoteFileObject file = this.sftpChannel.file(path);
@@ -325,9 +327,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                     if (!file.exists()) {
                         Services.message(path + " does not exist!", MessageType.INFO);
                     } else if (!file.isDir()) {
-                        // 加载父文件夹
-                        this.setCurrentRemotePath(this.getParentFolderPath(file.path(), SERVER_FILE_SYSTEM_SEPARATOR));
                         this.downloadFileAndEdit(file);
+                        loadParent = this.getParentFolderPath(file.path(), SERVER_FILE_SYSTEM_SEPARATOR);
                     } else {
                         List<RemoteFileObject> files = file.list();
                         List<FileModel> fileModels = new ArrayList<>(files.size());
@@ -351,6 +352,11 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 } finally {
                     this.remoteFileList.setEnabled(true);
                     this.remotePath.setEnabled(true);
+
+                    if (loadParent != null) {
+                        // 加载父文件夹
+                        this.setCurrentRemotePath(loadParent);
+                    }
                 }
             });
         });

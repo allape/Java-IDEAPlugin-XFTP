@@ -3,6 +3,8 @@ package net.allape.component;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.intellij.ide.util.PropertiesComponent;
+import com.intellij.openapi.application.Application;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.ui.ComboBox;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -36,6 +38,11 @@ public class MemoComboBox<E> extends ComboBox<MemoComboBox.MemoComboBoxPersisten
     private Field dataField;
 
     /**
+     * 当前应用
+     */
+    private final Application application;
+
+    /**
      * @param persistenceKey 保存历史记录的key
      * @param maxCount 最大历史记录数量
      */
@@ -43,6 +50,8 @@ public class MemoComboBox<E> extends ComboBox<MemoComboBox.MemoComboBoxPersisten
         super();
         this.persistenceKey = persistenceKey;
         this.maxCount = maxCount;
+
+        this.application = ApplicationManager.getApplication();
 
         this.setRenderer(new ComboBoxCellRenderer());
 
@@ -90,10 +99,12 @@ public class MemoComboBox<E> extends ComboBox<MemoComboBox.MemoComboBoxPersisten
                         (DefaultComboBoxModel<MemoComboBoxPersistenceModel<E>>) this.dataModel;
                 MemoComboBoxPersistenceModel<E> newMemo = new MemoComboBoxPersistenceModel<>(value);
                 model.insertElementAt(newMemo, 0);
-                model.setSelectedItem(newMemo);
+
+                this.application.invokeLater(() -> model.setSelectedItem(newMemo));
 
                 // 持久化
-                PropertiesComponent.getInstance().setValue(this.persistenceKey, new Gson().toJson(vector));
+                this.application.executeOnPooledThread(() ->
+                        PropertiesComponent.getInstance().setValue(this.persistenceKey, new Gson().toJson(vector)));
             } else {
                 throw new ClassCastException("Only support for DefaultComboBoxModel");
             }
