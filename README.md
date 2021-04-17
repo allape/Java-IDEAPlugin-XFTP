@@ -5,8 +5,9 @@
 - ✔️ Drop on remote view port to upload (just available for dragging from Finder or Explorer).
 - ✔️️ Dragging from local file view port to remote file view port, and vice versa.
 - ✔️️ Open new terminal session in current folder.
+- ✔️️️ Autocomplete for history paths.
 - ✖️ Transferring history list with re-try button.
-- ✖️ Autocomplete for history paths.
+- ✖️ sftp FileSystem with custom VirtualFile.
 - ➖️ More operations in file view port: delete, copy, paste, etc...
 
 ## Known Issues

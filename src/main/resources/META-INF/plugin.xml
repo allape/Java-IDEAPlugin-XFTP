@@ -28,7 +28,7 @@
 
     <actions>
         <action id="ShowXftpToolWindow" class="net.allape.action.MenuOpenAction" text="New XFTP Explorer"
-                description="Goal ! ! ! ! ! ! !">
+                description="Open a new XFTP Explorer window">
             <add-to-group group-id="ToolsMenu" anchor="first"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl meta X"/>
         </action>
