@@ -1,4 +1,4 @@
-package net.allape.models;
+package net.allape.model;
 
 public class Transfer {
 

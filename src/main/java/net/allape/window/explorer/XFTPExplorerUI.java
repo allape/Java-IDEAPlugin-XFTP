@@ -1,4 +1,4 @@
-package net.allape.windows.explorer;
+package net.allape.window.explorer;
 
 import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.project.Project;
@@ -9,11 +9,11 @@ import com.intellij.ui.OnePixelSplitter;
 import com.intellij.ui.components.JBPanel;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.content.ContentManagerEvent;
-import net.allape.models.FileModel;
-import net.allape.utils.FixedList;
-import net.allape.utils.Grids;
-import net.allape.windows.XFTPWindow;
-import net.allape.windows.table.FileTable;
+import net.allape.model.FileModel;
+import net.allape.util.FixedList;
+import net.allape.util.Grids;
+import net.allape.window.XFTPWindow;
+import net.allape.component.FileTable;
 
 import javax.swing.*;
 import java.awt.*;

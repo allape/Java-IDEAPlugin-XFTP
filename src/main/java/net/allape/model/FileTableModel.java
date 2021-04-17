@@ -1,9 +1,9 @@
-package net.allape.models;
+package net.allape.model;
 
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.util.IconUtil;
-import net.allape.utils.LinuxPermissions;
+import net.allape.util.LinuxPermissions;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;

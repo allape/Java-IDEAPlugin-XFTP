@@ -1,14 +1,13 @@
-package net.allape.windows.table;
+package net.allape.component;
 
 import com.intellij.ui.DarculaColors;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.table.JBTable;
-import net.allape.models.FileTableModel;
+import net.allape.model.FileTableModel;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableColumn;
-import javax.swing.table.TableModel;
 import java.awt.*;
 import java.util.Enumeration;
 

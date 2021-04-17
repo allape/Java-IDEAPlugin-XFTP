@@ -1,7 +1,7 @@
 package net.allape.bus;
 
 import com.intellij.ui.content.Content;
-import net.allape.windows.XFTPWindow;
+import net.allape.window.XFTPWindow;
 
 import java.util.*;
 

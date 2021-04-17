@@ -1,4 +1,4 @@
-package net.allape.utils;
+package net.allape.util;
 
 import org.jetbrains.annotations.Nullable;
 

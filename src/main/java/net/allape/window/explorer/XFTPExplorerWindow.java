@@ -1,4 +1,4 @@
-package net.allape.windows.explorer;
+package net.allape.window.explorer;
 
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
@@ -37,9 +37,10 @@ import net.allape.bus.HistoryTopicHandler;
 import net.allape.bus.Services;
 import net.allape.bus.Windows;
 import net.allape.exception.TransferCancelledException;
+import net.allape.model.*;
 import net.allape.models.*;
-import net.allape.utils.Maps;
-import net.allape.windows.table.FileTable;
+import net.allape.util.Maps;
+import net.allape.component.FileTable;
 import net.schmizz.sshj.common.StreamCopier;
 import net.schmizz.sshj.sftp.SFTPClient;
 import net.schmizz.sshj.sftp.SFTPFileTransfer;
@@ -54,7 +55,6 @@ import javax.swing.event.PopupMenuListener;
 import java.awt.*;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
-import java.awt.event.ItemEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;

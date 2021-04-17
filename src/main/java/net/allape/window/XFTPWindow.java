@@ -1,4 +1,4 @@
-package net.allape.windows;
+package net.allape.window;
 
 import com.intellij.openapi.application.Application;
 import com.intellij.openapi.application.ApplicationManager;

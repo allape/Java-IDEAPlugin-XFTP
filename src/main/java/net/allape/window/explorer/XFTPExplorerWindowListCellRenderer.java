@@ -1,4 +1,4 @@
-package net.allape.windows.explorer;
+package net.allape.window.explorer;
 
 import com.intellij.ui.JBColor;
 import com.intellij.util.ui.JBUI;

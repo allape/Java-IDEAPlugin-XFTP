@@ -21,13 +21,13 @@
                     secondary="true"
                     anchor="bottom"
                     canCloseContents="true"
-                    factoryClass="net.allape.windows.XFTPExplorerWindowFactory">
+                    factoryClass="net.allape.window.XFTPExplorerWindowFactory">
         </toolWindow>
         <notificationGroup id="xftp" displayType="BALLOON" key="xftp.notification.group.name"/>
     </extensions>
 
     <actions>
-        <action id="ShowXftpToolWindow" class="net.allape.actions.MenuOpenAction" text="New XFTP Explorer"
+        <action id="ShowXftpToolWindow" class="net.allape.action.MenuOpenAction" text="New XFTP Explorer"
                 description="Goal ! ! ! ! ! ! !">
             <add-to-group group-id="ToolsMenu" anchor="first"/>
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl meta X"/>
