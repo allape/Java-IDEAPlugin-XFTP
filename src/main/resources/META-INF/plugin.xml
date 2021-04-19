@@ -1,13 +1,13 @@
 <idea-plugin>
     <id>net.allape.XFTP</id>
     <name>XFTP</name>
-    <vendor email="allensnape@qq.com" url="https://www.allensnape.com">ALLAPE</vendor>
+    <vendor email="allensnape@gmail.com" url="https://www.allensnape.com">ALLAPE</vendor>
 
     <description><![CDATA[
-        <a href="https://github.com/ALLAPE/Java-IDEAPlugin-XFTP">Github</a>
-        <br/>
-        FYI, not test on Windows yet.<br/>
-        File manage with SFTP using <a href="jetbrains://idea/settings?name=Tools--SSH+Configurations">SSH Configurations of IDE Settings</a>.<br>
+        A SFTP tools using Preferences | Tools | SSH Configurations.<br/>
+        Upload and download files with drag and drop, edit remote text file by double clicking.<br/>
+        Requires ultimate version of Jetbrains IDEs.<br/>
+        <a href="https://github.com/ALLAPE/Java-IDEAPlugin-XFTP">Github</a><br/>
     ]]></description>
 
     <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
