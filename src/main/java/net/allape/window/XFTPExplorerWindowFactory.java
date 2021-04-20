@@ -33,9 +33,9 @@ public class XFTPExplorerWindowFactory implements ToolWindowFactory {
                     Windows.windows.remove(event.getContent());
                 }
 
-//                if (toolWindow.getContentManager().getContents().length == 0) {
-//                    toolWindow.hide();
-//                }
+                if (toolWindow.getContentManager().getContents().length == 0) {
+                    toolWindow.hide();
+                }
             }
         });
         if (toolWindow instanceof ToolWindowEx) {

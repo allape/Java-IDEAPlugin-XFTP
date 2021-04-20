@@ -1,5 +1,6 @@
 package net.allape.window.explorer;
 
+import com.intellij.icons.AllIcons;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.ui.JBSplitter;
@@ -7,15 +8,14 @@ import com.intellij.ui.OnePixelSplitter;
 import com.intellij.ui.components.JBPanel;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.content.ContentManagerEvent;
+import icons.TerminalIcons;
 import net.allape.component.FileTable;
 import net.allape.component.MemoComboBox;
-import net.allape.model.FileModel;
 import net.allape.util.Grids;
 import net.allape.window.XFTPWindow;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.List;
 
 public class XFTPExplorerUI extends XFTPWindow {
 
@@ -36,9 +36,9 @@ public class XFTPExplorerUI extends XFTPWindow {
     @SuppressWarnings("rawtypes")
     protected JBPanel remoteTopWrapper = new JBPanel(new GridBagLayout());
     protected MemoComboBox<String> remotePath = new MemoComboBox<>(REMOTE_HISTORY_PERSISTENCE_KEY);
-    protected JButton exploreButton = new JButton("Explorer");
-    protected JButton disconnectButton = new JButton("Disconnect");
-    protected JButton newTerminalSessionButton = new JButton("TTY");
+    protected JButton exploreButton = new JButton(AllIcons.Webreferences.Server);
+    protected JButton disconnectButton = new JButton(AllIcons.Actions.Suspend);
+    protected JButton newTerminalSessionButton = new JButton(TerminalIcons.OpenTerminal_13x13);
     protected FileTable remoteFileList = new FileTable();
     protected JBScrollPane remoteFileListWrapper = new JBScrollPane(remoteFileList);
 

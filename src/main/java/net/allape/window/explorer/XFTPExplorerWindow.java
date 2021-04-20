@@ -25,7 +25,6 @@ import com.intellij.ssh.RemoteCredentialsUtil;
 import com.intellij.ssh.RemoteFileObject;
 import com.intellij.ssh.channels.SftpChannel;
 import com.intellij.ssh.impl.sshj.channels.SshjSftpChannel;
-import com.intellij.ui.AnimatedIcon;
 import com.intellij.ui.content.Content;
 import com.intellij.ui.content.ContentManagerEvent;
 import com.intellij.util.ReflectionUtil;
@@ -554,7 +553,10 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                         this.application.executeOnPooledThread(() -> {
                             // com.jetbrains.plugins.remotesdk.tools.RemoteTool.startRemoteProcess
                             //noinspection UnstableApiUsage
-                            this.connectionBuilder = RemoteCredentialsUtil.connectionBuilder(this.credentials, this.project).withConnectionTimeout(60L);
+                            this.connectionBuilder = RemoteCredentialsUtil.connectionBuilder(
+                                    this.credentials, this.project,
+                                    ProgressManager.getGlobalProgressIndicator(), true
+                            ).withConnectionTimeout(60L);
                             this.sftpChannel = this.connectionBuilder.openSftpChannel();
                             this.triggerConnected();
 
@@ -616,10 +618,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      * 设置当前状态为连接中
      */
     public void triggerConnecting () {
-        this.application.invokeLater(() -> {
-            this.exploreButton.setEnabled(false);
-            this.exploreButton.setIcon(AnimatedIcon.Default.INSTANCE);
-        });
+        this.application.invokeLater(() -> this.exploreButton.setEnabled(false));
     }
 
     /**
@@ -629,7 +628,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         this.application.invokeLater(() -> {
             this.remotePath.setEnabled(true);
             this.exploreButton.setVisible(false);
-            this.exploreButton.setIcon(null);
             this.disconnectButton.setVisible(true);
             this.newTerminalSessionButton.setVisible(true);
 
