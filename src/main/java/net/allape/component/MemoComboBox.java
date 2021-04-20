@@ -55,6 +55,16 @@ public class MemoComboBox<E> extends ComboBox<MemoComboBox.MemoComboBoxPersisten
 
         this.setRenderer(new ComboBoxCellRenderer());
 
+//        this.getEditor().getEditorComponent().addKeyListener(new KeyAdapter() {
+//            @Override
+//            public void keyReleased(KeyEvent e) {
+//                System.out.println("released" + e);
+//                if (e.getKeyChar() == KeyEvent.VK_ENTER) {
+//                    System.out.println("enter pressed");
+//                }
+//            }
+//        });
+
         // 读取持久化数据
         PropertiesComponent propertiesComponent = PropertiesComponent.getInstance();
         try {
