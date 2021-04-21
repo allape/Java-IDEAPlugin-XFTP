@@ -1,7 +1,8 @@
 <idea-plugin>
     <id>net.allape.XFTP</id>
     <name>XFTP</name>
-    <vendor email="allensnape@gmail.com" url="https://www.allensnape.com">ALLAPE</vendor>
+    <!-- url="https://www.allensnape.com" -->
+    <vendor email="allensnape@gmail.com">ALLAPE</vendor>
 
     <description><![CDATA[
         A SFTP tools using Preferences | Tools | SSH Configurations.<br/>
