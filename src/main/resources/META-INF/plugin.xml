@@ -5,11 +5,54 @@
     <vendor email="allensnape@gmail.com">ALLAPE</vendor>
 
     <description><![CDATA[
-        A SFTP tools using Preferences | Tools | SSH Configurations.<br/>
-        Upload and download files with drag and drop, edit remote text file by double clicking.<br/>
-        Requires ultimate version of Jetbrains IDEs.<br/>
-        <a href="https://github.com/ALLAPE/Java-IDEAPlugin-XFTP">Github</a><br/>
-    ]]></description>
+        A SFTP tool for remote file management using SSH Configurations.<br/>
+        <br/>
+        <h3>Features</h3>
+        <ul>
+            <li>Upload and download files with drag and drop.</li>
+            <li>Edit remote text file by double clicking.</li>
+        </ul>
+        <br/>
+        <h3>Viewport Explain</h3>
+        <ul>
+            <li>The left list displays local files, current project directory is displayed by default.</li>
+            <li>The right list displays remote files.</li>
+            <li>The dropdown above every list is the path of its own, and it memorizes access history.
+                And it accepts keyboard type-in to display files or open file.</li>
+        </ul>
+        <br/>
+        <h3>Usage Instructions</h3>
+        <ul>
+            <li>Click the top-right "Server" icon button of the right list to select a server, if there is none, it can be managed in Preferences | Tools | SSH Configurations.</li>
+            <li>
+                After connected to a server, the ssh user's home folder will be displayed in the right list.
+                <ul>
+                    <li>The "Suspend" icon button is for disconnecting.</li>
+                    <li>The "Terminal" icon button is for opening a new ssh terminal with current remote directory, like Tools | Start SSH Session.</li>
+                    <li>The row with empty "size" cell is a directory.</li>
+                    <li>Double click the file in the right list, if it is editable, it will be opened in IDE text editor,
+                        and the temporary file will be uploaded after it saved.</li>
+                    <li>Dropping files at the right list will upload them to current remote folder.</li>
+                    <li>Dropping remote files at the left list will download them to current local folder.</li>
+                </ul>
+            </li>
+            <li>Disconnect or close tab while transferring files will cancel the transfer.</li>
+        </ul>
+        <br/>
+        More information at <a href="https://github.com/ALLAPE/Java-IDEAPlugin-XFTP">Github</a>.<br/>
+    ]]>
+    </description>
+
+    <change-notes><![CDATA[
+        <h3>2021-04-17</h3>
+        <ul>
+            <li>A first usable Version.</li>
+        </ul>
+        <h3>2020-11-02</h3>
+        <ul>
+            <li>Project started.</li>
+        </ul>
+    ]]></change-notes>
 
     <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
          on how to target different products -->
