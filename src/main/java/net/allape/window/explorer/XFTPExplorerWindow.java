@@ -113,6 +113,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     ) {
         @Override
         public void actionPerformed(@NotNull AnActionEvent e) {
+            e.getPresentation().setEnabled(false);
             XFTPExplorerWindow.this.connectSftp();
         }
     };
@@ -432,13 +433,13 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             });
         });
 
-        this.suspend.setEnabled(false);
-        this.newTerminal.setEnabled(false);
         this.remoteActionGroup.addAll(
                 explore,
                 suspend,
                 newTerminal
         );
+        this.suspend.setEnabled(false);
+        this.newTerminal.setEnabled(false, true);
 
         this.remoteFileList.getSelectionModel().addListSelectionListener(e -> {
             List<FileModel> allRemoteFiles = this.remoteFileList.getModel().getData();
@@ -681,7 +682,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      * 设置当前状态为连接中
      */
     public void triggerConnecting () {
-        this.application.invokeLater(() -> this.explore.setEnabled(false));
+        this.application.invokeLater(() -> this.explore.setEnabled(false, true));
     }
 
     /**
@@ -716,7 +717,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
             this.explore.setEnabled(true);
             this.suspend.setEnabled(false);
-            this.newTerminal.setEnabled(false);
+            this.newTerminal.setEnabled(false, true);
 
             // 清空列表
             if (this.remoteFileList.getModel() != null) {
