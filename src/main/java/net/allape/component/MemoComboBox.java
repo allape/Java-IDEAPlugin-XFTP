@@ -54,6 +54,7 @@ public class MemoComboBox<E> extends ComboBox<MemoComboBox.MemoComboBoxPersisten
         this.application = ApplicationManager.getApplication();
 
         this.setRenderer(new ComboBoxCellRenderer());
+        this.setEditable(true);
 
 //        this.getEditor().getEditorComponent().addKeyListener(new KeyAdapter() {
 //            @Override
