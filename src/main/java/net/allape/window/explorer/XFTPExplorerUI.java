@@ -1,13 +1,13 @@
 package net.allape.window.explorer;
 
-import com.intellij.icons.AllIcons;
+import com.intellij.openapi.actionSystem.DefaultActionGroup;
+import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.ui.JBSplitter;
 import com.intellij.ui.OnePixelSplitter;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.content.ContentManagerEvent;
-import icons.TerminalIcons;
 import net.allape.component.FileTable;
 import net.allape.component.MemoComboBox;
 import net.allape.util.Grids;
@@ -21,28 +21,30 @@ public class XFTPExplorerUI extends XFTPWindow {
     public static final String LOCAL_HISTORY_PERSISTENCE_KEY = "xftp.persistence.local-history";
     public static final String REMOTE_HISTORY_PERSISTENCE_KEY = "xftp.persistence.remote-history";
 
+    protected static final String LOCAL_TOOL_BAR_PLACE = "XFTPLocalToolBar";
+    protected static final String REMOTE_TOOL_BAR_PLACE = "XFTPRemoteToolBar";
+
     protected JPanel panelWrapper = new JPanel(new BorderLayout());
     protected JBSplitter splitter = new OnePixelSplitter("xftp-main-window", .5f);
 
     protected JPanel localWrapper = new JPanel(new GridBagLayout());
     protected JPanel localPathWrapper = new JPanel(new GridBagLayout());
     protected MemoComboBox<String> localPath = new MemoComboBox<>(LOCAL_HISTORY_PERSISTENCE_KEY);
-    protected JPanel localActionsPanel = new JPanel();
+    protected DefaultActionGroup localActionGroup = new DefaultActionGroup();
+    protected ActionToolbarImpl localActionToolBar = new ActionToolbarImpl(LOCAL_TOOL_BAR_PLACE, localActionGroup, true);
     protected FileTable localFileList = new FileTable();
     protected JBScrollPane localFileListWrapper = new JBScrollPane(localFileList);
 
     protected JPanel remoteWrapper = new JPanel(new GridBagLayout());
     protected JPanel remotePathWrapper = new JPanel(new GridBagLayout());
     protected MemoComboBox<String> remotePath = new MemoComboBox<>(REMOTE_HISTORY_PERSISTENCE_KEY);
-    protected JButton exploreButton = new JButton(AllIcons.Webreferences.Server);
-    protected JButton disconnectButton = new JButton(AllIcons.Actions.Suspend);
-    protected JButton newTerminalSessionButton = new JButton(TerminalIcons.OpenTerminal_13x13);
+    protected DefaultActionGroup remoteActionGroup = new DefaultActionGroup();
+    protected ActionToolbarImpl remoteActionToolBar = new ActionToolbarImpl(REMOTE_TOOL_BAR_PLACE, remoteActionGroup, true);
     protected FileTable remoteFileList = new FileTable();
     protected JBScrollPane remoteFileListWrapper = new JBScrollPane(remoteFileList);
 
     public XFTPExplorerUI(Project project, ToolWindow toolWindow) {
         super(project, toolWindow);
-        this.initUI();
     }
 
     @Override
@@ -54,9 +56,10 @@ public class XFTPExplorerUI extends XFTPWindow {
      * 初始化UI样式
      */
     protected void initUI() {
-        final GridBagConstraints noWeight = (GridBagConstraints) Grids.X0Y0.clone();
-        noWeight.weightx = 0;
-        noWeight.weighty = 0;
+        final GridBagConstraints noYWeightX0Y0 = (GridBagConstraints) Grids.X0Y0.clone();
+        noYWeightX0Y0.weighty = 0;
+        final GridBagConstraints noXWeightX1Y0 = (GridBagConstraints) Grids.X1Y0.clone();
+        noXWeightX1Y0.weightx = 0;
 
         this.localWrapper.setBorder(null);
         this.remoteWrapper.setBorder(null);
@@ -67,23 +70,15 @@ public class XFTPExplorerUI extends XFTPWindow {
         this.panelWrapper.setBorder(null);
 
         this.localPathWrapper.add(this.localPath, Grids.X0Y0);
-        this.localPathWrapper.add(this.localActionsPanel,Grids.X1Y0);
-        this.localWrapper.add(this.localPathWrapper, noWeight);
+        this.localPathWrapper.add(this.localActionToolBar, noXWeightX1Y0);
+        this.localWrapper.add(this.localPathWrapper, noYWeightX0Y0);
 
         this.localFileListWrapper.setBorder(null);
         this.localWrapper.add(this.localFileListWrapper, Grids.X0Y1);
 
         this.remotePathWrapper.add(this.remotePath, Grids.X0Y0);
-        GridBagConstraints exploreButtonGrid = (GridBagConstraints) Grids.X1Y0.clone();
-        exploreButtonGrid.weightx = 0;
-        this.remotePathWrapper.add(this.exploreButton, exploreButtonGrid);
-        GridBagConstraints disconnectButtonGrid = (GridBagConstraints) Grids.X2Y0.clone();
-        disconnectButtonGrid.weightx = 0;
-        this.remotePathWrapper.add(this.disconnectButton, disconnectButtonGrid);
-        GridBagConstraints ttyButtonGrid = (GridBagConstraints) Grids.X3Y0.clone();
-        ttyButtonGrid.weightx = 0;
-        this.remotePathWrapper.add(this.newTerminalSessionButton, ttyButtonGrid);
-        this.remoteWrapper.add(this.remotePathWrapper, noWeight);
+        this.remotePathWrapper.add(this.remoteActionToolBar, noXWeightX1Y0);
+        this.remoteWrapper.add(this.remotePathWrapper, noYWeightX0Y0);
 
         this.remoteFileListWrapper.setBorder(null);
         this.remoteWrapper.add(this.remoteFileListWrapper, Grids.X0Y1);

@@ -23,6 +23,9 @@
         <br/>
         <h3>Usage Instructions</h3>
         <ul>
+            <li>The "Refresh" icon button on the left side is for refreshing local file list.</li>
+            <li>The "Open Folder" icon button on the left side is for displaying current local folder in system file manager, like Finder on MacOS and Explorer on Windows.</li>
+            <li>------------------------------</li>
             <li>Click the top-right "Server" icon button of the right list to select a server, if there is none, it can be managed in Preferences | Tools | SSH Configurations.</li>
             <li>
                 After connected to a server, the ssh user's home folder will be displayed in the right list.
@@ -44,6 +47,11 @@
     </description>
 
     <change-notes><![CDATA[
+        <h3>2021-04-28</h3>
+        <ul>
+            <li>Change all buttons to tool bar.</li>
+            <li>Add tooltip for all buttons.</li>
+        </ul>
         <h3>2021-04-17</h3>
         <ul>
             <li>A first usable Version.</li>

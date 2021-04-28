@@ -1,5 +1,8 @@
 package net.allape.window.explorer;
 
+import com.intellij.icons.AllIcons;
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider;
@@ -30,8 +33,10 @@ import com.intellij.ui.content.ContentManagerEvent;
 import com.intellij.util.ReflectionUtil;
 import com.jetbrains.plugins.remotesdk.console.RemoteDataProducer;
 import com.jetbrains.plugins.remotesdk.console.SshTerminalDirectRunner;
+import icons.TerminalIcons;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.internal.functions.Functions;
+import net.allape.action.FastEnableAnAction;
 import net.allape.bus.HistoryTopicHandler;
 import net.allape.bus.Services;
 import net.allape.bus.Windows;
@@ -100,6 +105,52 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     // 修改中的远程文件, 用于文件修改后自动上传 key: remote file, value: local file
     private Map<RemoteFileObject, String> remoteEditingFiles = new HashMap<>(COLLECTION_SIZE);
 
+    // 建立连接
+    private final FastEnableAnAction explore = new FastEnableAnAction(
+            REMOTE_TOOL_BAR_PLACE,
+            "Start New Session", "Start a sftp session",
+            AllIcons.Webreferences.Server
+    ) {
+        @Override
+        public void actionPerformed(@NotNull AnActionEvent e) {
+            XFTPExplorerWindow.this.connectSftp();
+        }
+    };
+    // 断开连接
+    private final FastEnableAnAction suspend = new FastEnableAnAction(
+            REMOTE_TOOL_BAR_PLACE,
+            "Disconnect", "Disconnect from sftp server",
+            AllIcons.Actions.Suspend
+    ) {
+        @Override
+        public void actionPerformed(@NotNull AnActionEvent e) {
+            XFTPExplorerWindow self = XFTPExplorerWindow.this;
+
+            if (MessageDialogBuilder
+                    .yesNo("Disconnecting", "Do you really want to close this session?")
+                    .asWarning()
+                    .yesText("Disconnect")
+                    .ask(self.project)) {
+                self.disconnect(true);
+            }
+        }
+    };
+    // 命令行打开
+    private final FastEnableAnAction newTerminal = new FastEnableAnAction(
+            REMOTE_TOOL_BAR_PLACE,
+            "Open In Terminal", "Open current folder in ssh terminal",
+            TerminalIcons.OpenTerminal_13x13
+    ) {
+        @Override
+        public void actionPerformed(@NotNull AnActionEvent e) {
+            XFTPExplorerWindow self = XFTPExplorerWindow.this;
+
+            TerminalTabState state = new TerminalTabState();
+            state.myWorkingDirectory = self.remotePath.getMemoItem();
+            TerminalView.getInstance(self.project).createNewSession(new SshTerminalDirectRunner(self.project, self.credentials, Charset.defaultCharset()), state);
+        }
+    };
+
     public XFTPExplorerWindow(Project project, ToolWindow toolWindow) {
         super(project, toolWindow);
 
@@ -128,6 +179,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 }
             }
         });
+
+        this.initUI();
     }
 
     @Override
@@ -146,6 +199,26 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
         final XFTPExplorerWindow self = XFTPExplorerWindow.this;
 
+        this.localActionGroup.addAll(
+                new AnAction("Refresh", "Refresh current folder", AllIcons.Actions.Refresh) {
+                    @Override
+                    public void actionPerformed(@NotNull AnActionEvent e) {
+                        self.reloadLocal();
+                    }
+                },
+                new AnAction("Open In Finder/Explorer", "Display folder in system file manager", AllIcons.Actions.MenuOpen) {
+                @Override
+                public void actionPerformed(@NotNull AnActionEvent e) {
+                    String path = self.localPath.getMemoItem();
+                    try {
+                        Desktop.getDesktop().open(new File(path));
+                    } catch (IOException ioException) {
+                        ioException.printStackTrace();
+                        Services.message("Failed to open \"" + path + "\"", MessageType.ERROR);
+                    }
+                }
+            }
+        );
         this.localPath.addActionListener(e -> {
             String path = this.localPath.getMemoItem();
             if (path == null || path.isEmpty()) {
@@ -359,24 +432,15 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 }
             });
         });
-        this.exploreButton.addActionListener(e -> this.connectSftp());
-        this.disconnectButton.setVisible(false);
-        this.disconnectButton.addActionListener(e -> {
-            if (MessageDialogBuilder
-                    .yesNo("Disconnecting", "Do you really want to close this session?")
-                    .asWarning()
-                    .yesText("Disconnect")
-                    .ask(this.project)) {
-                this.disconnect(true);
-            }
-        });
-        this.newTerminalSessionButton.setVisible(false);
-        this.newTerminalSessionButton.addActionListener(e -> {
-            TerminalTabState state = new TerminalTabState();
-//            state.myTabName = this.credentials.getUserName() + "@" + this.credentials.getHost();
-            state.myWorkingDirectory = this.remotePath.getMemoItem();
-            TerminalView.getInstance(this.project).createNewSession(new SshTerminalDirectRunner(this.project, this.credentials, Charset.defaultCharset()), state);
-        });
+
+        suspend.setEnabled(false);
+        newTerminal.setEnabled(false);
+        this.remoteActionGroup.addAll(
+                explore,
+                suspend,
+                newTerminal
+        );
+
         this.remoteFileList.getSelectionModel().addListSelectionListener(e -> {
             List<FileModel> allRemoteFiles = this.remoteFileList.getModel().getData();
 
@@ -618,7 +682,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      * 设置当前状态为连接中
      */
     public void triggerConnecting () {
-        this.application.invokeLater(() -> this.exploreButton.setEnabled(false));
+        this.application.invokeLater(() -> this.explore.setEnabled(false));
     }
 
     /**
@@ -627,9 +691,10 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     public void triggerConnected () {
         this.application.invokeLater(() -> {
             this.remotePath.setEnabled(true);
-            this.exploreButton.setVisible(false);
-            this.disconnectButton.setVisible(true);
-            this.newTerminalSessionButton.setVisible(true);
+
+            this.explore.setEnabled(false);
+            this.suspend.setEnabled(true);
+            this.newTerminal.setEnabled(true);
 
             if (this.content != null && this.credentials != null) {
                 this.content.setDisplayName(
@@ -650,10 +715,9 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             this.remotePath.setItem(null);
             this.remotePath.setEnabled(false);
 
-            this.exploreButton.setEnabled(true);
-            this.exploreButton.setVisible(true);
-            this.disconnectButton.setVisible(false);
-            this.newTerminalSessionButton.setVisible(false);
+            this.explore.setEnabled(true);
+            this.suspend.setEnabled(false);
+            this.newTerminal.setEnabled(false);
 
             // 清空列表
             if (this.remoteFileList.getModel() != null) {
@@ -670,6 +734,14 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      */
     public void setCurrentLocalPath(String currentLocalPath) {
         this.localPath.push(currentLocalPath);
+    }
+
+    /**
+     * 刷新本地资源
+     */
+    public void reloadLocal() {
+        // 相同路径刷新有问题
+        this.localPath.push(this.localPath.getMemoItem());
     }
 
     /**
