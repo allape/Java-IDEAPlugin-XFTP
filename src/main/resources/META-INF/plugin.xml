@@ -51,6 +51,7 @@
         <ul>
             <li>Change all buttons to tool bar.</li>
             <li>Add tooltip for all buttons.</li>
+            <li>Fix remote not reloading after deleting or transferring.</li>
         </ul>
         <h3>2021-04-17</h3>
         <ul>

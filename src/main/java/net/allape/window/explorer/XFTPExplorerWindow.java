@@ -41,6 +41,7 @@ import net.allape.bus.HistoryTopicHandler;
 import net.allape.bus.Services;
 import net.allape.bus.Windows;
 import net.allape.component.FileTable;
+import net.allape.component.MemoComboBox;
 import net.allape.exception.TransferCancelledException;
 import net.allape.model.FileModel;
 import net.allape.model.FileTransferHandler;
@@ -158,7 +159,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         this.historyTopicHandler = this.project.getMessageBus().syncPublisher(HistoryTopicHandler.HISTORY_TOPIC);
 
         final XFTPExplorerWindow self = XFTPExplorerWindow.this;
-        this.setCurrentLocalPath(this.project.getBasePath());
+        this.setCurrentLocalPath(Objects.requireNonNull(this.project.getBasePath()));
         // 初始化文件监听
         this.project.getMessageBus().connect().subscribe(VirtualFileManager.VFS_CHANGES, new BulkFileListener() {
             @Override
@@ -229,6 +230,13 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 File file = new File(path);
                 if (!file.exists()) {
                     Services.message(path + " does not exist!", MessageType.INFO);
+                    // 获取第二个历史, 不存在时加载项目路径
+                    MemoComboBox.MemoComboBoxPersistenceModel<String> lastPath = this.localPath.getItemAt(1);
+                    if (lastPath != null && lastPath.getMemo() != null) {
+                        this.setCurrentLocalPath(lastPath.getMemo());
+                    } else {
+                        this.setCurrentLocalPath(Objects.requireNonNull(this.project.getBasePath()));
+                    }
                 } else if (!file.isDirectory()) {
                     // 加载父文件夹
                     this.setCurrentLocalPath(file.getParent());
@@ -398,6 +406,12 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                     path = file.path();
                     if (!file.exists()) {
                         Services.message(path + " does not exist!", MessageType.INFO);
+                        MemoComboBox.MemoComboBoxPersistenceModel<String> lastPath = this.remotePath.getItemAt(1);
+                        if (lastPath != null && lastPath.getMemo() != null) {
+                            this.setCurrentRemotePath(lastPath.getMemo());
+                        } else {
+                            this.setCurrentRemotePath(this.sftpChannel.getHome());
+                        }
                     } else if (!file.isDir()) {
                         this.downloadFileAndEdit(file);
                         loadParent = this.getParentFolderPath(file.path(), SERVER_FILE_SYSTEM_SEPARATOR);
@@ -550,7 +564,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                             self.application.invokeLater(() -> {
                                 self.unlockRemoteUIs();
                                 // 刷新当前页面
-                                self.setCurrentRemotePath(self.remotePath.getMemoItem());
+                                self.reloadRemote();
                             });
                         }
                     });
@@ -732,24 +746,38 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      * 设置当前显示的本地路径
      * @param currentLocalPath 本地文件路径
      */
-    public void setCurrentLocalPath(String currentLocalPath) {
+    public void setCurrentLocalPath(@NotNull String currentLocalPath) {
+        boolean fireEventManually = currentLocalPath.equals(this.localPath.getMemoItem());
         this.localPath.push(currentLocalPath);
+        if (fireEventManually) {
+            this.localPath.actionPerformed(null);
+        }
     }
 
     /**
      * 刷新本地资源
      */
     public void reloadLocal() {
-        // 相同路径刷新有问题
-        this.localPath.push(this.localPath.getMemoItem());
+        this.setCurrentLocalPath(this.localPath.getMemoItem());
     }
 
     /**
      * 谁当前现实的远程路径
      * @param currentRemotePath 远程文件路径
      */
-    public void setCurrentRemotePath(String currentRemotePath) {
+    public void setCurrentRemotePath(@NotNull String currentRemotePath) {
+        boolean fireEventManually = currentRemotePath.equals(this.remotePath.getMemoItem());
         this.remotePath.push(currentRemotePath);
+        if (fireEventManually) {
+            this.remotePath.actionPerformed(null);
+        }
+    }
+
+    /**
+     * 刷新远程资源
+     */
+    public void reloadRemote() {
+        this.setCurrentRemotePath(this.remotePath.getMemoItem());
     }
 
     /**
@@ -1074,7 +1102,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 sub.onComplete();
                 // 是上传至当前目录则刷新
                 if (remoteFilePath.startsWith(self.remotePath.getMemoItem())) {
-                    self.application.invokeLater(() -> self.setCurrentRemotePath(self.remotePath.getMemoItem()));
+                    self.application.invokeLater(self::reloadRemote);
                 }
             }, e -> {
                 transfer.setResult(Transfer.Result.FAIL);
