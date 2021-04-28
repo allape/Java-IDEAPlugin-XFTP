@@ -53,8 +53,6 @@ public class XFTPExplorerWindowFactory implements ToolWindowFactory {
 
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
-        // TODO 创建一个传输历史的窗口
-
         // 默认创建一个XFTP窗口
         createTheToolWindowContent(project, toolWindow);
     }

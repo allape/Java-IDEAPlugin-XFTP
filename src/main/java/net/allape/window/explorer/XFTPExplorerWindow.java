@@ -36,7 +36,7 @@ import com.jetbrains.plugins.remotesdk.console.SshTerminalDirectRunner;
 import icons.TerminalIcons;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.internal.functions.Functions;
-import net.allape.action.FastEnableAnAction;
+import net.allape.action.ActionToolbarFastEnableAnAction;
 import net.allape.bus.HistoryTopicHandler;
 import net.allape.bus.Services;
 import net.allape.bus.Windows;
@@ -106,8 +106,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     private Map<RemoteFileObject, String> remoteEditingFiles = new HashMap<>(COLLECTION_SIZE);
 
     // 建立连接
-    private final FastEnableAnAction explore = new FastEnableAnAction(
-            REMOTE_TOOL_BAR_PLACE,
+    private final ActionToolbarFastEnableAnAction explore = new ActionToolbarFastEnableAnAction(
+            this.remoteActionToolBar,
             "Start New Session", "Start a sftp session",
             AllIcons.Webreferences.Server
     ) {
@@ -117,8 +117,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         }
     };
     // 断开连接
-    private final FastEnableAnAction suspend = new FastEnableAnAction(
-            REMOTE_TOOL_BAR_PLACE,
+    private final ActionToolbarFastEnableAnAction suspend = new ActionToolbarFastEnableAnAction(
+            this.remoteActionToolBar,
             "Disconnect", "Disconnect from sftp server",
             AllIcons.Actions.Suspend
     ) {
@@ -136,8 +136,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         }
     };
     // 命令行打开
-    private final FastEnableAnAction newTerminal = new FastEnableAnAction(
-            REMOTE_TOOL_BAR_PLACE,
+    private final ActionToolbarFastEnableAnAction newTerminal = new ActionToolbarFastEnableAnAction(
+            this.remoteActionToolBar,
             "Open In Terminal", "Open current folder in ssh terminal",
             TerminalIcons.OpenTerminal_13x13
     ) {
@@ -371,7 +371,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             }
         });
 
-        // 弹出的时候获取ssh配置
         this.remotePath.setEnabled(false);
         this.remotePath.addActionListener(e -> {
             String remoteFilePath = this.remotePath.getMemoItem();
@@ -433,8 +432,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             });
         });
 
-        suspend.setEnabled(false);
-        newTerminal.setEnabled(false);
+        this.suspend.setEnabled(false);
+        this.newTerminal.setEnabled(false);
         this.remoteActionGroup.addAll(
                 explore,
                 suspend,
