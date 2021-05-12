@@ -26,6 +26,7 @@ import com.intellij.remote.RemoteCredentials;
 import com.intellij.ssh.ConnectionBuilder;
 import com.intellij.ssh.RemoteCredentialsUtil;
 import com.intellij.ssh.RemoteFileObject;
+import com.intellij.ssh.SshTransportException;
 import com.intellij.ssh.channels.SftpChannel;
 import com.intellij.ssh.impl.sshj.channels.SshjSftpChannel;
 import com.intellij.ui.content.Content;
@@ -635,27 +636,58 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                     this.credentials, this.project,
                                     ProgressManager.getGlobalProgressIndicator(), true
                             ).withConnectionTimeout(60L);
-                            this.sftpChannel = this.connectionBuilder.openSftpChannel();
-                            this.triggerConnected();
+                            XFTPExplorerWindow self = this;
 
-                            try {
-                                // 获取sftpClient
-                                // 使用反射获取到 net.schmizz.sshj.sftp.SFTPClient
-                                Class<SshjSftpChannel> sftpChannelClass = SshjSftpChannel.class;
+                            ProgressManager.getInstance().run(new Task.Backgroundable(
+                                    this.project,
+                                    "connecting to " + this.credentials.getUserName() + "@" + this.credentials.getHost(),
+                                    // 暂时不允许取消
+                                    false
+                            ) {
+                                // 是否已被取消
+                                private boolean cancelled = false;
+                                @Override
+                                public void run(@NotNull ProgressIndicator indicator) {
+                                    indicator.setFraction(0);
+                                    indicator.setIndeterminate(true);
+                                    try {
+                                        self.sftpChannel = self.connectionBuilder.openSftpChannel();
+                                        self.triggerConnected();
 
-                                Field field = ReflectionUtil.findFieldInHierarchy(sftpChannelClass, f -> f.getType() == SFTPClient.class);
-                                if (field == null) {
-                                    throw new IllegalArgumentException("Unable to upload files!");
+                                        try {
+                                            // 获取sftpClient
+                                            // 使用反射获取到 net.schmizz.sshj.sftp.SFTPClient
+                                            Class<SshjSftpChannel> sftpChannelClass = SshjSftpChannel.class;
+
+                                            Field field = ReflectionUtil.findFieldInHierarchy(sftpChannelClass, f -> f.getType() == SFTPClient.class);
+                                            if (field == null) {
+                                                throw new IllegalArgumentException("Unable to upload files!");
+                                            }
+                                            field.setAccessible(true);
+                                            self.sftpClient = (SFTPClient) field.get(self.sftpChannel);
+                                        } catch (Exception e) {
+                                            e.printStackTrace();
+                                            Services.message("Failed to get sftp client for this session, please try it again: "
+                                                    + e.getMessage(), MessageType.ERROR);
+                                        }
+
+                                        self.application.invokeLater(() -> self.setCurrentRemotePath(self.sftpChannel.getHome()));
+                                    } catch (SshTransportException e) {
+                                        if (!cancelled) {
+                                            Services.message("连接失败, 请重试", MessageType.WARNING);
+                                        }
+                                        e.printStackTrace();
+                                    } finally {
+                                        indicator.setFraction(1);
+                                    }
                                 }
-                                field.setAccessible(true);
-                                this.sftpClient = (SFTPClient) field.get(this.sftpChannel);
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                Services.message("Failed to get sftp client for this session, please try it again: "
-                                        + e.getMessage(), MessageType.ERROR);
-                            }
 
-                            this.application.invokeLater(() -> this.setCurrentRemotePath(this.sftpChannel.getHome()));
+                                @Override
+                                public void onCancel() {
+                                    super.onCancel();
+                                    this.cancelled = true;
+                                }
+                            });
                         });
                     }
                 );
@@ -952,7 +984,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         // 检查当前传输的队列, 存在相同target的, 取消上一个任务
         for (Transfer exists : TRANSFERRING) {
             // 移除非运行中的内容
-            if (exists.getResult() != Transfer.Result.TRANSFERRING) {
+            if (exists == null || exists.getResult() != Transfer.Result.TRANSFERRING) {
                 this.application.invokeLater(() -> TRANSFERRING.remove(exists));
             }
             // 标记相同目标内容为已取消

@@ -114,8 +114,13 @@ public class MemoComboBox<E> extends ComboBox<MemoComboBox.MemoComboBoxPersisten
                 this.application.invokeLater(() -> model.setSelectedItem(newMemo));
 
                 // 持久化
-                this.application.executeOnPooledThread(() ->
-                        PropertiesComponent.getInstance().setValue(this.persistenceKey, new Gson().toJson(vector)));
+                this.application.executeOnPooledThread(() -> {
+                    try {
+                        PropertiesComponent.getInstance().setValue(this.persistenceKey, new Gson().toJson(vector));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
             } else {
                 throw new ClassCastException("Only support for DefaultComboBoxModel");
             }
