@@ -1,7 +1,6 @@
 package net.allape.window.explorer;
 
 import com.intellij.icons.AllIcons;
-import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
@@ -10,6 +9,7 @@ import com.intellij.openapi.fileEditor.impl.text.FileDropHandler;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.progress.Task;
+import com.intellij.openapi.project.DumbAwareAction;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.JBMenuItem;
 import com.intellij.openapi.ui.JBPopupMenu;
@@ -213,13 +213,13 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         final XFTPExplorerWindow self = XFTPExplorerWindow.this;
 
         this.localActionGroup.addAll(
-                new AnAction("Refresh", "Refresh current folder", AllIcons.Actions.Refresh) {
+                new DumbAwareAction("Refresh", "Refresh current folder", AllIcons.Actions.Refresh) {
                     @Override
                     public void actionPerformed(@NotNull AnActionEvent e) {
                         self.reloadLocal();
                     }
                 },
-                new AnAction("Open In Finder/Explorer", "Display folder in system file manager", AllIcons.Actions.MenuOpen) {
+                new DumbAwareAction("Open In Finder/Explorer", "Display folder in system file manager", AllIcons.Actions.MenuOpen) {
                 @Override
                 public void actionPerformed(@NotNull AnActionEvent e) {
                     String path = self.localPath.getMemoItem();
