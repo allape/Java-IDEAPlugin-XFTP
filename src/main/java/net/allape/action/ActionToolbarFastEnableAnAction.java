@@ -1,15 +1,15 @@
 package net.allape.action;
 
-import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl;
+import com.intellij.openapi.project.DumbAwareAction;
 import com.intellij.openapi.util.NlsActions;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 
-public abstract class ActionToolbarFastEnableAnAction extends AnAction {
+public abstract class ActionToolbarFastEnableAnAction extends DumbAwareAction {
 
     private final ActionToolbarImpl toolbar;
 
