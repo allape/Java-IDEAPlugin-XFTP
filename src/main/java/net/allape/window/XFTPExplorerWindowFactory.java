@@ -30,7 +30,7 @@ public class XFTPExplorerWindowFactory implements ToolWindowFactory, DumbAware {
                 if (window == null) {
                     logger.warn("closed an un-cached window: " + event);
                 } else {
-                    window.onClosed(event);
+                    window.dispose();
                     Windows.windows.remove(event.getContent());
                 }
 

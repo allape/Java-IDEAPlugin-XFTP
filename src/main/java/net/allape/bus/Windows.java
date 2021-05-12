@@ -1,9 +1,10 @@
 package net.allape.bus;
 
 import com.intellij.ui.content.Content;
-import net.allape.window.XFTPWindow;
+import net.allape.window.explorer.XFTPExplorerWindow;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public final class Windows {
 
@@ -13,6 +14,6 @@ public final class Windows {
     public static final String WINDOW_DEFAULT_NAME = "Explorer";
 
     // 当前打开的窗口
-    public static final Map<Content, XFTPWindow> windows = new HashMap<>(10);
+    public static final Map<Content, XFTPExplorerWindow> windows = new HashMap<>(10);
 
 }

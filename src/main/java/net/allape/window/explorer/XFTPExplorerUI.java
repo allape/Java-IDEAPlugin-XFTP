@@ -48,8 +48,8 @@ public class XFTPExplorerUI extends XFTPWindow {
     }
 
     @Override
-    public void onClosed(ContentManagerEvent e) {
-        super.onClosed(e);
+    public void dispose() {
+        super.dispose();
     }
 
     /**

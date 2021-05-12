@@ -30,7 +30,6 @@ import com.intellij.ssh.SshTransportException;
 import com.intellij.ssh.channels.SftpChannel;
 import com.intellij.ssh.impl.sshj.channels.SshjSftpChannel;
 import com.intellij.ui.content.Content;
-import com.intellij.ui.content.ContentManagerEvent;
 import com.intellij.util.ReflectionUtil;
 import com.jetbrains.plugins.remotesdk.console.RemoteDataProducer;
 import com.jetbrains.plugins.remotesdk.console.SshTerminalDirectRunner;
@@ -198,8 +197,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     }
 
     @Override
-    public void onClosed(ContentManagerEvent e) {
-        super.onClosed(e);
+    public void dispose() {
+        super.dispose();
 
         // 关闭连接
         this.disconnect(true);
@@ -661,7 +660,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                 private boolean cancelled = false;
                                 @Override
                                 public void run(@NotNull ProgressIndicator indicator) {
-                                    indicator.setFraction(0);
                                     indicator.setIndeterminate(true);
                                     try {
                                         self.sftpChannel = self.connectionBuilder.openSftpChannel();
@@ -690,8 +688,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                             Services.message("连接失败, 请重试", MessageType.WARNING);
                                         }
                                         e.printStackTrace();
-                                    } finally {
-                                        indicator.setFraction(1);
                                     }
                                 }
 
@@ -1168,7 +1164,14 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     // region getter / setter
 
     public void setContent(Content content) {
-        this.content = content;
+        if (content != null) {
+            this.content = content;
+            new XFTPExplorerWindowTabCloseListener(this.content, this.project, this);
+        }
+    }
+
+    public SFTPClient getSftpClient() {
+        return sftpClient;
     }
 
     // endregion

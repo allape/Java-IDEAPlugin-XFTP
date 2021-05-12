@@ -52,6 +52,7 @@
         <ul>
             <li>Fix some bugs.</li>
             <li>Add remote reload button.</li>
+            <li>Add a confirmation on closing tab while connected to a server.</li>
         </ul>
         <h3>2021-04-28</h3>
         <ul>

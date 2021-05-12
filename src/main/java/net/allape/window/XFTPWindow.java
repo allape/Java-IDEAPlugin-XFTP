@@ -1,5 +1,6 @@
 package net.allape.window;
 
+import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.Application;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
@@ -9,7 +10,7 @@ import com.intellij.ui.content.ContentManagerEvent;
 import com.intellij.ui.content.ContentManagerListener;
 import java.awt.datatransfer.DataFlavor;
 
-public class XFTPWindow {
+public class XFTPWindow implements Disposable {
 
     // 服务器文件系统分隔符
     protected static final String SERVER_FILE_SYSTEM_SEPARATOR = "/";
@@ -42,10 +43,7 @@ public class XFTPWindow {
         this.application = ApplicationManager.getApplication();
     }
 
-    /**
-     * 页面关闭时
-     * @param e {@link ContentManagerListener#contentRemoved(ContentManagerEvent)}的参数
-     */
-    public void onClosed (ContentManagerEvent e) { }
+    @Override
+    public void dispose() { }
 
 }
