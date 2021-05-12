@@ -3,6 +3,7 @@ package net.allape.window;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.DumbAwareAction;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.MessageType;
@@ -15,7 +16,7 @@ import net.allape.bus.Services;
 import net.allape.window.explorer.XFTPExplorerWindow;
 import org.jetbrains.annotations.NotNull;
 
-public class XFTPExplorerWindowFactory implements ToolWindowFactory {
+public class XFTPExplorerWindowFactory implements ToolWindowFactory, DumbAware {
 
     public static final Logger logger = Logger.getInstance(XFTPExplorerWindowFactory.class);
 
