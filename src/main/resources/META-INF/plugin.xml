@@ -30,6 +30,7 @@
             <li>
                 After connected to a server, the ssh user's home folder will be displayed in the right list.
                 <ul>
+                    <li>The "Refresh" icon button is for reload current folder.</li>
                     <li>The "Suspend" icon button is for disconnecting.</li>
                     <li>The "Terminal" icon button is for opening a new ssh terminal with current remote directory, like Tools | Start SSH Session.</li>
                     <li>The row with empty "size" cell is a directory.</li>
@@ -47,6 +48,11 @@
     </description>
 
     <change-notes><![CDATA[
+        <h3>2021-05-12</h3>
+        <ul>
+            <li>Fix some bugs.</li>
+            <li>Add remote reload button.</li>
+        </ul>
         <h3>2021-04-28</h3>
         <ul>
             <li>Change all buttons to tool bar.</li>

@@ -119,6 +119,17 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             XFTPExplorerWindow.this.connectSftp();
         }
     };
+    // 刷新
+    private final ActionToolbarFastEnableAnAction reload = new ActionToolbarFastEnableAnAction(
+            this.remoteActionToolBar,
+            "Reload", "Reload current folder",
+            AllIcons.Actions.Refresh
+    ) {
+        @Override
+        public void actionPerformed(@NotNull AnActionEvent e) {
+            XFTPExplorerWindow.this.reloadRemote();
+        }
+    };
     // 断开连接
     private final ActionToolbarFastEnableAnAction suspend = new ActionToolbarFastEnableAnAction(
             this.remoteActionToolBar,
@@ -450,9 +461,11 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
         this.remoteActionGroup.addAll(
                 explore,
+                reload,
                 suspend,
                 newTerminal
         );
+        this.reload.setEnabled(false);
         this.suspend.setEnabled(false);
         this.newTerminal.setEnabled(false, true);
 
@@ -739,6 +752,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             this.remotePath.setEnabled(true);
 
             this.explore.setEnabled(false);
+            this.reload.setEnabled(true);
             this.suspend.setEnabled(true);
             this.newTerminal.setEnabled(true);
 
@@ -762,6 +776,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             this.remotePath.setEnabled(false);
 
             this.explore.setEnabled(true);
+            this.reload.setEnabled(false);
             this.suspend.setEnabled(false);
             this.newTerminal.setEnabled(false, true);
 
