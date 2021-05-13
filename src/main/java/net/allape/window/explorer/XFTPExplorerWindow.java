@@ -2,6 +2,7 @@ package net.allape.window.explorer;
 
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.actionSystem.Separator;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider;
@@ -114,14 +115,25 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     ) {
         @Override
         public void actionPerformed(@NotNull AnActionEvent e) {
-            e.getPresentation().setEnabled(false);
             XFTPExplorerWindow.this.connectSftp();
+        }
+    };
+    // 显示combobox的下拉内容
+    private final ActionToolbarFastEnableAnAction dropdown = new ActionToolbarFastEnableAnAction(
+            this.remoteActionToolBar,
+            "Dropdown", "Display remote access history",
+            AllIcons.Actions.MoveDown
+    ) {
+        @Override
+        public void actionPerformed(@NotNull AnActionEvent e) {
+            XFTPExplorerWindow self = XFTPExplorerWindow.this;
+            self.remotePath.setPopupVisible(true);
         }
     };
     // 刷新
     private final ActionToolbarFastEnableAnAction reload = new ActionToolbarFastEnableAnAction(
             this.remoteActionToolBar,
-            "Reload", "Reload current folder",
+            "Reload Remote", "Reload current remote folder",
             AllIcons.Actions.Refresh
     ) {
         @Override
@@ -213,13 +225,14 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         final XFTPExplorerWindow self = XFTPExplorerWindow.this;
 
         this.localActionGroup.addAll(
-                new DumbAwareAction("Refresh", "Refresh current folder", AllIcons.Actions.Refresh) {
+                new DumbAwareAction("Refresh Local", "Refresh current local folder", AllIcons.Actions.Refresh) {
                     @Override
                     public void actionPerformed(@NotNull AnActionEvent e) {
                         self.reloadLocal();
                     }
                 },
-                new DumbAwareAction("Open In Finder/Explorer", "Display folder in system file manager", AllIcons.Actions.MenuOpen) {
+                Separator.create(),
+                new DumbAwareAction("Open In FileManager", "Display folder in system file manager", AllIcons.Actions.MenuOpen) {
                 @Override
                 public void actionPerformed(@NotNull AnActionEvent e) {
                     String path = self.localPath.getMemoItem();
@@ -460,13 +473,16 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
         this.remoteActionGroup.addAll(
                 explore,
+                Separator.create(),
+                dropdown,
+                Separator.create(),
                 reload,
+                Separator.create(),
                 suspend,
+                Separator.create(),
                 newTerminal
         );
-        this.reload.setEnabled(false);
-        this.suspend.setEnabled(false);
-        this.newTerminal.setEnabled(false, true);
+        this.setRemoteButtonsEnable(false);
 
         this.remoteFileList.getSelectionModel().addListSelectionListener(e -> {
             List<FileModel> allRemoteFiles = this.remoteFileList.getModel().getData();
@@ -600,6 +616,18 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         });
         remoteFileListPopupMenu.add(remoteFileListPopupMenuDelete);
         this.remoteFileList.setComponentPopupMenu(remoteFileListPopupMenu);
+    }
+
+    /**
+     * 设置需要进行连接后才能使用的按钮的状态
+     * @param enable 是否启用
+     */
+    private void setRemoteButtonsEnable(boolean enable) {
+        this.explore.setEnabled(!enable);
+        this.dropdown.setEnabled(enable);
+        this.reload.setEnabled(enable);
+        this.suspend.setEnabled(enable);
+        this.newTerminal.setEnabled(enable);
     }
 
     /**
@@ -747,10 +775,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
         this.application.invokeLater(() -> {
             this.remotePath.setEnabled(true);
 
-            this.explore.setEnabled(false);
-            this.reload.setEnabled(true);
-            this.suspend.setEnabled(true);
-            this.newTerminal.setEnabled(true);
+            this.setRemoteButtonsEnable(true);
 
             if (this.content != null && this.credentials != null) {
                 this.content.setDisplayName(
@@ -771,10 +796,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             this.remotePath.setItem(null);
             this.remotePath.setEnabled(false);
 
-            this.explore.setEnabled(true);
-            this.reload.setEnabled(false);
-            this.suspend.setEnabled(false);
-            this.newTerminal.setEnabled(false, true);
+            this.setRemoteButtonsEnable(false);
 
             // 清空列表
             if (this.remoteFileList.getModel() != null) {

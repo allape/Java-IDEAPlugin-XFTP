@@ -7,7 +7,6 @@ import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.ui.JBSplitter;
 import com.intellij.ui.OnePixelSplitter;
 import com.intellij.ui.components.JBScrollPane;
-import com.intellij.ui.content.ContentManagerEvent;
 import net.allape.component.FileTable;
 import net.allape.component.MemoComboBox;
 import net.allape.util.Grids;
@@ -30,16 +29,16 @@ public class XFTPExplorerUI extends XFTPWindow {
     protected JPanel localWrapper = new JPanel(new GridBagLayout());
     protected JPanel localPathWrapper = new JPanel(new GridBagLayout());
     protected MemoComboBox<String> localPath = new MemoComboBox<>(LOCAL_HISTORY_PERSISTENCE_KEY);
-    protected DefaultActionGroup localActionGroup = new DefaultActionGroup();
-    protected ActionToolbarImpl localActionToolBar = new ActionToolbarImpl(LOCAL_TOOL_BAR_PLACE, localActionGroup, true);
     protected FileTable localFileList = new FileTable();
     protected JBScrollPane localFileListWrapper = new JBScrollPane(localFileList);
+    protected DefaultActionGroup localActionGroup = new DefaultActionGroup();
+    protected ActionToolbarImpl localActionToolBar = new ActionToolbarImpl(LOCAL_TOOL_BAR_PLACE, localActionGroup, false);
 
     protected JPanel remoteWrapper = new JPanel(new GridBagLayout());
     protected JPanel remotePathWrapper = new JPanel(new GridBagLayout());
     protected MemoComboBox<String> remotePath = new MemoComboBox<>(REMOTE_HISTORY_PERSISTENCE_KEY);
     protected DefaultActionGroup remoteActionGroup = new DefaultActionGroup();
-    protected ActionToolbarImpl remoteActionToolBar = new ActionToolbarImpl(REMOTE_TOOL_BAR_PLACE, remoteActionGroup, true);
+    protected ActionToolbarImpl remoteActionToolBar = new ActionToolbarImpl(REMOTE_TOOL_BAR_PLACE, remoteActionGroup, false);
     protected FileTable remoteFileList = new FileTable();
     protected JBScrollPane remoteFileListWrapper = new JBScrollPane(remoteFileList);
 
@@ -58,30 +57,42 @@ public class XFTPExplorerUI extends XFTPWindow {
     protected void initUI() {
         final GridBagConstraints noYWeightX0Y0 = (GridBagConstraints) Grids.X0Y0.clone();
         noYWeightX0Y0.weighty = 0;
+
+        final GridBagConstraints noXWeightX0Y0 = (GridBagConstraints) Grids.X0Y0.clone();
+        noXWeightX0Y0.weightx = 0;
+
         final GridBagConstraints noXWeightX1Y0 = (GridBagConstraints) Grids.X1Y0.clone();
         noXWeightX1Y0.weightx = 0;
+
+        // region 本地
+        this.localPathWrapper.add(this.localPath, noYWeightX0Y0);
+
+        this.localFileListWrapper.setBorder(null);
+        this.localPathWrapper.add(this.localFileListWrapper, Grids.X0Y1);
+        this.localWrapper.add(this.localPathWrapper, Grids.X0Y0);
+
+        this.localWrapper.add(this.localActionToolBar, noXWeightX1Y0);
+        // endregion
+
+        // region 远程
+        this.remoteWrapper.add(this.remoteActionToolBar, noXWeightX0Y0);
+
+        this.remotePathWrapper.add(this.remotePath, noYWeightX0Y0);
+
+        this.remoteFileListWrapper.setBorder(null);
+        this.remotePathWrapper.add(this.remoteFileListWrapper, Grids.X0Y1);
+
+        this.remoteWrapper.add(this.remotePathWrapper, Grids.X1Y0);
+        // endregion
 
         this.localWrapper.setBorder(null);
         this.remoteWrapper.setBorder(null);
 
         this.splitter.setFirstComponent(this.localWrapper);
         this.splitter.setSecondComponent(this.remoteWrapper);
+
         this.panelWrapper.add(this.splitter, BorderLayout.CENTER);
         this.panelWrapper.setBorder(null);
-
-        this.localPathWrapper.add(this.localPath, Grids.X0Y0);
-        this.localPathWrapper.add(this.localActionToolBar, noXWeightX1Y0);
-        this.localWrapper.add(this.localPathWrapper, noYWeightX0Y0);
-
-        this.localFileListWrapper.setBorder(null);
-        this.localWrapper.add(this.localFileListWrapper, Grids.X0Y1);
-
-        this.remotePathWrapper.add(this.remotePath, Grids.X0Y0);
-        this.remotePathWrapper.add(this.remoteActionToolBar, noXWeightX1Y0);
-        this.remoteWrapper.add(this.remotePathWrapper, noYWeightX0Y0);
-
-        this.remoteFileListWrapper.setBorder(null);
-        this.remoteWrapper.add(this.remoteFileListWrapper, Grids.X0Y1);
     }
 
     /**

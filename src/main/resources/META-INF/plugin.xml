@@ -15,25 +15,28 @@
         <br/>
         <h3>Viewport Explain</h3>
         <ul>
-            <li>The left list displays local files, current project directory is displayed by default.</li>
-            <li>The right list displays remote files.</li>
             <li>The dropdown above every list is the path of its own, and it memorizes access history.
-                And it accepts keyboard type-in to display files or open file.</li>
+                And it accepts keyboard type-in to display folder or open file.</li>
+            <li>---------------Left Side---------------</li>
+            <li>The left list displays local files, current project directory is displayed by default.</li>
+            <li>The "Refresh" icon button: refresh local file list.</li>
+            <li>The "Open Folder" icon button: display current local folder in system file manager, like Finder on MacOS or Explorer on Windows.</li>
+            <li>---------------Right Side---------------</li>
+            <li>The right list displays remote files.</li>
+            <li>A row with empty "size" cell is a directory.</li>
+            <li>The "Server" icon button: connect to a server.</li>
+            <li>The "DownArrow" icon button: display remote access history.</li>
+            <li>The "Refresh" icon button: reload current folder.</li>
+            <li>The "Suspend" icon button: disconnect.</li>
+            <li>The "Terminal" icon button: open a new ssh terminal with current remote directory, like Tools | Start SSH Session.</li>
         </ul>
         <br/>
         <h3>Usage Instructions</h3>
         <ul>
-            <li>The "Refresh" icon button on the left side is for refreshing local file list.</li>
-            <li>The "Open Folder" icon button on the left side is for displaying current local folder in system file manager, like Finder on MacOS and Explorer on Windows.</li>
-            <li>------------------------------</li>
-            <li>Click the top-right "Server" icon button of the right list to select a server, if there is none, it can be managed in Preferences | Tools | SSH Configurations.</li>
+            <li>Click the "Server" icon button to select a server, if there is none, it can be managed in Preferences | Tools | SSH Configurations.</li>
             <li>
                 After connected to a server, the ssh user's home folder will be displayed in the right list.
                 <ul>
-                    <li>The "Refresh" icon button is for reload current folder.</li>
-                    <li>The "Suspend" icon button is for disconnecting.</li>
-                    <li>The "Terminal" icon button is for opening a new ssh terminal with current remote directory, like Tools | Start SSH Session.</li>
-                    <li>The row with empty "size" cell is a directory.</li>
                     <li>Double click the file in the right list, if it is editable, it will be opened in IDE text editor,
                         and the temporary file will be uploaded after it saved.</li>
                     <li>Dropping files at the right list will upload them to current remote folder.</li>
@@ -48,6 +51,10 @@
     </description>
 
     <change-notes><![CDATA[
+        <h3>2021-05-13</h3>
+        <ul>
+            <li>Change buttons position, put all buttons together for minimizing the mouse operation distance.</li>
+        </ul>
         <h3>2021-05-12</h3>
         <ul>
             <li>Fix some bugs.</li>
