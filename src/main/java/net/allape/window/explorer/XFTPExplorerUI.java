@@ -71,11 +71,17 @@ public class XFTPExplorerUI extends XFTPWindow {
         this.localPathWrapper.add(this.localFileListWrapper, Grids.X0Y1);
         this.localWrapper.add(this.localPathWrapper, Grids.X0Y0);
 
-        this.localWrapper.add(this.localActionToolBar, noXWeightX1Y0);
+        JPanel localActionToolBarWrapper = new JPanel(new BorderLayout());
+        localActionToolBarWrapper.setMinimumSize(new Dimension(48, 0));
+        localActionToolBarWrapper.add(this.localActionToolBar);
+        this.localWrapper.add(localActionToolBarWrapper, noXWeightX1Y0);
         // endregion
 
         // region 远程
-        this.remoteWrapper.add(this.remoteActionToolBar, noXWeightX0Y0);
+        JPanel remoteActionToolBarWrapper = new JPanel(new BorderLayout());
+        remoteActionToolBarWrapper.setMinimumSize(new Dimension(48, 0));
+        remoteActionToolBarWrapper.add(this.remoteActionToolBar);
+        this.remoteWrapper.add(remoteActionToolBarWrapper, noXWeightX0Y0);
 
         this.remotePathWrapper.add(this.remotePath, noYWeightX0Y0);
 
