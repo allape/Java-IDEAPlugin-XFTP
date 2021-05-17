@@ -175,6 +175,20 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             TerminalView.getInstance(self.project).createNewSession(new SshTerminalDirectRunner(self.project, self.credentials, Charset.defaultCharset()), state);
         }
     };
+    // 隐藏本地浏览器
+    private final ActionToolbarFastEnableAnAction localToggle = new ActionToolbarFastEnableAnAction(
+            this.remoteActionToolBar,
+            "Toggle Local Explorer", "Hide or display local file list",
+            AllIcons.Diff.ApplyNotConflictsRight
+    ) {
+        @Override
+        public void actionPerformed(@NotNull AnActionEvent e) {
+            XFTPExplorerWindow self = XFTPExplorerWindow.this;
+            boolean to = !self.splitter.getFirstComponent().isVisible();
+            self.splitter.getFirstComponent().setVisible(to);
+            self.localToggle.setIcon(to ? AllIcons.Diff.ApplyNotConflictsRight : AllIcons.Diff.ApplyNotConflictsLeft);
+        }
+    };
 
     public XFTPExplorerWindow(Project project, ToolWindow toolWindow) {
         super(project, toolWindow);
@@ -231,7 +245,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                         self.reloadLocal();
                     }
                 },
-                Separator.create(),
                 new DumbAwareAction("Open In FileManager", "Display folder in system file manager", AllIcons.Actions.MenuOpen) {
                 @Override
                 public void actionPerformed(@NotNull AnActionEvent e) {
@@ -473,14 +486,12 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
 
         this.remoteActionGroup.addAll(
                 explore,
-                Separator.create(),
                 dropdown,
-                Separator.create(),
                 reload,
-                Separator.create(),
                 suspend,
+                newTerminal,
                 Separator.create(),
-                newTerminal
+                localToggle
         );
         this.setRemoteButtonsEnable(false);
 
@@ -767,7 +778,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      * 设置当前状态为连接中
      */
     public void triggerConnecting () {
-        this.application.invokeLater(() -> this.explore.setEnabled(false, true));
+        this.application.invokeLater(() -> this.explore.setEnabled(false));
     }
 
     /**

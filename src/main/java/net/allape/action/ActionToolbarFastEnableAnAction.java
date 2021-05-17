@@ -14,6 +14,7 @@ public abstract class ActionToolbarFastEnableAnAction extends DumbAwareAction {
     private final ActionToolbarImpl toolbar;
 
     private boolean enabled = true;
+    private Icon icon;
 
     public ActionToolbarFastEnableAnAction(
             ActionToolbarImpl toolbar,
@@ -23,21 +24,20 @@ public abstract class ActionToolbarFastEnableAnAction extends DumbAwareAction {
         super(text, description, icon);
 
         this.toolbar = toolbar;
+        this.icon = icon;
     }
 
     public void setEnabled(boolean enabled) {
-        this.setEnabled(enabled, false);
+        this.enabled = enabled;
     }
 
-    public void setEnabled(boolean enabled, boolean updateUI) {
-        this.enabled = enabled;
-        if (updateUI) {
-            this.toolbar.updateUI();
-        }
+    public void setIcon(Icon icon) {
+        this.icon = icon;
     }
 
     @Override
     public void update(@NotNull AnActionEvent e) {
         e.getPresentation().setEnabled(this.enabled);
+        e.getPresentation().setIcon(this.icon);
     }
 }

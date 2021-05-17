@@ -7,13 +7,13 @@
     <description><![CDATA[
         A SFTP tool for remote file management using SSH Configurations.<br/>
         <br/>
-        <h3>Features</h3>
+        <h5>Features</h5>
         <ul>
             <li>Upload and download files with drag and drop.</li>
             <li>Edit remote text file by double clicking.</li>
         </ul>
         <br/>
-        <h3>Viewport Explain</h3>
+        <h5>Viewport Explain</h5>
         <ul>
             <li>The dropdown above every list is the path of its own, and it memorizes access history.
                 And it accepts keyboard type-in to display folder or open file.</li>
@@ -29,9 +29,10 @@
             <li>The "Refresh" icon button: reload current folder.</li>
             <li>The "Suspend" icon button: disconnect.</li>
             <li>The "Terminal" icon button: open a new ssh terminal with current remote directory, like Tools | Start SSH Session.</li>
+            <li>The "DoubleLeftArrows" or "DoubleRightArrows" icon button: Display or hide local file list.</li>
         </ul>
         <br/>
-        <h3>Usage Instructions</h3>
+        <h5>Usage Instructions</h5>
         <ul>
             <li>Click the "Server" icon button to select a server, if there is none, it can be managed in Preferences | Tools | SSH Configurations.</li>
             <li>
@@ -51,27 +52,34 @@
     </description>
 
     <change-notes><![CDATA[
-        <h3>2021-05-13</h3>
+        <h5>2021-05-17</h5>
+        <ul>
+            <li>Fix some bugs.</li>
+            <li>Add display/hide local file list button.</li>
+            <li>Change file list minimum width.</li>
+            <li>Change title font size in plugin description.</li>
+        </ul>
+        <h5>2021-05-13</h5>
         <ul>
             <li>Change buttons position, put all buttons together for minimizing the mouse operation distance.</li>
         </ul>
-        <h3>2021-05-12</h3>
+        <h5>2021-05-12</h5>
         <ul>
             <li>Fix some bugs.</li>
             <li>Add remote reload button.</li>
             <li>Add a confirmation on closing tab while connected to a server.</li>
         </ul>
-        <h3>2021-04-28</h3>
+        <h5>2021-04-28</h5>
         <ul>
             <li>Change all buttons to tool bar.</li>
             <li>Add tooltip for all buttons.</li>
             <li>Fix remote not reloading after deleting or transferring.</li>
         </ul>
-        <h3>2021-04-17</h3>
+        <h5>2021-04-17</h5>
         <ul>
             <li>A first usable Version.</li>
         </ul>
-        <h3>2020-11-02</h3>
+        <h5>2020-11-02</h5>
         <ul>
             <li>Project started.</li>
         </ul>

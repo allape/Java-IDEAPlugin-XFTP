@@ -65,6 +65,7 @@ public class XFTPExplorerUI extends XFTPWindow {
         noXWeightX1Y0.weightx = 0;
 
         // region 本地
+        this.localPath.setMinimumAndPreferredWidth(100);
         this.localPathWrapper.add(this.localPath, noYWeightX0Y0);
 
         this.localFileListWrapper.setBorder(null);
@@ -83,6 +84,7 @@ public class XFTPExplorerUI extends XFTPWindow {
         remoteActionToolBarWrapper.add(this.remoteActionToolBar);
         this.remoteWrapper.add(remoteActionToolBarWrapper, noXWeightX0Y0);
 
+        this.remotePath.setMinimumAndPreferredWidth(100);
         this.remotePathWrapper.add(this.remotePath, noYWeightX0Y0);
 
         this.remoteFileListWrapper.setBorder(null);
