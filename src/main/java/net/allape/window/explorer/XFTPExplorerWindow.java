@@ -665,6 +665,8 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                     null,
                     "",
                     data -> {
+                        if (data == null) return;
+
                         this.credentials = data;
                         this.triggerConnecting();
                         this.disconnect(false);
