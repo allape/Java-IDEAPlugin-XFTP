@@ -351,7 +351,11 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             public void mouseClicked(MouseEvent e) {
                 if (e.getButton() == MouseEvent.BUTTON1) {
                     long now = System.currentTimeMillis();
-                    if (self.lastFile == self.currentLocalFile && now - self.clickWatcher < DOUBLE_CLICK_INTERVAL) {
+                    if (
+                            self.lastFile != null
+                                    && self.lastFile == self.currentLocalFile
+                                    && now - self.clickWatcher < DOUBLE_CLICK_INTERVAL
+                    ) {
                         self.setCurrentLocalPath(self.currentLocalFile.getPath());
                     }
 
@@ -509,7 +513,11 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             public void mouseClicked(MouseEvent e) {
                 if (e.getButton() == MouseEvent.BUTTON1) {
                     long now = System.currentTimeMillis();
-                    if (self.lastFile == self.currentRemoteFile && now - self.clickWatcher < DOUBLE_CLICK_INTERVAL) {
+                    if (
+                            self.lastFile != null
+                                    && self.lastFile == self.currentRemoteFile
+                                    && now - self.clickWatcher < DOUBLE_CLICK_INTERVAL
+                    ) {
                         self.setCurrentRemotePath(self.currentRemoteFile.getPath());
                     }
 
