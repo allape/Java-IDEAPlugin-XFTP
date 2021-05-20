@@ -934,18 +934,18 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             }
 
             try {
-                String formattedFileName;
+                String formattedFileName = remoteFile.name();
                 // 所有点"."开头的文件名可能导致本地fs错误
-                if (remoteFile.name().startsWith(".")) {
-                    formattedFileName = remoteFile.name().replaceAll("\\.", "-");
-                } else {
-                    String fileSuffix = remoteFile.name().contains(".") ?
-                            remoteFile.name().substring(remoteFile.name().lastIndexOf('.')) :
-                            "";
-                    formattedFileName = "-" + remoteFile.name()
-                            .substring(0, remoteFile.name().length() - fileSuffix.length())
-                            .replaceAll("\\.", "-") + fileSuffix;
-                }
+//                if (remoteFile.name().startsWith(".")) {
+//                    formattedFileName = remoteFile.name().replaceAll("\\.", "-");
+//                } else {
+//                    String fileSuffix = remoteFile.name().contains(".") ?
+//                            remoteFile.name().substring(remoteFile.name().lastIndexOf('.')) :
+//                            "";
+//                    formattedFileName = "-" + remoteFile.name()
+//                            .substring(0, remoteFile.name().length() - fileSuffix.length())
+//                            .replaceAll("\\.", "-") + fileSuffix;
+//                }
                 File localFile = File.createTempFile("jb-ide-xftp-", formattedFileName);
                 this.application.executeOnPooledThread(() ->
                         this.transfer(localFile, remoteFile, Transfer.Type.DOWNLOAD).subscribe(t -> {
@@ -967,7 +967,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
      */
     @SuppressWarnings("JavadocReference")
     private void openFileInEditor (@NotNull File file) {
-        VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByIoFile(file);
+        VirtualFile virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(file);
         if (virtualFile == null) {
             Services.message(file.getAbsolutePath() + " does not exists!", MessageType.WARNING);
             return;
