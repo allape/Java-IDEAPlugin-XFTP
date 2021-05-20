@@ -105,7 +105,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
     private FileModel currentRemoteFile = null;
 
     // 修改中的远程文件, 用于文件修改后自动上传 key: remote file, value: local file
-    private Map<RemoteFileObject, String> remoteEditingFiles = new HashMap<>(COLLECTION_SIZE);
+    private final Map<RemoteFileObject, String> remoteEditingFiles = new HashMap<>(COLLECTION_SIZE);
 
     // 建立连接
     private final ActionToolbarFastEnableAnAction explore = new ActionToolbarFastEnableAnAction(
@@ -824,7 +824,7 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                 this.remoteFileList.getModel().resetData(new ArrayList<>());
             }
             // 清空文件列表
-            this.remoteEditingFiles = new HashMap<>(COLLECTION_SIZE);
+            this.remoteEditingFiles.clear();
         });
     }
 
@@ -934,7 +934,19 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
             }
 
             try {
-                File localFile = File.createTempFile("jb-ide-xftp-", "." + remoteFile.name());
+                String formattedFileName;
+                // 所有点"."开头的文件名可能导致本地fs错误
+                if (remoteFile.name().startsWith(".")) {
+                    formattedFileName = remoteFile.name().replaceAll("\\.", "-");
+                } else {
+                    String fileSuffix = remoteFile.name().contains(".") ?
+                            remoteFile.name().substring(remoteFile.name().lastIndexOf('.')) :
+                            "";
+                    formattedFileName = "-" + remoteFile.name()
+                            .substring(0, remoteFile.name().length() - fileSuffix.length())
+                            .replaceAll("\\.", "-") + fileSuffix;
+                }
+                File localFile = File.createTempFile("jb-ide-xftp-", formattedFileName);
                 this.application.executeOnPooledThread(() ->
                         this.transfer(localFile, remoteFile, Transfer.Type.DOWNLOAD).subscribe(t -> {
                             this.openFileInEditor(localFile);
