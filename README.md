@@ -1,5 +1,7 @@
 # XFTP - A SFTP tools for IntelliJ IDEA Ultimate
 
+### [GitHub](https://github.com/ALLAPE/Java-IDEAPlugin-XFTP) | [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/16590-xftp)
+
 ## Features
 - ✔️ Editing remote files just by double-click it, and saving (Ctrl s or Cmd s by default) for uploading.
 - ✔️ Drop on remote view port to upload (just available for dragging from Finder or Explorer).
