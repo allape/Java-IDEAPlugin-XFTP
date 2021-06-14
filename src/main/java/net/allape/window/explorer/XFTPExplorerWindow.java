@@ -734,8 +734,9 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                         self.application.invokeLater(() -> self.setCurrentRemotePath(self.sftpChannel.getHome()));
                                     } catch (SshTransportException e) {
                                         if (!cancelled) {
-                                            Services.message("连接失败, 请重试", MessageType.WARNING);
+                                            Services.message("Failed to connect: " + e.getMessage(), MessageType.WARNING);
                                         }
+                                        self.triggerDisconnected();
                                         e.printStackTrace();
                                     }
                                 }
