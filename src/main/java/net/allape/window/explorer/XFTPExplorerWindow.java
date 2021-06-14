@@ -68,6 +68,7 @@ import java.awt.event.MouseListener;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.SocketException;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.*;
@@ -1176,6 +1177,9 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                                 e.printStackTrace();
                                 Services.message("Error occurred while transferring " + transfer.getSource() + " to " + transfer.getTarget() + ", " +
                                         e.getMessage(), MessageType.ERROR);
+                                if (e instanceof SocketException) {
+                                    disconnect(true);
+                                }
                                 emitter.onError(e);
                             }
                         }
@@ -1190,7 +1194,6 @@ public class XFTPExplorerWindow extends XFTPExplorerUI {
                     Services.message("Error occurred while starting to transfer " + transfer.getSource() + " to " + transfer.getTarget() + ", " +
                             e.getMessage(), MessageType.ERROR);
                     emitter.onError(e);
-
                 }
             });
 

@@ -52,6 +52,10 @@
     </description>
 
     <change-notes><![CDATA[
+        <h5>2021-06-14</h5>
+        <ul>
+            <li>Fix buttons' state after failed to connect to a server.</li>
+        </ul>
         <h5>2021-05-18</h5>
         <ul>
             <li>Fix some bugs.</li>
