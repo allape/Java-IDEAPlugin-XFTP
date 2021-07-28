@@ -1,6 +1,7 @@
-<idea-plugin>
+<idea-plugin url="https://github.com/allape/Java-IDEAPlugin-XFTP">
     <id>net.allape.XFTP</id>
     <name>XFTP</name>
+    <idea-version since-build="211.000"/>
     <!-- url="https://www.allensnape.com" -->
     <vendor email="allensnape@gmail.com">ALLAPE</vendor>
 
@@ -52,6 +53,11 @@
     </description>
 
     <change-notes><![CDATA[
+        <h5>2021-07-28</h5>
+        <ul>
+            <li>Change IDEA version for compatibility.</li>
+            <li>Add icon.</li>
+        </ul>
         <h5>2021-06-14</h5>
         <ul>
             <li>Fix buttons' state after failed to connect to a server.</li>
