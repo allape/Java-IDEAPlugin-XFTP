@@ -1,7 +1,6 @@
 <idea-plugin url="https://github.com/allape/Java-IDEAPlugin-XFTP">
     <id>net.allape.XFTP</id>
     <name>XFTP</name>
-    <idea-version since-build="211.000"/>
     <!-- url="https://www.allensnape.com" -->
     <vendor email="allensnape@gmail.com">ALLAPE</vendor>
 

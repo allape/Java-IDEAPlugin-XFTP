@@ -21,5 +21,10 @@ dependencies {
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
 intellij {
-    version "IU-2021.2"
+    version "IU-2021.1"
+    updateSinceUntilBuild false
+}
+
+patchPluginXml {
+    sinceBuild "211.000"
 }
