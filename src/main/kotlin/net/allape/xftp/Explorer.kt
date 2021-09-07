@@ -1273,7 +1273,7 @@ class Explorer(
                         } else {
                             val currentLocalPath: String = localPath.getMemoItem() ?: ""
                             if (
-                                getParentFolderPath(localFileAbsPath, SERVER_FILE_SYSTEM_SEPARATOR)
+                                getParentFolderPath(localFileAbsPath, File.separator)
                                 ==
                                 currentLocalPath
                             ) {
