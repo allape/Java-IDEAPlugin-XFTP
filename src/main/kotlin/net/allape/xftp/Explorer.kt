@@ -1042,9 +1042,9 @@ class Explorer(
      * 获取当前连接名称
      */
     private fun getWindowName(): String {
-//        return if (credentials == null) Windows.WINDOW_DEFAULT_NAME
-//            else "${credentials!!.userName}@${credentials!!.host}:${credentials!!.port}"
-        return connector?.name ?: Windows.WINDOW_DEFAULT_NAME
+        return if (connector != null) connector!!.name
+            else if (credentials != null) "${credentials!!.userName}@${credentials!!.host}:${credentials!!.port}"
+            else Windows.WINDOW_DEFAULT_NAME
     }
 
     /**
