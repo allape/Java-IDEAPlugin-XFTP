@@ -1263,33 +1263,21 @@ class Explorer(
                         // 如果上传目录和当前目录相同, 则刷新目录
                         if (type === TransferType.UPLOAD) {
                             val currentRemotePath: String = remotePath.getMemoItem() ?: ""
-                            if (remoteFile.isDir()) {
-                                if (remoteFilePath == currentRemotePath) {
-                                    reloadRemote()
-                                }
-                            } else {
-                                if (
-                                    getParentFolderPath(remoteFilePath, SERVER_FILE_SYSTEM_SEPARATOR)
-                                    ==
-                                    currentRemotePath
-                                ) {
-                                    reloadRemote()
-                                }
+                            if (
+                                getParentFolderPath(remoteFilePath, SERVER_FILE_SYSTEM_SEPARATOR)
+                                ==
+                                currentRemotePath
+                            ) {
+                                reloadRemote()
                             }
                         } else {
                             val currentLocalPath: String = localPath.getMemoItem() ?: ""
-                            if (localFile.isDirectory) {
-                                if (localFileAbsPath == currentLocalPath) {
-                                    reloadLocal()
-                                }
-                            } else {
-                                if (
-                                    getParentFolderPath(localFileAbsPath, SERVER_FILE_SYSTEM_SEPARATOR)
-                                    ==
-                                    currentLocalPath
-                                ) {
-                                    reloadLocal()
-                                }
+                            if (
+                                getParentFolderPath(localFileAbsPath, SERVER_FILE_SYSTEM_SEPARATOR)
+                                ==
+                                currentLocalPath
+                            ) {
+                                reloadLocal()
                             }
                         }
 
