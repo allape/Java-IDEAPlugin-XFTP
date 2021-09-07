@@ -37,11 +37,12 @@ import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.content.Content
 import com.intellij.util.ReflectionUtil
-import com.jetbrains.plugins.remotesdk.console.RemoteDataProducer
+import com.jetbrains.plugins.remotesdk.console.SshConfigConnector
 import com.jetbrains.plugins.remotesdk.console.SshTerminalDirectRunner
 import icons.TerminalIcons
 import net.allape.action.ActionToolbarFastEnableAnAction
 import net.allape.common.HistoryTopicHandler
+import net.allape.common.RemoteDataProducerWrapper
 import net.allape.common.Services
 import net.allape.common.Windows
 import net.allape.component.FileTable
@@ -264,6 +265,8 @@ class Explorer(
     // 修改中的远程文件, 用于文件修改后自动上传 key: remote file, value: local file
     private val remoteEditingFiles: HashMap<RemoteFileObject, String> = HashMap(COLLECTION_SIZE)
 
+    // 当前配置的连接器
+    private var connector: SshConfigConnector? = null
     // 当前配置
     private var credentials: RemoteCredentials? = null
     // 当前配置的连接创建者
@@ -784,75 +787,80 @@ class Explorer(
      */
     fun connectSftp() {
         try {
-            RemoteDataProducer()
+            RemoteDataProducerWrapper()
                 .withProject(project)
-                .produceRemoteData(
+                .produceRemoteDataWithConnector(
                     RemoteConnectionType.SSH_CONFIG,
                     null,
-                    "from xftp"
-                ) { data ->
-                    if (data != null) {
-                        credentials = data
-                        this.triggerConnecting()
-                        this.disconnect(false)
+                    null
+                ) { c ->
+                    c?.let { connector ->
+                        this@Explorer.connector = connector as SshConfigConnector
+                        connector.produceRemoteCredentials { data ->
+                            if (data != null) {
+                                credentials = data
+                                this.triggerConnecting()
+                                this.disconnect(false)
 
-                        this.application.executeOnPooledThread {
-                            // com.jetbrains.plugins.remotesdk.tools.RemoteTool.startRemoteProcess
-                            @Suppress("UnstableApiUsage")
-                            connectionBuilder = credentials!!.connectionBuilder(
-                                project,
-                                ProgressManager.getGlobalProgressIndicator(),
-                                true
-                            ).withConnectionTimeout(30L)
+                                this.application.executeOnPooledThread {
+                                    // com.jetbrains.plugins.remotesdk.tools.RemoteTool.startRemoteProcess
+                                    @Suppress("UnstableApiUsage")
+                                    connectionBuilder = credentials!!.connectionBuilder(
+                                        project,
+                                        ProgressManager.getGlobalProgressIndicator(),
+                                        true
+                                    ).withConnectionTimeout(30L)
 
-                            ProgressManager.getInstance().run(object : Task.Backgroundable(
-                                project,
-                                "Connecting to " + getCredentialsName(),
-                                // 暂时不允许取消
-                                false
-                            ) {
-                                // 是否已被取消
-                                private var cancelled = false
+                                    ProgressManager.getInstance().run(object : Task.Backgroundable(
+                                        project,
+                                        "Connecting to " + getWindowName(),
+                                        // 暂时不允许取消
+                                        false
+                                    ) {
+                                        // 是否已被取消
+                                        private var cancelled = false
 
-                                override fun run(indicator: ProgressIndicator) {
-                                    indicator.isIndeterminate = true
-                                    try {
-                                        sftpChannel = connectionBuilder!!.openSftpChannel()
-                                        triggerConnected()
+                                        override fun run(indicator: ProgressIndicator) {
+                                            indicator.isIndeterminate = true
+                                            try {
+                                                sftpChannel = connectionBuilder!!.openSftpChannel()
+                                                triggerConnected()
 
-                                        try {
-                                            // 获取sftpClient
-                                            // 使用反射获取到 net.schmizz.sshj.sftp.SFTPClient
-                                            @Suppress("INVISIBLE_REFERENCE")
-                                            val sftpChannelClass = com.intellij.ssh.impl.sshj.channels.SshjSftpChannel::class.java
-                                            val field = ReflectionUtil.findFieldInHierarchy(sftpChannelClass) { f: Field ->
-                                                f.type == SFTPClient::class.java
-                                            } ?: throw IllegalArgumentException("Unable to upload files!")
-                                            field.isAccessible = true
-                                            sftpClient = field[sftpChannel] as SFTPClient
-                                        } catch (e: Exception) {
-                                            e.printStackTrace()
-                                            Services.message(
-                                                "Failed to get sftp client for this session, please try it again: ${e.message}",
-                                                MessageType.ERROR
-                                            )
+                                                try {
+                                                    // 获取sftpClient
+                                                    // 使用反射获取到 net.schmizz.sshj.sftp.SFTPClient
+                                                    @Suppress("INVISIBLE_REFERENCE")
+                                                    val sftpChannelClass = com.intellij.ssh.impl.sshj.channels.SshjSftpChannel::class.java
+                                                    val field = ReflectionUtil.findFieldInHierarchy(sftpChannelClass) { f: Field ->
+                                                        f.type == SFTPClient::class.java
+                                                    } ?: throw IllegalArgumentException("Unable to upload files!")
+                                                    field.isAccessible = true
+                                                    sftpClient = field[sftpChannel] as SFTPClient
+                                                } catch (e: Exception) {
+                                                    e.printStackTrace()
+                                                    Services.message(
+                                                        "Failed to get sftp client for this session, please try it again: ${e.message}",
+                                                        MessageType.ERROR
+                                                    )
+                                                }
+
+                                                application.invokeLater { setCurrentRemotePath(sftpChannel!!.home) }
+                                            } catch (e: SshTransportException) {
+                                                if (!cancelled) {
+                                                    Services.message("Failed to connect: " + e.message, MessageType.WARNING)
+                                                }
+                                                triggerDisconnected()
+                                                e.printStackTrace()
+                                            }
                                         }
 
-                                        application.invokeLater { setCurrentRemotePath(sftpChannel!!.home) }
-                                    } catch (e: SshTransportException) {
-                                        if (!cancelled) {
-                                            Services.message("Failed to connect: " + e.message, MessageType.WARNING)
+                                        override fun onCancel() {
+                                            super.onCancel()
+                                            cancelled = true
                                         }
-                                        triggerDisconnected()
-                                        e.printStackTrace()
-                                    }
+                                    })
                                 }
-
-                                override fun onCancel() {
-                                    super.onCancel()
-                                    cancelled = true
-                                }
-                            })
+                            }
                         }
                     }
                 }
@@ -902,7 +910,7 @@ class Explorer(
             remotePath.isEnabled = true
             this.setRemoteButtonsEnable(true)
             if (credentials != null) {
-                content.displayName = getCredentialsName()
+                content.displayName = getWindowName()
 //                credentials!!.userName +
 //                        "@" +
 //                        credentials!!.host
@@ -1033,9 +1041,10 @@ class Explorer(
     /**
      * 获取当前连接名称
      */
-    private fun getCredentialsName(): String {
-        // credentials!!.userName + "@" + credentials!!.host
-        return credentials?.toString() ?: Windows.WINDOW_DEFAULT_NAME
+    private fun getWindowName(): String {
+//        return if (credentials == null) Windows.WINDOW_DEFAULT_NAME
+//            else "${credentials!!.userName}@${credentials!!.host}:${credentials!!.port}"
+        return connector?.name ?: Windows.WINDOW_DEFAULT_NAME
     }
 
     /**
