@@ -1,0 +1,124 @@
+<idea-plugin url="https://github.com/allape/Java-IDEAPlugin-XFTP">
+    <id>net.allape.XFTP</id>
+    <name>XFTP</name>
+    <!-- url="https://www.allensnape.com" -->
+    <vendor email="allensnape@gmail.com">ALLAPE</vendor>
+
+    <description><![CDATA[
+        A SFTP tool for remote file management using SSH Configurations.<br/>
+        <br/>
+        <h5>Features</h5>
+        <ul>
+            <li>Upload and download files with drag and drop.</li>
+            <li>Edit remote text file by double clicking.</li>
+        </ul>
+        <br/>
+        <h5>Viewport Explain</h5>
+        <ul>
+            <li>The dropdown above every list is the path of its own, and it memorizes access history.
+                And it accepts keyboard type-in to display folder or open file.</li>
+            <li>---------------Left Side---------------</li>
+            <li>The left list displays local files, current project directory is displayed by default.</li>
+            <li>The "Refresh" icon button: refresh local file list.</li>
+            <li>The "Open Folder" icon button: display current local folder in system file manager, like Finder on MacOS or Explorer on Windows.</li>
+            <li>---------------Right Side---------------</li>
+            <li>The right list displays remote files.</li>
+            <li>A row with empty "size" cell is a directory.</li>
+            <li>The "Server" icon button: connect to a server.</li>
+            <li>The "DownArrow" icon button: display remote access history.</li>
+            <li>The "Refresh" icon button: reload current folder.</li>
+            <li>The "Suspend" icon button: disconnect.</li>
+            <li>The "Terminal" icon button: open a new ssh terminal with current remote directory, like Tools | Start SSH Session.</li>
+            <li>The "DoubleLeftArrows" or "DoubleRightArrows" icon button: Display or hide local file list.</li>
+        </ul>
+        <br/>
+        <h5>Usage Instructions</h5>
+        <ul>
+            <li>Click the "Server" icon button to select a server, if there is none, it can be managed in Preferences | Tools | SSH Configurations.</li>
+            <li>
+                After connected to a server, the ssh user's home folder will be displayed in the right list.
+                <ul>
+                    <li>Double click the file in the right list, if it is editable, it will be opened in IDE text editor,
+                        and the temporary file will be uploaded after it saved.</li>
+                    <li>Dropping files at the right list will upload them to current remote folder.</li>
+                    <li>Dropping remote files at the left list will download them to current local folder.</li>
+                </ul>
+            </li>
+            <li>Disconnect or close tab while transferring files will cancel the transfer.</li>
+        </ul>
+        <br/>
+        More information at <a href="https://github.com/ALLAPE/Java-IDEAPlugin-XFTP">Github</a>.<br/>
+    ]]>
+    </description>
+
+    <change-notes><![CDATA[
+        <h5>2021-07-28</h5>
+        <ul>
+            <li>Change IDEA version for compatibility.</li>
+            <li>Add icon.</li>
+        </ul>
+        <h5>2021-06-14</h5>
+        <ul>
+            <li>Fix buttons' state after failed to connect to a server.</li>
+        </ul>
+        <h5>2021-05-18</h5>
+        <ul>
+            <li>Fix some bugs.</li>
+        </ul>
+        <h5>2021-05-17</h5>
+        <ul>
+            <li>Fix some bugs.</li>
+            <li>Add display/hide local file list button.</li>
+            <li>Change file list minimum width.</li>
+            <li>Change title font size in plugin description.</li>
+        </ul>
+        <h5>2021-05-13</h5>
+        <ul>
+            <li>Change buttons position, put all buttons together for minimizing the mouse operation distance.</li>
+        </ul>
+        <h5>2021-05-12</h5>
+        <ul>
+            <li>Fix some bugs.</li>
+            <li>Add remote reload button.</li>
+            <li>Add a confirmation on closing tab while connected to a server.</li>
+        </ul>
+        <h5>2021-04-28</h5>
+        <ul>
+            <li>Change all buttons to tool bar.</li>
+            <li>Add tooltip for all buttons.</li>
+            <li>Fix remote not reloading after deleting or transferring.</li>
+        </ul>
+        <h5>2021-04-17</h5>
+        <ul>
+            <li>A first usable Version.</li>
+        </ul>
+        <h5>2020-11-02</h5>
+        <ul>
+            <li>Project started.</li>
+        </ul>
+    ]]></change-notes>
+
+    <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+         on how to target different products -->
+    <depends>com.intellij.modules.ultimate</depends>
+    <depends>org.jetbrains.plugins.remote-run</depends>
+    <depends>org.jetbrains.plugins.terminal</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="XFTP"
+                    secondary="true"
+                    anchor="bottom"
+                    canCloseContents="true"
+                    factoryClass="net.allape.window.XFTPExplorerWindowFactory">
+        </toolWindow>
+        <notificationGroup id="xftp" displayType="BALLOON"/>
+    </extensions>
+
+    <actions>
+        <action id="ShowXftpToolWindow" class="net.allape.action.MenuOpenAction" text="New XFTP Explorer"
+                description="Open a new XFTP Explorer window">
+            <add-to-group group-id="ToolsMenu" anchor="first"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl meta X"/>
+        </action>
+    </actions>
+</idea-plugin>
