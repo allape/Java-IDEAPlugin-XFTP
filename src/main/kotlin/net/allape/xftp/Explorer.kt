@@ -1167,7 +1167,7 @@ class Explorer(
         }
 
         // 格式化远程路径
-        val normalizedRemotePath = sftpChannel!!.sshSession.host + ":" + normalizeRemoteFileObjectPath(remoteFile)
+        val normalizedRemotePath = getWindowName() + ":" + normalizeRemoteFileObjectPath(remoteFile)
         // 远程路径
         val remoteFilePath = remoteFile.path()
         // 本地绝对路径
