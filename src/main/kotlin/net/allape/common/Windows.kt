@@ -11,7 +11,7 @@ class Windows {
         const val WINDOW_DEFAULT_NAME = "Explorer"
 
         // 当前打开的窗口
-        val windows: Map<Content, Explorer> = HashMap(10)
+        val windows: HashMap<Content, Explorer> = HashMap(10)
 
     }
 

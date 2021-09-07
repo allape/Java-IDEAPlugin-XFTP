@@ -4,15 +4,26 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
 import com.intellij.openapi.application.Application
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.JBMenuItem
+import com.intellij.openapi.ui.JBPopupMenu
 import com.intellij.openapi.ui.MessageDialogBuilder
 import com.intellij.openapi.ui.MessageType
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.VirtualFileManager
+import com.intellij.openapi.vfs.newvfs.BulkFileListener
+import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.remote.RemoteConnectionType
 import com.intellij.remote.RemoteCredentials
@@ -21,7 +32,6 @@ import com.intellij.ssh.RemoteFileObject
 import com.intellij.ssh.SshTransportException
 import com.intellij.ssh.channels.SftpChannel
 import com.intellij.ssh.connectionBuilder
-import com.intellij.ssh.impl.sshj.channels.SshjSftpChannel
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBScrollPane
@@ -35,23 +45,34 @@ import net.allape.common.HistoryTopicHandler
 import net.allape.common.Services
 import net.allape.common.Windows
 import net.allape.component.FileTable
+import net.allape.component.FileTableModel
 import net.allape.component.MemoComboBox
 import net.allape.model.*
+import net.allape.util.Maps
+import net.schmizz.sshj.common.StreamCopier
 import net.schmizz.sshj.sftp.SFTPClient
+import net.schmizz.sshj.sftp.SFTPFileTransfer
+import net.schmizz.sshj.xfer.TransferListener
 import org.jetbrains.plugins.terminal.TerminalTabState
 import org.jetbrains.plugins.terminal.TerminalView
-import java.awt.BorderLayout
-import java.awt.Dimension
-import java.awt.GridBagConstraints
-import java.awt.GridBagLayout
+import java.awt.*
 import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.Transferable
+import java.awt.event.MouseEvent
+import java.awt.event.MouseListener
 import java.io.File
 import java.io.IOException
 import java.lang.reflect.Field
+import java.net.SocketException
 import java.nio.charset.Charset
+import java.util.*
 import java.util.stream.Collectors
+import javax.swing.DropMode
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.event.PopupMenuEvent
+import javax.swing.event.PopupMenuListener
+import kotlin.math.roundToInt
 
 open class SuperExplorer(
     protected val project: Project,
@@ -97,22 +118,25 @@ open class SuperExplorer(
             return gridBagCons
         }
 
-        val X0Y0: GridBagConstraints = defaultConfig();
+        val X0Y0: GridBagConstraints = defaultConfig()
+
         init {
-            X0Y0.gridx = 0;
-            X0Y0.gridy = 0;
+            X0Y0.gridx = 0
+            X0Y0.gridy = 0
         }
 
-        val X0Y1: GridBagConstraints = defaultConfig();
+        val X0Y1: GridBagConstraints = defaultConfig()
+
         init {
-            X0Y1.gridx = 0;
-            X0Y1.gridy = 1;
+            X0Y1.gridx = 0
+            X0Y1.gridy = 1
         }
 
-        val X1Y0: GridBagConstraints = defaultConfig();
+        val X1Y0: GridBagConstraints = defaultConfig()
+
         init {
-            X1Y0.gridx = 1;
-            X1Y0.gridy = 0;
+            X1Y0.gridx = 1
+            X1Y0.gridy = 0
         }
 
         // endregion
@@ -211,7 +235,7 @@ open class ExplorerUI(
 
 }
 
-open class Explorer(
+class Explorer(
     project: Project,
     toolWindow: ToolWindow,
 ) : ExplorerUI(project, toolWindow) {
@@ -229,13 +253,13 @@ open class Explorer(
     private lateinit var content: Content
 
     // 上一次选择文件
-    private val lastFile: FileModel? = null
+    private var lastFile: FileModel? = null
 
     // 当前选中的本地文件
-    private val currentLocalFile: FileModel? = null
+    private var currentLocalFile: FileModel? = null
 
     // 当前选中的远程文件
-    private val currentRemoteFile: FileModel? = null
+    private var currentRemoteFile: FileModel? = null
 
     // 修改中的远程文件, 用于文件修改后自动上传 key: remote file, value: local file
     private val remoteEditingFiles: HashMap<RemoteFileObject, String> = HashMap(COLLECTION_SIZE)
@@ -333,7 +357,426 @@ open class Explorer(
     // endregion
 
     init {
+        setCurrentLocalPath(this.project.basePath ?: "/")
 
+        // 初始化文件监听
+        this.project.messageBus.connect().subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
+            override fun after(events: List<VFileEvent>) {
+                for (e in events) {
+                    if (e.isFromSave) {
+                        val virtualFile = e.file
+                        if (virtualFile != null) {
+                            val localFile = virtualFile.path
+                            Maps.getFirstKeyByValue(remoteEditingFiles, localFile)?.let { remoteFile ->
+                                // 上传文件
+                                application.executeOnPooledThread {
+                                    transfer(File(localFile), remoteFile, TransferType.UPLOAD)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        })
+
+        initUI()
+    }
+
+    override fun dispose() {
+        super.dispose()
+
+        // 关闭连接
+        disconnect(true)
+    }
+
+    override fun initUI() {
+        super.initUI()
+
+        localActionGroup.addAll(
+            object : DumbAwareAction(
+                "Refresh Local",
+                "Refresh current local folder",
+                AllIcons.Actions.Refresh
+            ) {
+                override fun actionPerformed(e: AnActionEvent) {
+                    reloadLocal()
+                }
+            },
+            object : DumbAwareAction(
+                "Open In FileManager",
+                "Display folder in system file manager",
+                AllIcons.Actions.MenuOpen
+            ) {
+                override fun actionPerformed(e: AnActionEvent) {
+                    localPath.getMemoItem()?.let { path ->
+                        try {
+                            Desktop.getDesktop().open(File(path))
+                        } catch (ioException: IOException) {
+                            ioException.printStackTrace()
+                            Services.message("Failed to open \"$path\"", MessageType.ERROR)
+                        }
+                    }
+                }
+            }
+        )
+
+        localPath.addActionListener {
+            var path = localPath.getMemoItem()
+            if (path == null || path.isEmpty()) {
+                path = "/"
+            }
+            try {
+                val file = File(path)
+                if (!file.exists()) {
+                    Services.message("$path does not exist!", MessageType.INFO)
+                    // 获取第二个历史, 不存在时加载项目路径
+                    localPath.getItemAt(1)?.let { lastPath ->
+                        if (lastPath.memo != null) {
+                            setCurrentLocalPath(lastPath.memo.toString())
+                        } else {
+                            setCurrentLocalPath(Objects.requireNonNull(project.basePath)!!)
+                        }
+                    }
+                } else if (!file.isDirectory) {
+                    // 加载父文件夹
+                    setCurrentLocalPath(file.parent)
+                    if (file.length() > EDITABLE_FILE_SIZE) {
+                        if (MessageDialogBuilder.yesNo(
+                                "This file is too large for text editor",
+                                "Do you still want to edit it?"
+                            )
+                                .asWarning()
+                                .yesText("Edit it")
+                                .ask(project)
+                        ) {
+                            openFileInEditor(file)
+                        }
+                    } else {
+                        openFileInEditor(file)
+                    }
+                } else {
+                    val files = file.listFiles()
+                    if (files == null) {
+                        if (MessageDialogBuilder.yesNo(
+                                "It is an unavailable folder!",
+                                "This folder is not available, do you want to open it in system file manager?"
+                            )
+                                .asWarning()
+                                .yesText("Open")
+                                .ask(project)
+                        ) {
+                            try {
+                                Desktop.getDesktop().open(file)
+                            } catch (ioException: IOException) {
+                                ioException.printStackTrace()
+                                Services.message(
+                                    "Failed to open file in system file manager",
+                                    MessageType.INFO
+                                )
+                            }
+                        }
+                        return@addActionListener
+                    }
+                    path = file.absolutePath
+                    val fileModels: MutableList<FileModel> = ArrayList(
+                        if (file.length() == 0L) 1 else if (file.length() > Int.MAX_VALUE) Int.MAX_VALUE else file.length()
+                            .toString().toInt()
+                    )
+
+                    // 添加返回上一级目录
+                    fileModels.add(getParentFolder(path, File.separator))
+                    for (currentFile in files) {
+                        fileModels.add(
+                            FileModel(
+                                currentFile.absolutePath,
+                                currentFile.name,
+                                currentFile.isDirectory,
+                                currentFile.length(),
+                                (if (currentFile.canRead()) 4 else 0) or
+                                        (if (currentFile.canWrite()) 2 else 0) or
+                                        if (currentFile.canExecute()) 1 else 0,
+                                true
+                            )
+                        )
+                    }
+                    localFileList.resetData(fileModels)
+                }
+            } catch (ex: java.lang.Exception) {
+                ex.printStackTrace()
+                Services.message(ex.message!!, MessageType.WARNING)
+            }
+        }
+
+        localFileList.selectionModel.addListSelectionListener {
+            localFileList.model.data.let { allRemoteFiles ->
+                localFileList.selectedRow.let { currentSelectRow ->
+                    if (currentSelectRow != -1) {
+                        lastFile = currentLocalFile
+                        currentLocalFile = allRemoteFiles[currentSelectRow]
+                    }
+                }
+            }
+        }
+        // 监听双击, 双击后打开文件或文件夹
+        localFileList.addMouseListener(object : MouseListener {
+            override fun mouseClicked(e: MouseEvent) {
+                if (e.button == MouseEvent.BUTTON1) {
+                    val now = System.currentTimeMillis()
+                    if (lastFile != null && lastFile === currentLocalFile && now - clickWatcher < DOUBLE_CLICK_INTERVAL) {
+                        setCurrentLocalPath(currentLocalFile!!.path)
+                    }
+                    clickWatcher = now
+                }
+            }
+            override fun mousePressed(e: MouseEvent) {}
+            override fun mouseReleased(e: MouseEvent) {}
+            override fun mouseEntered(e: MouseEvent) {}
+            override fun mouseExited(e: MouseEvent) {}
+        })
+        localFileList.dragEnabled = true
+        localFileList.transferHandler = object : FileTransferHandler<File>() {
+            override fun createTransferable(c: JComponent?): Transferable {
+                val fileModels: List<FileModel> = getSelectedFileList(localFileList)
+                val files: MutableList<File> = ArrayList(fileModels.size)
+                for (path in fileModels) {
+                    files.add(File(path.path))
+                }
+                return FileTransferable(files, DataFlavor.javaFileListFlavor)
+            }
+
+            override fun canImport(support: TransferSupport): Boolean {
+                return if (!support.isDrop) {
+                    false
+                } else support.isDataFlavorSupported(remoteFileListFlavor)
+            }
+
+            override fun importData(support: TransferSupport): Boolean {
+                try {
+                    localPath.getMemoItem()?.let { currentLocalPath ->
+                        @Suppress("UNCHECKED_CAST")
+                        for (file in support.transferable.getTransferData(remoteFileListFlavor) as List<RemoteFileObject>) {
+                            application.executeOnPooledThread {
+                                transfer(
+                                    File(currentLocalPath + File.separator + file.name()),
+                                    file,
+                                    TransferType.DOWNLOAD,
+                                )
+                            }
+                        }
+                    }
+                } catch (e: java.lang.Exception) {
+                    e.printStackTrace()
+                }
+                return false
+            }
+        }
+
+        remotePath.isEnabled = false
+        remotePath.addActionListener {
+            val remoteFilePath = remotePath.getMemoItem() ?: return@addActionListener
+            application.executeOnPooledThread {
+                if (sftpChannel == null) {
+                    Services.message("Please connect to server first!", MessageType.INFO)
+                } else if (!sftpChannel!!.isConnected) {
+                    Services.message("SFTP lost connection, retrying...", MessageType.ERROR)
+                    connectSftp()
+                }
+                remoteFileList.isEnabled = false
+                remotePath.isEnabled = false
+                // 是否接下来加载父文件夹
+                var loadParent: String? = null
+                try {
+                    var path =
+                        remoteFilePath.ifEmpty { SERVER_FILE_SYSTEM_SEPARATOR }
+                    val file = sftpChannel!!.file(path)
+                    path = file.path()
+                    if (!file.exists()) {
+                        Services.message("$path does not exist!", MessageType.INFO)
+                        remotePath.getItemAt(1)?.let { lastPath ->
+                            if (lastPath.memo != null) {
+                                setCurrentRemotePath(lastPath.memo.toString())
+                            } else {
+                                setCurrentRemotePath(sftpChannel!!.home)
+                            }
+                        }
+                    } else if (!file.isDir()) {
+                        downloadFileAndEdit(file)
+                        loadParent = getParentFolderPath(file.path(), SERVER_FILE_SYSTEM_SEPARATOR)
+                    } else {
+                        val files = file.list()
+                        val fileModels: MutableList<FileModel> =
+                            ArrayList(files.size)
+
+                        // 添加返回上一级目录
+                        fileModels.add(getParentFolder(path, SERVER_FILE_SYSTEM_SEPARATOR))
+                        for (f in files) {
+                            fileModels.add(
+                                FileModel(
+                                    // 处理有些文件夹是//开头的
+                                    normalizeRemoteFileObjectPath(f),
+                                    f.name(), f.isDir(), f.size(), f.permissions, false
+                                )
+                            )
+                        }
+                        application.invokeLater { remoteFileList.resetData(fileModels) }
+                    }
+                } catch (ex: java.lang.Exception) {
+                    ex.printStackTrace()
+                    Services.message(
+                        "Error occurred while listing remote files: " + ex.message,
+                        MessageType.ERROR
+                    )
+                } finally {
+                    remoteFileList.isEnabled = true
+                    remotePath.isEnabled = true
+                    if (loadParent != null) {
+                        // 加载父文件夹
+                        setCurrentRemotePath(loadParent)
+                    }
+                }
+            }
+        }
+
+
+        remoteActionGroup.addAll(
+            explore,
+            dropdown,
+            reload,
+            suspend,
+            newTerminal,
+            Separator.create(),
+            localToggle
+        )
+        setRemoteButtonsEnable(false)
+
+        remoteFileList.selectionModel.addListSelectionListener {
+            val allRemoteFiles: List<FileModel> = remoteFileList.model.data
+            val currentSelectRow = remoteFileList.selectedRow
+            if (currentSelectRow != -1) {
+                lastFile = currentRemoteFile
+                currentRemoteFile = allRemoteFiles[currentSelectRow]
+            }
+        }
+        remoteFileList.addMouseListener(object : MouseListener {
+            override fun mouseClicked(e: MouseEvent) {
+                if (e.button == MouseEvent.BUTTON1) {
+                    val now = System.currentTimeMillis()
+                    if (lastFile != null && lastFile === currentRemoteFile && now - clickWatcher < DOUBLE_CLICK_INTERVAL) {
+                        setCurrentRemotePath(currentRemoteFile!!.path)
+                    }
+                    clickWatcher = now
+                }
+            }
+            override fun mousePressed(e: MouseEvent) {}
+            override fun mouseReleased(e: MouseEvent) {}
+            override fun mouseEntered(e: MouseEvent) {}
+            override fun mouseExited(e: MouseEvent) {}
+        })
+        remoteFileList.dragEnabled = true
+        remoteFileList.dropMode = DropMode.ON
+        remoteFileList.transferHandler = object : FileTransferHandler<RemoteFileObject?>() {
+            override fun createTransferable(c: JComponent?): Transferable {
+                return FileTransferable<RemoteFileObject>(getSelectedRemoteFileList(), remoteFileListFlavor)
+            }
+
+            override fun canImport(support: TransferSupport): Boolean {
+                if (sftpChannel == null || !sftpChannel!!.isConnected) {
+                    return false
+                } else if (!support.isDrop) {
+                    return false
+                }
+                return support.isDataFlavorSupported(DataFlavor.javaFileListFlavor)
+            }
+
+            override fun importData(support: TransferSupport): Boolean {
+                try {
+                    @Suppress("UNCHECKED_CAST")
+                    val files = support.transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<File>
+                    remotePath.getMemoItem()?.let { currentRemotePath ->
+                        for (file in files) {
+                            application.executeOnPooledThread {
+                                transfer(
+                                    file,
+                                    sftpChannel!!.file(currentRemotePath + SERVER_FILE_SYSTEM_SEPARATOR + file.name),
+                                    TransferType.UPLOAD
+                                )
+                            }
+                        }
+                    }
+                } catch (e: java.lang.Exception) {
+                    e.printStackTrace()
+                }
+                return false
+            }
+        }
+
+
+        val remoteFileListPopupMenuDelete = JBMenuItem("rm -Rf")
+        remoteFileListPopupMenuDelete.addActionListener {
+            if (!MessageDialogBuilder.yesNo("Delete Confirm", "This operation is irreversible, continue?")
+                    .asWarning()
+                    .yesText("Cancel")
+                    .noText("Continue")
+                    .ask(project)
+            ) {
+                val files: List<RemoteFileObject> = getSelectedRemoteFileList()
+                application.invokeLater {
+                    lockRemoteUIs()
+                    application.executeOnPooledThread {
+                        // 开启一个ExecChannel来删除非空的文件夹
+                        try {
+                            for (file in files) {
+                                try {
+                                    connectionBuilder!!.execBuilder("rm -Rf " + file.path()).execute().waitFor()
+                                    // file.rm();
+                                } catch (err: java.lang.Exception) {
+                                    err.printStackTrace()
+                                    Services.message(
+                                        "Error occurred while delete file: " + file.path(),
+                                        MessageType.ERROR
+                                    )
+                                }
+                            }
+                        } catch (err: java.lang.Exception) {
+                            err.printStackTrace()
+                            Services.message(
+                                "Can't delete file or folder right now, please try it later",
+                                MessageType.ERROR
+                            )
+                        } finally {
+                            application.invokeLater {
+                                unlockRemoteUIs()
+                                // 刷新当前页面
+                                reloadRemote()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        val remoteFileListPopupMenu = JBPopupMenu()
+        remoteFileListPopupMenu.addPopupMenuListener(object : PopupMenuListener {
+            override fun popupMenuWillBecomeVisible(e: PopupMenuEvent) {
+                remoteFileListPopupMenuDelete.isEnabled = getSelectedRemoteFileList().isNotEmpty()
+            }
+            override fun popupMenuWillBecomeInvisible(e: PopupMenuEvent) {}
+            override fun popupMenuCanceled(e: PopupMenuEvent) {}
+        })
+        remoteFileListPopupMenu.add(remoteFileListPopupMenuDelete)
+        remoteFileList.componentPopupMenu = remoteFileListPopupMenu
+    }
+
+    /**
+     * 设置需要进行连接后才能使用的按钮的状态
+     * @param enable 是否启用
+     */
+    private fun setRemoteButtonsEnable(enable: Boolean) {
+        explore.setEnabled(!enable)
+        dropdown.setEnabled(enable)
+        reload.setEnabled(enable)
+        suspend.setEnabled(enable)
+        newTerminal.setEnabled(enable)
     }
 
     /**
@@ -381,7 +824,7 @@ open class Explorer(
                                             // 获取sftpClient
                                             // 使用反射获取到 net.schmizz.sshj.sftp.SFTPClient
                                             @Suppress("INVISIBLE_REFERENCE")
-                                            val sftpChannelClass = SshjSftpChannel::class.java
+                                            val sftpChannelClass = com.intellij.ssh.impl.sshj.channels.SshjSftpChannel::class.java
                                             val field = ReflectionUtil.findFieldInHierarchy(sftpChannelClass) { f: Field ->
                                                 f.type == SFTPClient::class.java
                                             } ?: throw IllegalArgumentException("Unable to upload files!")
@@ -426,7 +869,7 @@ open class Explorer(
     /**
      * 断开当前连接
      */
-    open fun disconnect(triggerEvent: Boolean) {
+    fun disconnect(triggerEvent: Boolean) {
         // 断开连接
         if (sftpChannel != null && sftpChannel!!.isConnected) {
             try {
@@ -447,14 +890,14 @@ open class Explorer(
     /**
      * 设置当前状态为连接中
      */
-    open fun triggerConnecting() {
+    private fun triggerConnecting() {
         application.invokeLater { explore.setEnabled(false) }
     }
 
     /**
      * 设置当前状态为已连接
      */
-    open fun triggerConnected() {
+    private fun triggerConnected() {
         application.invokeLater {
             remotePath.isEnabled = true
             this.setRemoteButtonsEnable(true)
@@ -470,7 +913,7 @@ open class Explorer(
     /**
      * 设置当前状态为未连接
      */
-    open fun triggerDisconnected() {
+    private fun triggerDisconnected() {
         application.invokeLater {
 
             // 设置远程路径输入框
@@ -489,7 +932,7 @@ open class Explorer(
      * 设置当前显示的本地路径
      * @param currentLocalPath 本地文件路径
      */
-    open fun setCurrentLocalPath(currentLocalPath: String) {
+    fun setCurrentLocalPath(currentLocalPath: String) {
         val fireEventManually = currentLocalPath == localPath.getMemoItem()
         localPath.push(currentLocalPath)
         if (fireEventManually) {
@@ -500,7 +943,7 @@ open class Explorer(
     /**
      * 刷新本地资源
      */
-    open fun reloadLocal() {
+    fun reloadLocal() {
         setCurrentLocalPath(localPath.getMemoItem()!!)
     }
 
@@ -508,7 +951,7 @@ open class Explorer(
      * 谁当前显示的远程路径
      * @param currentRemotePath 远程文件路径
      */
-    open fun setCurrentRemotePath(currentRemotePath: String) {
+    fun setCurrentRemotePath(currentRemotePath: String) {
         val fireEventManually = currentRemotePath == remotePath.getMemoItem()
         remotePath.push(currentRemotePath)
         if (fireEventManually) {
@@ -519,7 +962,7 @@ open class Explorer(
     /**
      * 刷新远程资源
      */
-    open fun reloadRemote() {
+    fun reloadRemote() {
         setCurrentRemotePath(remotePath.getMemoItem()!!)
     }
 
@@ -575,7 +1018,7 @@ open class Explorer(
      */
     private fun getSelectedFileList(fileTable: FileTable): List<FileModel> {
         val rows = fileTable.selectedRows
-        val files: MutableList<FileModel> = java.util.ArrayList(rows.size)
+        val files: MutableList<FileModel> = ArrayList(rows.size)
         if (rows.isEmpty()) {
             return files
         }
@@ -595,6 +1038,111 @@ open class Explorer(
         return credentials?.toString() ?: Windows.WINDOW_DEFAULT_NAME
     }
 
+    /**
+     * 下载文件并编辑
+     * @param remoteFile 远程文件信息
+     */
+    private fun downloadFileAndEdit(remoteFile: RemoteFileObject) {
+        require(!remoteFile.isDir()) { "Can not edit a folder!" }
+        application.invokeLater {
+            // 如果文件小于2M, 则自动下载到缓存目录并进行监听
+            if (remoteFile.size() > EDITABLE_FILE_SIZE) {
+                if (
+                    !MessageDialogBuilder.yesNo(
+                        "This file is too large for text editor",
+                        "Do you still want to download and edit it?"
+                    ).asWarning()
+                        .yesText("Do it")
+                        .ask(project)
+                ) {
+                    return@invokeLater
+                }
+            }
+
+            // 如果当前远程文件已经在编辑器中打开了, 则关闭之前的
+            remoteEditingFiles
+                .keys.stream()
+                .filter { rf: RemoteFileObject -> rf.path() == remoteFile.path() }
+                .findFirst()
+                .orElse(null)?.let { existsRemoteFile ->
+                    remoteEditingFiles[existsRemoteFile]?.let { localFile ->
+                        val oldCachedFile = File(localFile)
+                        if (oldCachedFile.exists()) {
+                            if (MessageDialogBuilder.yesNo(
+                                    "This file is editing",
+                                    "Do you want to replace current editing file?\n\n" +
+                                            "\"Open\" to reopen/focus the existing file.\n" +
+                                            "\"Replace\" to re-download the file from remote and open it."
+                                )
+                                    .asWarning()
+                                    .noText("Replace")
+                                    .yesText("Open")
+                                    .ask(project)
+                            ) {
+                                openFileInEditor(oldCachedFile)
+                                return@invokeLater
+                            } else {
+                                remoteEditingFiles.remove(existsRemoteFile)
+                            }
+                        }
+                    }
+                }
+            try {
+                val formattedFileName = remoteFile.name()
+                // 所有点"."开头的文件名可能导致本地fs错误
+//                if (remoteFile.name().startsWith(".")) {
+//                    formattedFileName = remoteFile.name().replaceAll("\\.", "-");
+//                } else {
+//                    String fileSuffix = remoteFile.name().contains(".") ?
+//                            remoteFile.name().substring(remoteFile.name().lastIndexOf('.')) :
+//                            "";
+//                    formattedFileName = "-" + remoteFile.name()
+//                            .substring(0, remoteFile.name().length() - fileSuffix.length())
+//                            .replaceAll("\\.", "-") + fileSuffix;
+//                }
+                val localFile = File.createTempFile("jb-ide-xftp-", formattedFileName)
+                application.executeOnPooledThread {
+                    transfer(localFile, remoteFile, TransferType.DOWNLOAD, object : OnTransferResult {
+                        override fun onResult(result: Transfer) {
+                            if (result.result == TransferResult.SUCCESS) {
+                                openFileInEditor(localFile)
+                                // 加入文件监听队列
+                                remoteEditingFiles[remoteFile] = localFile.absolutePath
+                            }
+                        }
+                    })
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+                Services.message("Unable to create cache file: " + e.message, MessageType.ERROR)
+            }
+        }
+    }
+
+    /**
+     * 打开文件<br/>
+     * 参考: [com.intellij.openapi.fileEditor.impl.text.FileDropHandler.openFiles]
+     * @param file 文件
+     */
+    private fun openFileInEditor(file: File) {
+        val virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(file)
+        if (virtualFile == null) {
+            Services.message("${file.absolutePath} does not exists!")
+            return
+        }
+        NonProjectFileWritingAccessProvider.allowWriting(listOf(virtualFile))
+        application.invokeLater {
+            FileEditorManager.getInstance(project).openTextEditor(
+                OpenFileDescriptor(
+                    project,
+                    virtualFile,
+                    0
+                ),
+                true
+            )
+        }
+    }
+
     // region 上传下载
 
     @Synchronized
@@ -602,7 +1150,7 @@ open class Explorer(
         localFile: File,
         remoteFile: RemoteFileObject,
         type: TransferType,
-        onResult: OnTransferResult,
+        onTransferResult: OnTransferResult? = null,
     ) {
         if (sftpChannel == null || !sftpChannel!!.isConnected) {
             Services.message("Please start a sftp session first!", MessageType.INFO)
@@ -638,20 +1186,136 @@ open class Explorer(
         history.add(transfer)
         historyTopicHandler.before(HistoryTopicHandler.HAction.RERENDER)
 
-        // FIXME: 2021/9/7 使用kotlin routine代替rxjava和thread 
-        
-        if (type === TransferType.UPLOAD) {
-            if (!localFile.exists()) {
-                val e = "Can't find local file $localFileAbsPath"
-                Services.message(e, MessageType.ERROR)
-                return
+        val onResultProxy = object : OnTransferResult {
+            override fun onResult(result: Transfer) {
+                transferring.remove(transfer)
+                historyTopicHandler.before(HistoryTopicHandler.HAction.RERENDER)
+                onTransferResult?.onResult(result)
             }
-        } else {
-            if (!remoteFile.exists()) {
-                val e = "Can't find remote file $remoteFilePath"
-                Services.message(e, MessageType.ERROR)
-                return
+        }
+
+        try {
+            if (type === TransferType.UPLOAD) {
+                if (!localFile.exists()) {
+                    val e = "Can't find local file $localFileAbsPath"
+                    Services.message(e, MessageType.ERROR)
+                    throw TransferException(e)
+                }
+            } else {
+                if (!remoteFile.exists()) {
+                    val e = "Can't find remote file $remoteFilePath"
+                    Services.message(e, MessageType.ERROR)
+                    throw TransferException(e)
+                }
             }
+
+            ProgressManager.getInstance().run(object : Task.Backgroundable(
+                project,
+                if (type === TransferType.UPLOAD) "Uploading" else "Downloading",
+            ) {
+                override fun run(indicator: ProgressIndicator) {
+                    indicator.isIndeterminate =
+                        if (type === TransferType.UPLOAD) localFile.isDirectory else remoteFile.isDir()
+                    try {
+                        val fileTransfer = SFTPFileTransfer(sftpClient!!.sftpEngine)
+                        fileTransfer.transferListener = object : TransferListener {
+                            override fun directory(name: String): TransferListener {
+                                return this
+                            }
+                            override fun file(name: String, size: Long): StreamCopier.Listener {
+                                val total: String = FileTableModel.byteCountToDisplaySize(size)
+                                return StreamCopier.Listener { transferred: Long ->
+                                    if (indicator.isCanceled || transfer.result === TransferResult.CANCELLED) {
+                                        throw TransferCancelledException("Operation cancelled!")
+                                    }
+                                    transfer.transferred = transferred
+                                    historyTopicHandler.before(HistoryTopicHandler.HAction.RERENDER)
+                                    indicator.text2 = "${(if (type === TransferType.UPLOAD) "Uploading" else "Downloading")} " +
+                                            "${transfer.source} to ${transfer.target}"
+                                    val percent = transferred.toDouble() / size
+
+                                    // 文件夹的不显示百分比进度
+                                    if (!indicator.isIndeterminate) {
+                                        indicator.fraction = percent
+                                    }
+                                    indicator.text = "${((percent * 10000).roundToInt() / 100)}% " +
+                                            "${FileTableModel.byteCountToDisplaySize(transferred)}/$total"
+                                }
+                            }
+                        }
+
+                        // 开始传输
+                        if (type === TransferType.UPLOAD) {
+                            fileTransfer.upload(localFileAbsPath, remoteFilePath)
+                        } else {
+                            fileTransfer.download(remoteFilePath, localFileAbsPath)
+                        }
+
+                        // 如果上传目录和当前目录相同, 则刷新目录
+                        if (type === TransferType.UPLOAD) {
+                            val currentRemotePath: String = remotePath.getMemoItem() ?: ""
+                            if (remoteFile.isDir()) {
+                                if (transfer.target == currentRemotePath) {
+                                    reloadRemote()
+                                }
+                            } else {
+                                if (
+                                    getParentFolderPath(transfer.target, SERVER_FILE_SYSTEM_SEPARATOR)
+                                    ==
+                                    currentRemotePath
+                                ) {
+                                    reloadRemote()
+                                }
+                            }
+                        } else {
+                            val currentLocalPath: String = localPath.getMemoItem() ?: ""
+                            if (localFile.isDirectory) {
+                                if (transfer.target == currentLocalPath) {
+                                    reloadLocal()
+                                }
+                            } else {
+                                if (
+                                    getParentFolderPath(transfer.target, SERVER_FILE_SYSTEM_SEPARATOR)
+                                    ==
+                                    currentLocalPath
+                                ) {
+                                    reloadLocal()
+                                }
+                            }
+                        }
+
+                        transfer.result = TransferResult.SUCCESS
+                        onResultProxy.onResult(transfer)
+                    } catch (e: TransferCancelledException) {
+                        transfer.result = TransferResult.CANCELLED
+                        transfer.exception = e.message ?: "cancelled"
+                        onResultProxy.onResult(transfer)
+                    } catch (e: Exception) {
+                        transfer.result = TransferResult.FAIL
+                        transfer.exception = e.message ?: "failed"
+                        onResultProxy.onResult(transfer)
+
+                        e.printStackTrace()
+                        Services.message(
+                            "Error occurred while transferring ${transfer.source} to ${transfer.target}, ${e.message}",
+                            MessageType.ERROR,
+                        )
+                        if (e is SocketException) {
+                            disconnect(true)
+                        }
+                    }
+                }
+                override fun onCancel() {
+                    super.onCancel()
+                    this.cancelText = "Cancelling..."
+                }
+            })
+        } catch (e: Exception) {
+            transfer.result = TransferResult.FAIL
+            transfer.exception = e.message ?: "transfer failed"
+            onResultProxy.onResult(transfer)
+
+            e.printStackTrace()
         }
     }
 
@@ -659,16 +1323,19 @@ open class Explorer(
 
     // region getter / setter
 
-    open fun setContent(content: Content?) {
+    fun setContent(content: Content?) {
         if (content != null) {
             this.content = content
             ExplorerWindowTabCloseListener(this.content, project, this)
         }
     }
 
-    open fun getSftpClient(): SFTPClient? {
+    fun getSftpClient(): SFTPClient? {
         return sftpClient
     }
 
     // endregion
 }
+
+class TransferException(message: String): RuntimeException(message)
+class TransferCancelledException(message: String): RuntimeException(message)

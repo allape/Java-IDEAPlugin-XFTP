@@ -52,6 +52,10 @@
     </description>
 
     <change-notes><![CDATA[
+        <h5>2021-09-07</h5>
+        <ul>
+            <li>Rewrite code with kotlin.</li>
+        </ul>
         <h5>2021-07-28</h5>
         <ul>
             <li>Change IDEA version for compatibility.</li>
@@ -109,7 +113,7 @@
                     secondary="true"
                     anchor="bottom"
                     canCloseContents="true"
-                    factoryClass="net.allape.window.XFTPExplorerWindowFactory">
+                    factoryClass="net.allape.App">
         </toolWindow>
         <notificationGroup id="xftp" displayType="BALLOON"/>
     </extensions>

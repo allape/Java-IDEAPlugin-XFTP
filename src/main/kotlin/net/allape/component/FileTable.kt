@@ -58,6 +58,29 @@ class FileTableModel(
         private val ONE_TB_BI: BigInteger = ONE_KB_BI.multiply(ONE_GB_BI)
         private val ONE_PB_BI: BigInteger = ONE_KB_BI.multiply(ONE_TB_BI)
         private val ONE_EB_BI: BigInteger = ONE_KB_BI.multiply(ONE_PB_BI)
+
+        /**
+         * see [org.apache.commons.io.FileUtils.byteCountToDisplaySize]
+         */
+        fun byteCountToDisplaySize(longSize: Long): String {
+            val size = BigInteger.valueOf(longSize)
+            val displaySize: String = if (size.divide(ONE_EB_BI) > BigInteger.ZERO) {
+                size.divide(ONE_EB_BI).toString() + " E"
+            } else if (size.divide(ONE_PB_BI) > BigInteger.ZERO) {
+                size.divide(ONE_PB_BI).toString() + " P"
+            } else if (size.divide(ONE_TB_BI) > BigInteger.ZERO) {
+                size.divide(ONE_TB_BI).toString() + " T"
+            } else if (size.divide(ONE_GB_BI) > BigInteger.ZERO) {
+                size.divide(ONE_GB_BI).toString() + " G"
+            } else if (size.divide(ONE_MB_BI) > BigInteger.ZERO) {
+                size.divide(ONE_MB_BI).toString() + " M"
+            } else if (size.divide(ONE_KB_BI) > BigInteger.ZERO) {
+                size.divide(ONE_KB_BI).toString() + " K"
+            } else {
+                "$size b"
+            }
+            return displaySize
+        }
     }
 
     override fun getRowCount(): Int {
@@ -101,29 +124,6 @@ class FileTableModel(
     fun resetData(files: List<FileModel>) {
         data = files
         fireTableDataChanged()
-    }
-
-    /**
-     * see [org.apache.commons.io.FileUtils.byteCountToDisplaySize]
-     */
-    private fun byteCountToDisplaySize(longSize: Long): String {
-        val size = BigInteger.valueOf(longSize)
-        val displaySize: String = if (size.divide(ONE_EB_BI) > BigInteger.ZERO) {
-            size.divide(ONE_EB_BI).toString() + " E"
-        } else if (size.divide(ONE_PB_BI) > BigInteger.ZERO) {
-            size.divide(ONE_PB_BI).toString() + " P"
-        } else if (size.divide(ONE_TB_BI) > BigInteger.ZERO) {
-            size.divide(ONE_TB_BI).toString() + " T"
-        } else if (size.divide(ONE_GB_BI) > BigInteger.ZERO) {
-            size.divide(ONE_GB_BI).toString() + " G"
-        } else if (size.divide(ONE_MB_BI) > BigInteger.ZERO) {
-            size.divide(ONE_MB_BI).toString() + " M"
-        } else if (size.divide(ONE_KB_BI) > BigInteger.ZERO) {
-            size.divide(ONE_KB_BI).toString() + " K"
-        } else {
-            "$size b"
-        }
-        return displaySize
     }
 
 }
