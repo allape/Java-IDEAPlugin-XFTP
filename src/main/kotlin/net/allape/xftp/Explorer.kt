@@ -1264,12 +1264,12 @@ class Explorer(
                         if (type === TransferType.UPLOAD) {
                             val currentRemotePath: String = remotePath.getMemoItem() ?: ""
                             if (remoteFile.isDir()) {
-                                if (transfer.target == currentRemotePath) {
+                                if (remoteFilePath == currentRemotePath) {
                                     reloadRemote()
                                 }
                             } else {
                                 if (
-                                    getParentFolderPath(transfer.target, SERVER_FILE_SYSTEM_SEPARATOR)
+                                    getParentFolderPath(remoteFilePath, SERVER_FILE_SYSTEM_SEPARATOR)
                                     ==
                                     currentRemotePath
                                 ) {
@@ -1279,12 +1279,12 @@ class Explorer(
                         } else {
                             val currentLocalPath: String = localPath.getMemoItem() ?: ""
                             if (localFile.isDirectory) {
-                                if (transfer.target == currentLocalPath) {
+                                if (localFileAbsPath == currentLocalPath) {
                                     reloadLocal()
                                 }
                             } else {
                                 if (
-                                    getParentFolderPath(transfer.target, SERVER_FILE_SYSTEM_SEPARATOR)
+                                    getParentFolderPath(localFileAbsPath, SERVER_FILE_SYSTEM_SEPARATOR)
                                     ==
                                     currentLocalPath
                                 ) {
