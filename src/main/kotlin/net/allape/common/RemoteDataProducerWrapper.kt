@@ -78,7 +78,8 @@ class RemoteDataProducerWrapper : RemoteDataProducer() {
         consumer: Consumer<in RemoteConnector>,
     ) {
         val connector = getRemoteConnector(type, id, additionalData)
-        if (connector != null) {
+//        if (connector != null && connector !== RemoteConnectionSettingsForm.NONE_CONNECTOR) {
+        if (connector != null && connector is SshConfigConnector) {
             consumer.consume(connector)
         } else {
             ApplicationManager.getApplication().invokeAndWait { selectConnectorInPopup(consumer) }
