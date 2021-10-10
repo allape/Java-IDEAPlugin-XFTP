@@ -2,7 +2,7 @@
     <id>net.allape.XFTP</id>
     <name>XFTP</name>
     <!-- url="https://www.allensnape.com" -->
-    <vendor email="allensnape@gmail.com">ALLAPE</vendor>
+    <vendor email="allensnape@gmail.com">allape</vendor>
 
     <description><![CDATA[
         A SFTP tool for remote file management using SSH Configurations.<br/>
