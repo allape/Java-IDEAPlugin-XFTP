@@ -2,6 +2,7 @@ package net.allape.common
 
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.options.ShowSettingsUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.JBPopupFactory
@@ -13,6 +14,7 @@ import com.intellij.remote.RemoteConnectionType
 import com.intellij.remote.RemoteConnector
 import com.intellij.util.Consumer
 import com.jetbrains.plugins.remotesdk.RemoteSdkBundle
+import com.jetbrains.plugins.remotesdk.console.RemoteConnectionSettingsForm
 import com.jetbrains.plugins.remotesdk.console.RemoteConnectionUtil
 import com.jetbrains.plugins.remotesdk.console.RemoteDataProducer
 import com.jetbrains.plugins.remotesdk.console.SshConfigConnector
@@ -23,7 +25,10 @@ import java.lang.reflect.Method
 
 class RemoteDataProducerWrapper : RemoteDataProducer() {
 
+    private var project: Project? = null
+
     override fun withProject(project: Project): RemoteDataProducerWrapper {
+        this.project = project
         super.withProject(project)
         return this
     }
@@ -72,13 +77,11 @@ class RemoteDataProducerWrapper : RemoteDataProducer() {
      * [SshConfigConnector]
      */
     fun produceRemoteDataWithConnector(
-        type: RemoteConnectionType? = null,
         id: String? = null,
         additionalData: String? = null,
         consumer: Consumer<in RemoteConnector>,
     ) {
-        val connector = getRemoteConnector(type, id, additionalData)
-//        if (connector != null && connector !== RemoteConnectionSettingsForm.NONE_CONNECTOR) {
+        val connector = getRemoteConnector(RemoteConnectionType.SSH_CONFIG, id, additionalData)
         if (connector != null && connector is SshConfigConnector) {
             consumer.consume(connector)
         } else {
@@ -93,16 +96,14 @@ class RemoteDataProducerWrapper : RemoteDataProducer() {
                 getSuperProject(), getEmptyConnectorsMessageProxy(),
                 (NO_HOST_TO_CONNECT_SUPPLIER.get() as String)
             )
+        } else if (connectors.size == 1 && connectors[0] === RemoteConnectionSettingsForm.NONE_CONNECTOR) {
+            this.openSSHConfigurationsSettings()
         } else {
             connectors.sortWith { c1: RemoteConnector, c2: RemoteConnector ->
                 if (c1.type == RemoteConnectionType.NONE) -1 else if (c2.type == RemoteConnectionType.NONE) 1 else c1.name
                     .compareTo(c2.name)
             }
-            if (connectors.size == 1) {
-                consumer.consume(connectors[0] as RemoteConnector)
-            } else {
-                chooseConnectorWithConnectorConsumer(connectors, consumer)
-            }
+            chooseConnectorWithConnectorConsumer(connectors, consumer)
         }
     }
 
@@ -115,15 +116,19 @@ class RemoteDataProducerWrapper : RemoteDataProducer() {
         ) {
             override fun getTextFor(value: RemoteConnector): String {
                 return if (value.type == RemoteConnectionType.NONE) {
-                    RemoteSdkBundle.message("list.item.edit.credentials", *arrayOfNulls(0))
+                    "Edit SSH configurations..."
                 } else {
                     value.name
                 }
             }
 
             override fun onChosen(selected: RemoteConnector, finalChoice: Boolean): PopupStep<*>? {
-                ApplicationManager.getApplication().invokeLater {
-                    consumer.consume(selected)
+                if (selected is SshConfigConnector) {
+                    ApplicationManager.getApplication().invokeLater {
+                        consumer.consume(selected)
+                    }
+                } else {
+                    this@RemoteDataProducerWrapper.openSSHConfigurationsSettings()
                 }
                 return FINAL_CHOICE
             }
@@ -145,6 +150,12 @@ class RemoteDataProducerWrapper : RemoteDataProducer() {
             }
         } else {
             popup.showInFocusCenter()
+        }
+    }
+
+    private fun openSSHConfigurationsSettings() {
+        ApplicationManager.getApplication().invokeLater {
+            ShowSettingsUtil.getInstance().showSettingsDialog(this@RemoteDataProducerWrapper.project, "SSH Configurations")
         }
     }
 

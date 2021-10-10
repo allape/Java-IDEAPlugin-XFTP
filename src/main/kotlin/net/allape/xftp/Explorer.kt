@@ -790,7 +790,6 @@ class Explorer(
             RemoteDataProducerWrapper()
                 .withProject(project)
                 .produceRemoteDataWithConnector(
-                    RemoteConnectionType.SSH_CONFIG,
                     null,
                     null
                 ) { c ->
