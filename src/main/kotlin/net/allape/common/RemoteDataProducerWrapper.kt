@@ -37,14 +37,14 @@ class RemoteDataProducerWrapper : RemoteDataProducer() {
         val cls: Class<RemoteDataProducer> = RemoteDataProducer::class.java
     }
 
-    private lateinit var getProjectForServersSearchMethod: Method
+//    private lateinit var getProjectForServersSearchMethod: Method
     private lateinit var getEmptyConnectorsMessageMethod: Method
 
     init {
         // 反射入侵 RemoteDataProducer
         try {
-            getProjectForServersSearchMethod = cls.getDeclaredMethod("getProjectForServersSearch")
-            getProjectForServersSearchMethod.isAccessible = true
+//            getProjectForServersSearchMethod = cls.getDeclaredMethod("getProjectForServersSearch")
+//            getProjectForServersSearchMethod.isAccessible = true
             getEmptyConnectorsMessageMethod = cls.getDeclaredMethod("getEmptyConnectorsMessage")
             getEmptyConnectorsMessageMethod.isAccessible = true
         } catch (e: Exception) {
@@ -52,7 +52,7 @@ class RemoteDataProducerWrapper : RemoteDataProducer() {
         }
     }
 
-    private fun getProjectForServersSearchProxy(): Project? = getProjectForServersSearchMethod.invoke(this) as Project?
+//    private fun getProjectForServersSearchProxy(): Project? = getProjectForServersSearchMethod.invoke(this) as Project?
     private fun getEmptyConnectorsMessageProxy(): String? = getEmptyConnectorsMessageMethod.invoke(this) as String?
 
     private fun getSuperProject(): Project? {
@@ -90,7 +90,7 @@ class RemoteDataProducerWrapper : RemoteDataProducer() {
     }
 
     private fun selectConnectorInPopup(consumer: Consumer<in RemoteConnector>) {
-        val connectors = RemoteConnectionUtil.getUniqueRemoteConnectors(getProjectForServersSearchProxy())
+        val connectors = RemoteConnectionUtil.getUniqueRemoteConnectors(this.project)
         if (connectors.isEmpty()) {
             Messages.showWarningDialog(
                 getSuperProject(), getEmptyConnectorsMessageProxy(),
