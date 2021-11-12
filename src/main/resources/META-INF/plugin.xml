@@ -52,6 +52,11 @@
     </description>
 
     <change-notes><![CDATA[
+        <h5>2021-11-12</h5>
+        <ul>
+            <li>Fix #1.1: Unable to get connections of project-level.</li>
+            <li>Update Gson.</li>
+        </ul>
         <h5>2021-10-10</h5>
         <ul>
             <li>Fix #1.</li>
