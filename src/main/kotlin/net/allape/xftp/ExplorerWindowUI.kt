@@ -3,6 +3,8 @@ package net.allape.xftp
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.JBMenuItem
+import com.intellij.openapi.ui.JBPopupMenu
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.ssh.RemoteFileObject
 import com.intellij.ui.JBSplitter
@@ -56,9 +58,6 @@ abstract class ExplorerWindowUI(
             noXWeightX1Y0.weightx = 0.0
         }
 
-        // 双击间隔, 毫秒
-        const val DOUBLE_CLICK_INTERVAL: Long = 350
-
         // 远程文件拖拽flavor
         val remoteFileListFlavor = DataFlavor(RemoteFileObject::class.java, "SSH remote file list")
 
@@ -71,9 +70,11 @@ abstract class ExplorerWindowUI(
         const val REMOTE_TOOL_BAR_PLACE = "XFTPRemoteToolBar"
 
         // endregion
-    }
 
-    protected var clickWatcher: Long = System.currentTimeMillis()
+        const val RM_RF_TEXT = "rm -Rf"
+        const val TOUCH_TEXT = "touch"
+        const val MKDIR_P_TEXT = "mkdir -p"
+    }
 
     // region UI组件
 
@@ -110,6 +111,19 @@ abstract class ExplorerWindowUI(
     protected lateinit var newTerminal: ActionToolbarFastEnableAnAction
     // 隐藏本地浏览器
     protected lateinit var localToggle: ActionToolbarFastEnableAnAction
+
+    // endregion
+
+    // region 远程右键菜单
+
+    protected val remoteFileListPopupMenu = JBPopupMenu()
+
+    // 删除
+    protected val rmRf = JBMenuItem(RM_RF_TEXT)
+    // 新建文件
+    protected val touch = JBMenuItem(TOUCH_TEXT)
+    // 新建文件夹
+    protected val mkdirp = JBMenuItem(MKDIR_P_TEXT)
 
     // endregion
 
@@ -162,6 +176,11 @@ abstract class ExplorerWindowUI(
         remoteWrapper.add(remotePathWrapper, X1Y0)
 
         remoteWrapper.border = null
+
+        remoteFileListPopupMenu.add(rmRf)
+        remoteFileListPopupMenu.add(touch)
+        remoteFileListPopupMenu.add(mkdirp)
+        remoteFileList.componentPopupMenu = remoteFileListPopupMenu
     }
 
     /**
@@ -194,17 +213,46 @@ abstract class ExplorerWindowUI(
     }
 
     /**
+     * 设置远程列表右键菜单的状态
+     * @param enable 是否启用
+     */
+    protected fun setRemoteListContentMenuItems(enable: Boolean) {
+        rmRf.isEnabled = enable
+        touch.isEnabled = enable
+        mkdirp.isEnabled = enable
+    }
+
+    /**
+     * 重置远程列表右键菜单的text
+     */
+    protected fun resetRemoteListContentMenuItemsText() {
+        rmRf.text = RM_RF_TEXT
+        touch.text = TOUCH_TEXT
+        mkdirp.text = MKDIR_P_TEXT
+    }
+
+    /**
      * 设置当前远程内容锁定
      */
     protected open fun lockRemoteUIs() {
-        application.invokeLater { remoteWrapper.isEnabled = false }
+        application.invokeLater {
+            remoteFileListPopupMenu.isEnabled = false
+            remoteWrapper.isEnabled = false
+            remoteFileList.isEnabled = false
+            remotePath.isEnabled = false
+        }
     }
 
     /**
      * 设置当前远程内容锁定
      */
     protected open fun unlockRemoteUIs() {
-        application.invokeLater { remoteWrapper.isEnabled = true }
+        application.invokeLater {
+            remoteFileListPopupMenu.isEnabled = true
+            remoteWrapper.isEnabled = true
+            remoteFileList.isEnabled = true
+            remotePath.isEnabled = true
+        }
     }
 
 }

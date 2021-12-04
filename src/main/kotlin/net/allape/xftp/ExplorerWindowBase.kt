@@ -25,10 +25,7 @@ import net.allape.common.HistoryTopicHandler
 import net.allape.common.Services
 import net.allape.common.Windows
 import net.allape.component.FileTableModel
-import net.allape.model.FileModel
-import net.allape.model.Transfer
-import net.allape.model.TransferResult
-import net.allape.model.TransferType
+import net.allape.model.*
 import net.schmizz.sshj.common.StreamCopier
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.sftp.SFTPFileTransfer
@@ -88,7 +85,7 @@ abstract class ExplorerBaseWindow(
          * @param sep 文件系统分隔符
          */
         fun getParentFolder(path: String, sep: String): FileModel {
-            return FileModel(getParentFolderPath(path, sep), "..", true, 0, 0, false)
+            return FileModel(getParentFolderPath(path, sep), "..", true, 0, 0, false, FileModelType.NON_FILE)
         }
     }
 
@@ -146,9 +143,33 @@ abstract class ExplorerBaseWindow(
     abstract fun connect()
 
     /**
+     * 检查当前是否建立连接(但不保证连接正常, 比如长时间未使用后的socket自动关闭)
+     */
+    protected open fun isConnected(): Boolean = sftpChannel != null && sftpChannel!!.isConnected
+
+    /**
      * 检查当前channel是否可用, 长时间不使用可能会断开连接
      */
-    abstract fun isChannelAvailable(): Boolean
+    protected open fun isChannelAlive(): Boolean {
+        if (sftpChannel == null) {
+            Services.message("Please connect to server first!", MessageType.INFO)
+            return false
+        } else if (!sftpChannel!!.isConnected) {
+            Services.message("SFTP lost connection, retrying...", MessageType.ERROR)
+            connect()
+            return false
+        }
+        try {
+            val file = this.sftpChannel?.file("/dev/null")
+            if (file != null) {
+                return true
+            }
+        } catch (e: Exception) {
+            disconnect()
+        }
+        Services.message("Connection is not alive any more, please make a new connection!", MessageType.WARNING)
+        return false
+    }
 
     /**
      * 传输文件
@@ -316,7 +337,25 @@ abstract class ExplorerBaseWindow(
     /**
      * 断开SFTP连接
      */
-    abstract fun disconnect(triggerEvent: Boolean = true)
+    protected open fun disconnect(triggerEvent: Boolean = true) {
+        // 断开连接
+        if (sftpChannel != null && sftpChannel!!.isConnected) {
+            try {
+                sftpChannel!!.close()
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+        connector = null
+        credentials = null
+        connectionBuilder = null
+        sftpChannel = null
+        sftpClient = null
+        content.displayName = Windows.WINDOW_DEFAULT_NAME
+        history.clear()
+        transferring.clear()
+        remoteEditingFiles.clear()
+    }
 
     /**
      * 设置当前状态为连接中

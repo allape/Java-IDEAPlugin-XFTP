@@ -8,8 +8,6 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.JBMenuItem
-import com.intellij.openapi.ui.JBPopupMenu
 import com.intellij.openapi.ui.MessageDialogBuilder
 import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.vfs.VirtualFileManager
@@ -26,7 +24,7 @@ import icons.TerminalIcons
 import net.allape.action.ActionToolbarFastEnableAnAction
 import net.allape.common.RemoteDataProducerWrapper
 import net.allape.common.Services
-import net.allape.common.Windows
+import net.allape.component.FileNameTextFieldDialog
 import net.allape.model.FileModel
 import net.allape.model.FileTransferHandler
 import net.allape.model.FileTransferable
@@ -45,6 +43,7 @@ import java.io.IOException
 import java.lang.reflect.Field
 import java.nio.charset.Charset
 import java.util.*
+import java.util.concurrent.Future
 import java.util.stream.Collectors
 import javax.swing.DropMode
 import javax.swing.JComponent
@@ -55,6 +54,13 @@ class ExplorerWindow(
     project: Project,
     toolWindow: ToolWindow,
 ) : ExplorerWindowUI(project, toolWindow) {
+
+    companion object {
+        // 双击间隔, 毫秒
+        const val DOUBLE_CLICK_INTERVAL: Long = 350
+    }
+
+    private var clickWatcher: Long = System.currentTimeMillis()
 
     // 上一次选择文件
     private var lastFile: FileModel? = null
@@ -283,62 +289,50 @@ class ExplorerWindow(
             if (remoteFilePath.isEmpty()) return@addActionListener
 
             application.executeOnPooledThread {
-                if (sftpChannel == null) {
-                    Services.message("Please connect to server first!", MessageType.INFO)
-                } else if (!sftpChannel!!.isConnected) {
-                    Services.message("SFTP lost connection, retrying...", MessageType.ERROR)
-                    connect()
-                }
-                remoteFileList.isEnabled = false
-                remotePath.isEnabled = false
-                // 是否接下来加载父文件夹
-                var loadParent: String? = null
-                try {
-                    var path = remoteFilePath.ifEmpty { FILE_SEP }
-                    val file = sftpChannel!!.file(path)
-                    path = file.path()
-                    if (!file.exists()) {
-                        Services.message("$path does not exist!", MessageType.INFO)
-                        remotePath.getItemAt(1)?.let { lastPath ->
-                            if (lastPath.memo != null) {
-                                setCurrentRemotePath(lastPath.memo.toString())
-                            } else {
-                                setCurrentRemotePath(sftpChannel!!.home)
-                            }
-                        }
-                    } else if (!file.isDir()) {
-                        downloadFileAndEdit(file)
-                        loadParent = getParentFolderPath(file.path(), FILE_SEP)
-                    } else {
-                        val files = file.list()
-                        val fileModels: MutableList<FileModel> =
-                            ArrayList(files.size)
+                if (this.isChannelAlive()) {
+                    lockRemoteUIs()
+                    // 是否接下来加载父文件夹
+                    var loadParent: String? = null
+                    try {
+                        var path = remoteFilePath.ifEmpty { FILE_SEP }
+                        val file = sftpChannel!!.file(path)
+                        path = file.path()
+                        if (!file.exists()) {
+                            Services.message("$path does not exist!", MessageType.INFO)
+                            loadParent = getParentFolderPath(file.path(), FILE_SEP)
+                        } else if (!file.isDir()) {
+                            downloadFileAndEdit(file)
+                            loadParent = getParentFolderPath(file.path(), FILE_SEP)
+                        } else {
+                            val files = file.list()
+                            val fileModels: MutableList<FileModel> =
+                                ArrayList(files.size)
 
-                        // 添加返回上一级目录
-                        fileModels.add(getParentFolder(path, FILE_SEP))
-                        for (f in files) {
-                            fileModels.add(
-                                FileModel(
-                                    // 处理有些文件夹是//开头的
-                                    normalizeRemoteFileObjectPath(f),
-                                    f.name(), f.isDir(), f.size(), f.permissions, false
+                            // 添加返回上一级目录
+                            fileModels.add(getParentFolder(path, FILE_SEP))
+                            for (f in files) {
+                                fileModels.add(
+                                    FileModel(
+                                        // 处理有些文件夹是//开头的
+                                        normalizeRemoteFileObjectPath(f),
+                                        f.name(), f.isDir(), f.size(), f.permissions, false
+                                    )
                                 )
-                            )
+                            }
+                            application.invokeLater { remoteFileList.resetData(fileModels) }
                         }
-                        application.invokeLater { remoteFileList.resetData(fileModels) }
-                    }
-                } catch (ex: java.lang.Exception) {
-                    ex.printStackTrace()
-                    Services.message(
-                        "Error occurred while listing remote files: " + ex.message,
-                        MessageType.ERROR
-                    )
-                } finally {
-                    remoteFileList.isEnabled = true
-                    remotePath.isEnabled = true
-                    if (loadParent != null) {
-                        // 加载父文件夹
-                        setCurrentRemotePath(loadParent)
+                    } catch (ex: java.lang.Exception) {
+                        ex.printStackTrace()
+                        Services.message(
+                            "Error occurred while listing remote files: " + ex.message,
+                            MessageType.ERROR
+                        )
+                    } finally {
+                        unlockRemoteUIs()
+                        if (loadParent != null) {
+                            // 加载父文件夹
+                            setCurrentRemotePath(loadParent)
+                        }
                     }
                 }
             }
@@ -496,30 +490,34 @@ class ExplorerWindow(
      * 构建远程列表右键菜单
      */
     private fun buildRemoteListContextMenu() {
-        val remoteFileListPopupMenuDelete = JBMenuItem("rm -Rf ...")
-        remoteFileListPopupMenuDelete.addActionListener {
-            if (!MessageDialogBuilder.yesNo("Delete Confirm", "This operation is irreversible, continue?")
-                    .asWarning()
-                    .yesText("Cancel")
-                    .noText("Continue")
-                    .ask(project)
+        rmRf.addActionListener {
+            val files: List<RemoteFileObject> = getSelectedRemoteFileList()
+            if (MessageDialogBuilder.yesNo(
+                    "Delete Confirm",
+                    "${files.joinToString(separator = "\n") { it.name() }}\n\nThis operation is irreversible, continue?"
+                )
+                .asWarning()
+                .yesText("Continue")
+                .noText("Cancel")
+                .ask(project)
             ) {
-                val files: List<RemoteFileObject> = getSelectedRemoteFileList()
                 application.invokeLater {
                     lockRemoteUIs()
                     application.executeOnPooledThread {
                         // 开启一个ExecChannel来删除非空的文件夹
                         try {
                             for (file in files) {
-                                try {
-                                    connectionBuilder!!.execBuilder("rm -Rf " + file.path()).execute().waitFor()
-                                    // file.rm();
-                                } catch (err: java.lang.Exception) {
-                                    err.printStackTrace()
-                                    Services.message(
-                                        "Error occurred while delete file: " + file.path(),
-                                        MessageType.ERROR
-                                    )
+                                if (file.exists()) {
+                                    try {
+                                        connectionBuilder!!.execBuilder("rm -Rf " + file.path()).execute().waitFor()
+                                        // file.rm();
+                                    } catch (err: java.lang.Exception) {
+                                        err.printStackTrace()
+                                        Services.message(
+                                            "Error occurred while delete file: " + file.path(),
+                                            MessageType.ERROR
+                                        )
+                                    }
                                 }
                             }
                         } catch (err: java.lang.Exception) {
@@ -539,17 +537,30 @@ class ExplorerWindow(
                 }
             }
         }
+        touch.addActionListener {
+            FileNameTextFieldDialog(project).openDialog(sftpChannel!!) {
+                println(it)
+            }
+        }
 
-        val remoteFileListPopupMenu = JBPopupMenu()
         remoteFileListPopupMenu.addPopupMenuListener(object : PopupMenuListener {
             override fun popupMenuWillBecomeVisible(e: PopupMenuEvent) {
-                remoteFileListPopupMenuDelete.isEnabled = getSelectedRemoteFileList().isNotEmpty()
+                if (isConnected()) {
+                    setRemoteListContentMenuItems(true)
+                    val selectedFiles = remoteFileList.selected()
+                    rmRf.isEnabled = selectedFiles.isNotEmpty()
+                    if (rmRf.isEnabled) {
+                        rmRf.text = "$RM_RF_TEXT ${selectedFiles[0].name} ${if (selectedFiles.size > 1) "and ${selectedFiles.size-1} more" else ""}"
+                    }
+                } else {
+                    setRemoteListContentMenuItems(false)
+                }
             }
-            override fun popupMenuWillBecomeInvisible(e: PopupMenuEvent) {}
+            override fun popupMenuWillBecomeInvisible(e: PopupMenuEvent) {
+                resetRemoteListContentMenuItemsText()
+            }
             override fun popupMenuCanceled(e: PopupMenuEvent) {}
         })
-        remoteFileListPopupMenu.add(remoteFileListPopupMenuDelete)
-        remoteFileList.componentPopupMenu = remoteFileListPopupMenu
     }
 
     override fun connect() {
@@ -564,11 +575,12 @@ class ExplorerWindow(
                         this@ExplorerWindow.connector = connector as SshConfigConnector
                         connector.produceRemoteCredentials { data ->
                             if (data != null) {
-                                credentials = data
                                 this.triggerConnecting()
                                 this.disconnect(false)
+                                credentials = data
 
-                                this.application.executeOnPooledThread {
+                                var connectionThread: Future<*>? = null
+                                connectionThread = this.application.executeOnPooledThread {
                                     // com.jetbrains.plugins.remotesdk.tools.RemoteTool.startRemoteProcess
                                     @Suppress("UnstableApiUsage")
                                     connectionBuilder = credentials!!.connectionBuilder(
@@ -581,7 +593,7 @@ class ExplorerWindow(
                                         project,
                                         "Connecting to " + getWindowName(),
                                         // 暂时不允许取消
-                                        false
+                                        true
                                     ) {
                                         // 是否已被取消
                                         private var cancelled = false
@@ -623,6 +635,7 @@ class ExplorerWindow(
                                         override fun onCancel() {
                                             super.onCancel()
                                             cancelled = true
+                                            connectionThread?.cancel(true)
                                         }
                                     })
                                 }
@@ -641,33 +654,10 @@ class ExplorerWindow(
     }
 
     override fun disconnect(triggerEvent: Boolean) {
-        // 断开连接
-        if (sftpChannel != null && sftpChannel!!.isConnected) {
-            try {
-                sftpChannel!!.close()
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-        }
-        connectionBuilder = null
-        sftpChannel = null
-        sftpClient = null
-        content.displayName = Windows.WINDOW_DEFAULT_NAME
+        super.disconnect(triggerEvent)
         if (triggerEvent) {
             triggerDisconnected()
         }
-    }
-
-    override fun isChannelAvailable(): Boolean {
-        try {
-            val file = this.sftpChannel?.file("/dev/null")
-            if (file != null) {
-                return true
-            }
-        } catch (e: Exception) {
-            disconnect()
-        }
-        return false
     }
 
     override fun triggerConnecting() {
@@ -676,13 +666,10 @@ class ExplorerWindow(
 
     override fun triggerConnected() {
         application.invokeLater {
-            remotePath.isEnabled = true
-            this.setRemoteButtonsEnable(true)
+            setRemoteButtonsEnable(true)
+            unlockRemoteUIs()
             if (credentials != null) {
                 content.displayName = getWindowName()
-//                credentials!!.userName +
-//                        "@" +
-//                        credentials!!.host
             }
         }
     }
@@ -691,13 +678,12 @@ class ExplorerWindow(
         application.invokeLater {
             // 设置远程路径输入框
             remotePath.item = null
-            remotePath.isEnabled = false
-            this.setRemoteButtonsEnable(false)
+            lockRemoteUIs()
+            setRemoteButtonsEnable(false)
+            setRemoteListContentMenuItems(false)
 
             // 清空列表
             remoteFileList.model.resetData(emptyList())
-            // 清空文件列表
-            remoteEditingFiles.clear()
         }
     }
 
@@ -742,14 +728,19 @@ class ExplorerWindow(
      * @return 远程文件列表
      */
     private fun getSelectedRemoteFileList(): List<RemoteFileObject> {
-        return remoteFileList.selected()
-            .stream()
-            .map{ (path): FileModel ->
-                sftpChannel!!.file(
-                    path
-                )
-            }
-            .collect(Collectors.toList())
+        try {
+            lockRemoteUIs()
+            return remoteFileList.selected()
+                .stream()
+                .map{ (path): FileModel ->
+                    sftpChannel!!.file(
+                        path
+                    )
+                }
+                .collect(Collectors.toList())
+        } finally {
+            unlockRemoteUIs()
+        }
     }
 
 }

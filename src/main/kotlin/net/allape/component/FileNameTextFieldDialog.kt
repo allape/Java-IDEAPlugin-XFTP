@@ -1,4 +1,4 @@
-package net.allape.action
+package net.allape.component
 
 import com.intellij.ide.IdeBundle
 import com.intellij.ide.ui.newItemPopup.NewItemPopupUtil

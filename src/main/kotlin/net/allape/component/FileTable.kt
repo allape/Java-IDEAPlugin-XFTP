@@ -6,6 +6,7 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.table.JBTable
 import com.intellij.util.IconUtil
 import net.allape.model.FileModel
+import net.allape.model.FileModelType
 import net.allape.util.LinuxPermissions
 import java.awt.Component
 import java.io.File
@@ -197,7 +198,7 @@ class FileTable: JBTable(FileTableModel()) {
     }
 
     /**
-     * 获取当前选中了的元素
+     * 获取当前选中了的真实文件
      */
     fun selected(): List<FileModel> {
         val rows = this.selectedRows
@@ -207,8 +208,9 @@ class FileTable: JBTable(FileTableModel()) {
         }
         val fileModels = this.model.data
         for (row in rows) {
-            if (row == 0) continue
-            files.add(fileModels[row])
+            val fileModel = fileModels[row]
+            if (fileModel.type == FileModelType.NON_FILE) continue
+            files.add(fileModel)
         }
         return files
     }
