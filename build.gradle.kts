@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "net.allape"
-version = "0.10.2"
+version = "0.10.3"
 
 repositories {
     mavenCentral()
@@ -18,8 +18,8 @@ dependencies {
     compileOnly(files("/Applications/IntelliJ IDEA.app/Contents/plugins/remote-run/lib/remote-run.jar"))
     compileOnly(files("/Applications/IntelliJ IDEA.app/Contents/plugins/terminal/lib/terminal.jar"))
 
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")
 }
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/

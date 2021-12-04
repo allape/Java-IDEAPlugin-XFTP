@@ -501,45 +501,83 @@ class ExplorerWindow(
                 .noText("Cancel")
                 .ask(project)
             ) {
-                application.invokeLater {
+                application.executeOnPooledThread {
                     lockRemoteUIs()
-                    application.executeOnPooledThread {
-                        // 开启一个ExecChannel来删除非空的文件夹
-                        try {
-                            for (file in files) {
-                                if (file.exists()) {
-                                    try {
-                                        connectionBuilder!!.execBuilder("rm -Rf " + file.path()).execute().waitFor()
-                                        // file.rm();
-                                    } catch (err: java.lang.Exception) {
-                                        err.printStackTrace()
-                                        Services.message(
-                                            "Error occurred while delete file: " + file.path(),
-                                            MessageType.ERROR
-                                        )
-                                    }
-                                }
-                            }
-                        } catch (err: java.lang.Exception) {
-                            err.printStackTrace()
-                            Services.message(
-                                "Can't delete file or folder right now, please try it later",
-                                MessageType.ERROR
-                            )
-                        } finally {
-                            application.invokeLater {
-                                unlockRemoteUIs()
-                                // 刷新当前页面
-                                reloadRemote()
+                    // 开启一个ExecChannel来删除非空的文件夹
+                    for (file in files) {
+                        if (file.exists()) {
+                            try {
+                                executeSync("rm -Rf ${file.path()}")
+                            } catch (err: java.lang.Exception) {
+                                err.printStackTrace()
+                                Services.message(
+                                    "Error occurred while delete file: ${file.path()}",
+                                    MessageType.ERROR
+                                )
                             }
                         }
                     }
+                    unlockRemoteUIs()
+                    // 刷新当前页面
+                    reloadRemote()
                 }
             }
         }
         touch.addActionListener {
-            FileNameTextFieldDialog(project).openDialog(sftpChannel!!) {
-                println(it)
+            FileNameTextFieldDialog(project).openDialog(sftpChannel!!) { filename ->
+                application.executeOnPooledThread {
+                    lockRemoteUIs()
+                    var requiredReload = true
+                    try {
+                        val parsedFileName = joinWithCurrentRemotePath(filename.trim())
+
+                        // 如果包含文件分隔符且对应的文件夹不存在, 则先去创建文件夹
+                        val folderName: String? =
+                            if (parsedFileName.contains(FILE_SEP))
+                                parsedFileName.substring(0, parsedFileName.lastIndexOf(FILE_SEP))
+                            else null
+
+                        if (folderName != null) {
+                            sftpClient!!.mkdirs(folderName)
+                        }
+
+                        executeSync("touch $parsedFileName")
+                        requiredReload = false
+                        // 打开当前文件
+                        setCurrentRemotePath(parsedFileName)
+                    } catch (err: java.lang.Exception) {
+                        err.printStackTrace()
+                        Services.message(
+                            "Error occurred while create file: ${err.message}",
+                            MessageType.ERROR
+                        )
+                    }
+                    unlockRemoteUIs()
+                    if (requiredReload) reloadRemote()
+                }
+            }
+        }
+        mkdirp.addActionListener {
+            FileNameTextFieldDialog(project).openDialog(sftpChannel!!) { filename ->
+                application.executeOnPooledThread {
+                    lockRemoteUIs()
+                    var requiredReload = true
+                    try {
+                        val fullPath = joinWithCurrentRemotePath(filename.trim())
+                        sftpClient!!.mkdirs(fullPath)
+
+                        requiredReload = false
+                        setCurrentRemotePath(fullPath)
+                    } catch (err: java.lang.Exception) {
+                        err.printStackTrace()
+                        Services.message(
+                            "Error occurred while create folder: ${err.message}",
+                            MessageType.ERROR
+                        )
+                    }
+                    unlockRemoteUIs()
+                    if (requiredReload) reloadRemote()
+                }
             }
         }
 

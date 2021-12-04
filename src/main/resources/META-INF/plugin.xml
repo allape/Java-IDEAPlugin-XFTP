@@ -23,6 +23,7 @@
             <li>The "Open Folder" icon button: display current local folder in system file manager, like Finder on MacOS or Explorer on Windows.</li>
             <li>---------------Right Side---------------</li>
             <li>The right list displays remote files.</li>
+            <li>Right-click in list to open context menu to delete, create new file and more.</li>
             <li>A row with empty "size" cell is a directory.</li>
             <li>The "Server" icon button: connect to a server.</li>
             <li>The "DownArrow" icon button: display remote access history.</li>
@@ -52,6 +53,10 @@
     </description>
 
     <change-notes><![CDATA[
+        <h5>2021-12-04</h5>
+        <ul>
+            <li>Add touch, mkdir to context menu.</li>
+        </ul>
         <h5>2021-11-12</h5>
         <ul>
             <li>Fix #1.1: Unable to get connections of project-level.</li>

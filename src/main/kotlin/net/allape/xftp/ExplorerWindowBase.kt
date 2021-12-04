@@ -49,6 +49,12 @@ abstract class ExplorerBaseWindow(
     companion object {
         // 服务器文件系统分隔符
         const val FILE_SEP = "/"
+        // 分隔符重复替换正则
+        val duplicateRegex = Regex("$FILE_SEP$FILE_SEP+")
+        // 分隔符头部替换正则
+        val startsWithRegex = Regex("^$FILE_SEP+")
+        // 分隔符尾部替换正则
+        val endsWithRegex = Regex("$FILE_SEP+$")
 
         // 默认集合大小
         const val COLLECTION_SIZE = 100
@@ -175,7 +181,7 @@ abstract class ExplorerBaseWindow(
      * 传输文件
      */
     @Synchronized
-    fun transfer(
+    open fun transfer(
         localFile: File,
         remoteFile: RemoteFileObject,
         type: TransferType,
@@ -331,6 +337,23 @@ abstract class ExplorerBaseWindow(
             resultConsumerProxy.consume(transfer)
 
             e.printStackTrace()
+        }
+    }
+
+    /**
+     * 堵塞执行执行远程命令
+     * @param command 命令内容
+     * @param timeoutInSeconds 超时时间
+     */
+    @Synchronized
+    open fun executeSync(command: String, timeoutInSeconds: Int = 30) {
+        if (connectionBuilder != null) {
+            connectionBuilder!!.execBuilder(command).execute(timeoutInSeconds).waitFor()
+        } else {
+            Services.message(
+                "No available connection to execute \"$command\" within $timeoutInSeconds seconds.",
+                MessageType.WARNING
+            )
         }
     }
 
@@ -493,6 +516,23 @@ abstract class ExplorerBaseWindow(
                 Services.message("Unable to create cache file: " + e.message, MessageType.ERROR)
             }
         }
+    }
+
+    /**
+     * 拼接路径到当前远程列表展示的文件夹
+     */
+    protected fun joinWithCurrentRemotePath(vararg subs: String): String {
+        val paths = arrayOf(getCurrentRemotePath(), *subs)
+        for (index in paths.indices) {
+            val item = paths[index].replace(duplicateRegex, FILE_SEP)
+            paths[index] = if (index == 0) {
+                if (item.endsWith(FILE_SEP)) item.replace(endsWithRegex, "") else item
+            } else {
+                val parsedPath = if (item.startsWith(FILE_SEP)) item.replace(startsWithRegex, "") else item
+                if (parsedPath.endsWith(FILE_SEP)) item.replace(endsWithRegex, "") else parsedPath
+            }
+        }
+        return paths.joinToString(FILE_SEP)
     }
 
 }

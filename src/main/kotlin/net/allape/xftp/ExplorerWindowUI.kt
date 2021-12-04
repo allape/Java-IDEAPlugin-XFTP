@@ -177,6 +177,7 @@ abstract class ExplorerWindowUI(
 
         remoteWrapper.border = null
 
+        resetRemoteListContentMenuItemsText()
         remoteFileListPopupMenu.add(rmRf)
         remoteFileListPopupMenu.add(touch)
         remoteFileListPopupMenu.add(mkdirp)
@@ -226,7 +227,7 @@ abstract class ExplorerWindowUI(
      * 重置远程列表右键菜单的text
      */
     protected fun resetRemoteListContentMenuItemsText() {
-        rmRf.text = RM_RF_TEXT
+        rmRf.text = "$RM_RF_TEXT ..."
         touch.text = TOUCH_TEXT
         mkdirp.text = MKDIR_P_TEXT
     }

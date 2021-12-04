@@ -25,6 +25,7 @@ ConnectionBuilder connectionBuilder = RemoteCredentialsUtil.connectionBuilder(da
 SftpChannel sftpChannel = connectionBuilder.openSftpChannel();
 sftpChannel.uploadFileOrDir(local, remote, ""); // -> throws some exceptions because the remote variable has been appended a "/" at its tail
 ```
+- Why there is no function for creating a file
 
 ### Enhancements
 - UI needs obey [IntelliJ Platform UI Guidelines](https://jetbrains.github.io/ui/)
