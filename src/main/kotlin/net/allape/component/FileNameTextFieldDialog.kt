@@ -1,16 +1,12 @@
 package net.allape.component
 
-import com.intellij.ide.IdeBundle
 import com.intellij.ide.ui.newItemPopup.NewItemPopupUtil
 import com.intellij.ide.ui.newItemPopup.NewItemSimplePopupPanel
-import com.intellij.lang.LangBundle
 import com.intellij.openapi.application.Experiments
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.InputValidator
 import com.intellij.openapi.ui.InputValidatorEx
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.JBPopup
-import com.intellij.ssh.channels.SftpChannel
 import com.intellij.util.Consumer
 import net.allape.xftp.ExplorerBaseWindow
 import java.awt.event.InputEvent
@@ -27,28 +23,23 @@ class FileNameTextFieldDialog(private val project: Project) {
             createLightWeightPopup(validator, consumer).showCenteredInCurrentWindow(project)
         } else {
             Messages.showInputDialog(
-                this.project, IdeBundle.message("prompt.enter.new.file.name"),
-                IdeBundle.message("title.new.file"), null, null, validator
+                this.project, "Create something new",
+                "New File", null, null, validator
             )
         }
     }
 
-    private fun createLightWeightPopup(validator: InputValidator, consumer: Consumer<String>): JBPopup {
+    private fun createLightWeightPopup(validator: FileNameValidator, consumer: Consumer<String>): JBPopup {
         val contentPanel = NewItemSimplePopupPanel()
         val nameField = contentPanel.textField
-        return NewItemPopupUtil.createNewItemPopup(IdeBundle.message("title.new.file"), contentPanel, nameField).also { popup ->
+        return NewItemPopupUtil.createNewItemPopup("New ${validator.objectName.replaceFirstChar { it.uppercaseChar() }}", contentPanel, nameField).also { popup ->
             contentPanel.applyAction = Consumer { event: InputEvent? ->
                 val name = nameField.text
                 if (validator.checkInput(name) && validator.canClose(name)) {
                     popup.closeOk(event)
                     consumer.consume(name)
                 } else {
-                    val errorMessage =
-                        if (validator is InputValidatorEx)
-                            validator.getErrorText(name)
-                        else
-                            LangBundle.message("incorrect.name")
-                    contentPanel.setError(errorMessage)
+                    contentPanel.setError(validator.getErrorText(name))
                 }
             }
         }
@@ -58,7 +49,7 @@ class FileNameTextFieldDialog(private val project: Project) {
 
 class FileNameValidator(private val isDirectory: Boolean) : InputValidatorEx {
 
-    private val objectName: String = if (isDirectory) "folder" else "file"
+    val objectName: String = if (isDirectory) "folder" else "file"
 
     private var errorText: String? = null
 
