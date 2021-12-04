@@ -196,6 +196,23 @@ class FileTable: JBTable(FileTableModel()) {
         this.model.resetData(sortFiles(files))
     }
 
+    /**
+     * 获取当前选中了的元素
+     */
+    fun selected(): List<FileModel> {
+        val rows = this.selectedRows
+        val files: MutableList<FileModel> = ArrayList(rows.size)
+        if (rows.isEmpty()) {
+            return files
+        }
+        val fileModels = this.model.data
+        for (row in rows) {
+            if (row == 0) continue
+            files.add(fileModels[row])
+        }
+        return files
+    }
+
     override fun getModel(): FileTableModel {
         return super.getModel() as FileTableModel
     }

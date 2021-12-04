@@ -2,6 +2,7 @@ package net.allape.xftp
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.Application
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider
@@ -9,6 +10,7 @@ import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.MessageDialogBuilder
 import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.wm.ToolWindow
@@ -32,7 +34,9 @@ import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.sftp.SFTPFileTransfer
 import net.schmizz.sshj.xfer.TransferListener
 import java.io.File
+import java.io.IOException
 import java.net.SocketException
+import java.util.HashMap
 import kotlin.math.roundToInt
 
 class TransferException(message: String): RuntimeException(message)
@@ -41,8 +45,9 @@ class TransferCancelledException(message: String): RuntimeException(message)
 abstract class ExplorerBaseWindow(
     protected val project: Project,
     protected val toolWindow: ToolWindow,
-    protected val application: Application,
 ) : Disposable {
+
+    protected val application: Application = ApplicationManager.getApplication()
 
     companion object {
         // 服务器文件系统分隔符
@@ -110,6 +115,9 @@ abstract class ExplorerBaseWindow(
 
     // 传输中的
     protected val transferring: ArrayList<Transfer> = ArrayList(COLLECTION_SIZE)
+
+    // 修改中的远程文件, 用于文件修改后自动上传 key: remote file, value: local file
+    protected val remoteEditingFiles: HashMap<RemoteFileObject, String> = HashMap(COLLECTION_SIZE)
 
     override fun dispose() {}
 
@@ -366,6 +374,85 @@ abstract class ExplorerBaseWindow(
                 ),
                 true
             )
+        }
+    }
+
+    /**
+     * 下载文件并编辑
+     * @param remoteFile 远程文件信息
+     */
+    protected fun downloadFileAndEdit(remoteFile: RemoteFileObject) {
+        require(!remoteFile.isDir()) { "Can not edit a folder!" }
+        application.invokeLater {
+            // 如果文件小于2M, 则自动下载到缓存目录并进行监听
+            if (remoteFile.size() > EDITABLE_FILE_SIZE) {
+                if (
+                    !MessageDialogBuilder.yesNo(
+                        "This file is too large for text editor",
+                        "Do you still want to download and edit it?"
+                    ).asWarning()
+                        .yesText("Do it")
+                        .ask(project)
+                ) {
+                    return@invokeLater
+                }
+            }
+
+            // 如果当前远程文件已经在编辑器中打开了, 则关闭之前的
+            remoteEditingFiles
+                .keys.stream()
+                .filter { rf: RemoteFileObject -> rf.path() == remoteFile.path() }
+                .findFirst()
+                .orElse(null)?.let { existsRemoteFile ->
+                    remoteEditingFiles[existsRemoteFile]?.let { localFile ->
+                        val oldCachedFile = File(localFile)
+                        if (oldCachedFile.exists()) {
+                            if (MessageDialogBuilder.yesNo(
+                                    "This file is editing",
+                                    "Do you want to replace current editing file?\n\n" +
+                                            "\"Open\" to reopen/focus the existing file.\n" +
+                                            "\"Replace\" to re-download the file from remote and open it."
+                                )
+                                    .asWarning()
+                                    .noText("Replace")
+                                    .yesText("Open")
+                                    .ask(project)
+                            ) {
+                                openFileInEditor(oldCachedFile)
+                                return@invokeLater
+                            } else {
+                                remoteEditingFiles.remove(existsRemoteFile)
+                            }
+                        }
+                    }
+                }
+            try {
+                val formattedFileName = remoteFile.name()
+                // 所有点"."开头的文件名可能导致本地fs错误
+//                if (remoteFile.name().startsWith(".")) {
+//                    formattedFileName = remoteFile.name().replaceAll("\\.", "-");
+//                } else {
+//                    String fileSuffix = remoteFile.name().contains(".") ?
+//                            remoteFile.name().substring(remoteFile.name().lastIndexOf('.')) :
+//                            "";
+//                    formattedFileName = "-" + remoteFile.name()
+//                            .substring(0, remoteFile.name().length() - fileSuffix.length())
+//                            .replaceAll("\\.", "-") + fileSuffix;
+//                }
+                val localFile = File.createTempFile("jb-ide-xftp-", formattedFileName)
+                application.executeOnPooledThread {
+                    transfer(localFile, remoteFile, TransferType.DOWNLOAD) {
+                        if (it.result == TransferResult.SUCCESS) {
+                            openFileInEditor(localFile)
+                            // 加入文件监听队列
+                            remoteEditingFiles[remoteFile] = localFile.absolutePath
+                        }
+                    }
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+                Services.message("Unable to create cache file: " + e.message, MessageType.ERROR)
+            }
         }
     }
 

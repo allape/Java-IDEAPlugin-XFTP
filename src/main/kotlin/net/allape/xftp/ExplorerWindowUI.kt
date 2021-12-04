@@ -1,43 +1,31 @@
 package net.allape.xftp
 
-import com.intellij.icons.AllIcons
-import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
-import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.MessageDialogBuilder
-import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.ssh.RemoteFileObject
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBScrollPane
-import com.jetbrains.plugins.remotesdk.console.SshTerminalDirectRunner
-import icons.TerminalIcons
 import net.allape.action.ActionToolbarFastEnableAnAction
-import net.allape.common.Services
 import net.allape.component.FileTable
 import net.allape.component.MemoComboBox
-import org.jetbrains.plugins.terminal.TerminalTabState
-import org.jetbrains.plugins.terminal.TerminalView
-import java.awt.*
+import java.awt.BorderLayout
+import java.awt.Dimension
+import java.awt.GridBagConstraints
+import java.awt.GridBagLayout
 import java.awt.datatransfer.DataFlavor
-import java.io.File
-import java.io.IOException
-import java.nio.charset.Charset
 import javax.swing.JComponent
 import javax.swing.JPanel
 
+/**
+ * 纯UI组件
+ */
 abstract class ExplorerWindowUI(
     project: Project,
     toolWindow: ToolWindow,
-) : ExplorerBaseWindow(project, toolWindow, ApplicationManager.getApplication()) {
-
-    // 双击监听
-    protected var clickWatcher: Long = System.currentTimeMillis()
+) : ExplorerBaseWindow(project, toolWindow) {
 
     companion object {
         private fun defaultConfig(): GridBagConstraints {
@@ -85,6 +73,10 @@ abstract class ExplorerWindowUI(
         // endregion
     }
 
+    protected var clickWatcher: Long = System.currentTimeMillis()
+
+    // region UI组件
+
     protected var panelWrapper = JPanel(BorderLayout())
     protected var splitter: JBSplitter = OnePixelSplitter("xftp-main-window", .5f)
 
@@ -104,86 +96,22 @@ abstract class ExplorerWindowUI(
     protected var remoteFileList = FileTable()
     protected var remoteFileListWrapper = JBScrollPane(remoteFileList)
 
-    // region actions图标按钮
+    // region 远程actions图标按钮
 
     // 建立连接
-    protected val explore: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Start New Session", "Start a sftp session",
-        AllIcons.Webreferences.Server
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            connect()
-        }
-    }
-
+    protected lateinit var explore: ActionToolbarFastEnableAnAction
     // 显示combobox的下拉内容
-    protected val dropdown: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Dropdown", "Display remote access history",
-        AllIcons.Actions.MoveDown
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            remotePath.isPopupVisible = true
-        }
-    }
-
+    protected lateinit var dropdown: ActionToolbarFastEnableAnAction
     // 刷新
-    protected val reload: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Reload Remote", "Reload current remote folder",
-        AllIcons.Actions.Refresh
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            reloadRemote()
-        }
-    }
-
+    protected lateinit var reload: ActionToolbarFastEnableAnAction
     // 断开连接
-    protected val suspend: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Disconnect", "Disconnect from sftp server",
-        AllIcons.Actions.Suspend
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            if (MessageDialogBuilder.yesNo("Disconnecting", "Do you really want to close this session?")
-                    .asWarning()
-                    .yesText("Disconnect")
-                    .ask(project)
-            ) {
-                disconnect()
-            }
-        }
-    }
-
+    protected lateinit var suspend: ActionToolbarFastEnableAnAction
     // 命令行打开
-    protected val newTerminal: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Open In Terminal", "Open current folder in ssh terminal",
-        TerminalIcons.OpenTerminal_13x13
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            val state = TerminalTabState()
-            state.myWorkingDirectory = remotePath.getMemoItem()
-            TerminalView.getInstance(project).createNewSession(
-                SshTerminalDirectRunner(project, credentials, Charset.defaultCharset()),
-                state
-            )
-        }
-    }
-
+    protected lateinit var newTerminal: ActionToolbarFastEnableAnAction
     // 隐藏本地浏览器
-    protected val localToggle: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Toggle Local Explorer", "Hide or display local file list",
-        AllIcons.Diff.ApplyNotConflictsRight
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            val to: Boolean = !splitter.firstComponent.isVisible
-            splitter.firstComponent.isVisible = to
-            this.setIcon(if (to) AllIcons.Diff.ApplyNotConflictsRight else AllIcons.Diff.ApplyNotConflictsLeft)
-        }
-    }
+    protected lateinit var localToggle: ActionToolbarFastEnableAnAction
+
+    // endregion
 
     // endregion
 
@@ -192,7 +120,9 @@ abstract class ExplorerWindowUI(
      */
     protected open fun buildUI() {
         this.buildLocalUI()
+        this.bindLocalIU()
         this.buildRemoteUI()
+        this.bindRemoteUI()
 
         splitter.firstComponent = localWrapper
         splitter.secondComponent = remoteWrapper
@@ -214,34 +144,6 @@ abstract class ExplorerWindowUI(
         localActionToolBarWrapper.add(localActionToolBar)
         localWrapper.add(localActionToolBarWrapper, noXWeightX1Y0)
 
-        localActionGroup.addAll(
-            object : DumbAwareAction(
-                "Refresh Local",
-                "Refresh current local folder",
-                AllIcons.Actions.Refresh
-            ) {
-                override fun actionPerformed(e: AnActionEvent) {
-                    reloadLocal()
-                }
-            },
-            object : DumbAwareAction(
-                "Open In FileManager",
-                "Display folder in system file manager",
-                AllIcons.Actions.MenuOpen
-            ) {
-                override fun actionPerformed(e: AnActionEvent) {
-                    getCurrentLocalPath().let { path ->
-                        try {
-                            Desktop.getDesktop().open(File(path))
-                        } catch (ioException: IOException) {
-                            ioException.printStackTrace()
-                            Services.message("Failed to open \"$path\"", MessageType.ERROR)
-                        }
-                    }
-                }
-            }
-        )
-
         localWrapper.border = null
     }
 
@@ -259,19 +161,18 @@ abstract class ExplorerWindowUI(
         remotePathWrapper.add(remoteFileListWrapper, X0Y1)
         remoteWrapper.add(remotePathWrapper, X1Y0)
 
-        // 远程列表窗口组件
-        remoteActionGroup.addAll(
-            explore,
-            dropdown,
-            reload,
-            suspend,
-            newTerminal,
-            Separator.create(),
-            localToggle
-        )
-
         remoteWrapper.border = null
     }
+
+    /**
+     * 给本地UI组件表绑定事件
+     */
+    abstract fun bindLocalIU()
+
+    /**
+     * 给远程UI组件表绑定事件
+     */
+    abstract fun bindRemoteUI()
 
     /**
      * 获取当前window的UI内容
