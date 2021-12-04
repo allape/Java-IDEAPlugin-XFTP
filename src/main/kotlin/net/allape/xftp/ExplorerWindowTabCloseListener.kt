@@ -18,7 +18,7 @@ class ExplorerWindowTabCloseListener(
     override fun closeQuery(content: Content, projectClosing: Boolean): Boolean {
         if (projectClosing) return true
         val window = Windows.windows[content]
-        return if (window?.getSftpClient() != null) {
+        return if (window?.sftpClient != null) {
             MessageDialogBuilder.yesNo("A server is connected", "Do you really want to close this tab?")
                 .asWarning()
                 .yesText("Close")

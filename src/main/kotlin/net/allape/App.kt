@@ -37,7 +37,7 @@ class App: ToolWindowFactory, DumbAware {
             val contentManager = toolWindow.contentManager
             contentManager.addContent(content)
             contentManager.setSelectedContent(content)
-            window.setContent(content)
+            window.bindContext(content)
 
             // 放入缓存
             Windows.windows[content] = window

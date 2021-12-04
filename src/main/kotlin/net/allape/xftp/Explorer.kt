@@ -1,12 +1,10 @@
 package net.allape.xftp
 
 import com.intellij.icons.AllIcons
-import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
-import com.intellij.openapi.application.Application
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
@@ -25,17 +23,12 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.wm.ToolWindow
-import com.intellij.remote.RemoteConnectionType
-import com.intellij.remote.RemoteCredentials
-import com.intellij.ssh.ConnectionBuilder
 import com.intellij.ssh.RemoteFileObject
 import com.intellij.ssh.SshTransportException
-import com.intellij.ssh.channels.SftpChannel
 import com.intellij.ssh.connectionBuilder
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.content.Content
 import com.intellij.util.ReflectionUtil
 import com.jetbrains.plugins.remotesdk.console.SshConfigConnector
 import com.jetbrains.plugins.remotesdk.console.SshTerminalDirectRunner
@@ -75,82 +68,21 @@ import javax.swing.event.PopupMenuEvent
 import javax.swing.event.PopupMenuListener
 import kotlin.math.roundToInt
 
-open class SuperExplorer(
-    protected val project: Project,
-    protected val toolWindow: ToolWindow,
-    protected val application: Application,
-) : Disposable {
-
-    companion object {
-        // 服务器文件系统分隔符
-        const val SERVER_FILE_SYSTEM_SEPARATOR = "/"
-
-        // 默认集合大小
-        const val COLLECTION_SIZE = 100
-
-        // 当前用户本地home目录
-        val USER_HOME: String = System.getProperty("user.home")
-
-        // 双击间隔, 毫秒
-        const val DOUBLE_CLICK_INTERVAL: Long = 350
-
-        // 最大可打开文件
-        const val EDITABLE_FILE_SIZE = (2 * 1024 * 1024).toLong()
-
-        // 双击监听
-        var clickWatcher = System.currentTimeMillis()
-
-        // 远程文件拖拽flavor
-        val remoteFileListFlavor = DataFlavor(RemoteFileObject::class.java, "SSH remote file list")
-
-        // region UI配置
-
-        const val LOCAL_HISTORY_PERSISTENCE_KEY = "xftp.persistence.local-history"
-        const val REMOTE_HISTORY_PERSISTENCE_KEY = "xftp.persistence.remote-history"
-
-        const val LOCAL_TOOL_BAR_PLACE = "XFTPLocalToolBar"
-        const val REMOTE_TOOL_BAR_PLACE = "XFTPRemoteToolBar"
-
-        private fun defaultConfig(): GridBagConstraints {
-            val gridBagCons = GridBagConstraints()
-            gridBagCons.fill = GridBagConstraints.BOTH
-            gridBagCons.weightx = 1.0
-            gridBagCons.weighty = 1.0
-            return gridBagCons
-        }
-
-        val X0Y0: GridBagConstraints = defaultConfig()
-
-        init {
-            X0Y0.gridx = 0
-            X0Y0.gridy = 0
-        }
-
-        val X0Y1: GridBagConstraints = defaultConfig()
-
-        init {
-            X0Y1.gridx = 0
-            X0Y1.gridy = 1
-        }
-
-        val X1Y0: GridBagConstraints = defaultConfig()
-
-        init {
-            X1Y0.gridx = 1
-            X1Y0.gridy = 0
-        }
-
-        // endregion
-    }
-
-    override fun dispose() {}
-
-}
-
-open class ExplorerUI(
+abstract class ExplorerUI(
     project: Project,
     toolWindow: ToolWindow,
 ) : SuperExplorer(project, toolWindow, ApplicationManager.getApplication()) {
+
+    companion object {
+        private val noYWeightX0Y0 = X0Y0.clone() as GridBagConstraints
+        private val noXWeightX0Y0 = X0Y0.clone() as GridBagConstraints
+        private val noXWeightX1Y0 = X1Y0.clone() as GridBagConstraints
+        init {
+            noYWeightX0Y0.weighty = 0.0
+            noXWeightX0Y0.weightx = 0.0
+            noXWeightX1Y0.weightx = 0.0
+        }
+    }
 
     protected var panelWrapper = JPanel(BorderLayout())
     protected var splitter: JBSplitter = OnePixelSplitter("xftp-main-window", .5f)
@@ -171,18 +103,106 @@ open class ExplorerUI(
     protected var remoteFileList = FileTable()
     protected var remoteFileListWrapper = JBScrollPane(remoteFileList)
 
+    // region actions图标按钮
+
+    // 建立连接
+    protected val explore: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
+        remoteActionToolBar,
+        "Start New Session", "Start a sftp session",
+        AllIcons.Webreferences.Server
+    ) {
+        override fun actionPerformed(e: AnActionEvent) {
+            connect()
+        }
+    }
+
+    // 显示combobox的下拉内容
+    protected val dropdown: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
+        remoteActionToolBar,
+        "Dropdown", "Display remote access history",
+        AllIcons.Actions.MoveDown
+    ) {
+        override fun actionPerformed(e: AnActionEvent) {
+            remotePath.isPopupVisible = true
+        }
+    }
+
+    // 刷新
+    protected val reload: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
+        remoteActionToolBar,
+        "Reload Remote", "Reload current remote folder",
+        AllIcons.Actions.Refresh
+    ) {
+        override fun actionPerformed(e: AnActionEvent) {
+            reloadRemote()
+        }
+    }
+
+    // 断开连接
+    protected val suspend: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
+        remoteActionToolBar,
+        "Disconnect", "Disconnect from sftp server",
+        AllIcons.Actions.Suspend
+    ) {
+        override fun actionPerformed(e: AnActionEvent) {
+            if (MessageDialogBuilder.yesNo("Disconnecting", "Do you really want to close this session?")
+                    .asWarning()
+                    .yesText("Disconnect")
+                    .ask(project)
+            ) {
+                disconnect()
+            }
+        }
+    }
+
+    // 命令行打开
+    protected val newTerminal: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
+        remoteActionToolBar,
+        "Open In Terminal", "Open current folder in ssh terminal",
+        TerminalIcons.OpenTerminal_13x13
+    ) {
+        override fun actionPerformed(e: AnActionEvent) {
+            val state = TerminalTabState()
+            state.myWorkingDirectory = remotePath.getMemoItem()
+            TerminalView.getInstance(project).createNewSession(
+                SshTerminalDirectRunner(project, credentials, Charset.defaultCharset()),
+                state
+            )
+        }
+    }
+
+    // 隐藏本地浏览器
+    protected val localToggle: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
+        remoteActionToolBar,
+        "Toggle Local Explorer", "Hide or display local file list",
+        AllIcons.Diff.ApplyNotConflictsRight
+    ) {
+        override fun actionPerformed(e: AnActionEvent) {
+            val to: Boolean = !splitter.firstComponent.isVisible
+            splitter.firstComponent.isVisible = to
+            this.setIcon(if (to) AllIcons.Diff.ApplyNotConflictsRight else AllIcons.Diff.ApplyNotConflictsLeft)
+        }
+    }
+
+    // endregion
+
     /**
      * 初始化UI样式
      */
-    protected open fun initUI() {
-        val noYWeightX0Y0 = X0Y0.clone() as GridBagConstraints
-        noYWeightX0Y0.weighty = 0.0
-        val noXWeightX0Y0 = X0Y0.clone() as GridBagConstraints
-        noXWeightX0Y0.weightx = 0.0
-        val noXWeightX1Y0 = X1Y0.clone() as GridBagConstraints
-        noXWeightX1Y0.weightx = 0.0
+    protected open fun buildUI() {
+        this.buildLocalUI()
+        this.buildRemoteUI()
 
-        // region 本地
+        splitter.firstComponent = localWrapper
+        splitter.secondComponent = remoteWrapper
+        panelWrapper.add(splitter, BorderLayout.CENTER)
+        panelWrapper.border = null
+    }
+
+    /**
+     * 构建本地文件列表
+     */
+    protected open fun buildLocalUI() {
         localPath.setMinimumAndPreferredWidth(100)
         localPathWrapper.add(localPath, noYWeightX0Y0)
         localFileListWrapper.border = null
@@ -192,9 +212,14 @@ open class ExplorerUI(
         localActionToolBarWrapper.minimumSize = Dimension(48, 0)
         localActionToolBarWrapper.add(localActionToolBar)
         localWrapper.add(localActionToolBarWrapper, noXWeightX1Y0)
-        // endregion
 
-        // region 远程
+        localWrapper.border = null
+    }
+
+    /**
+     * 构建远程文件列表
+     */
+    protected open fun buildRemoteUI() {
         val remoteActionToolBarWrapper = JPanel(BorderLayout())
         remoteActionToolBarWrapper.minimumSize = Dimension(48, 0)
         remoteActionToolBarWrapper.add(remoteActionToolBar)
@@ -204,20 +229,39 @@ open class ExplorerUI(
         remoteFileListWrapper.border = null
         remotePathWrapper.add(remoteFileListWrapper, X0Y1)
         remoteWrapper.add(remotePathWrapper, X1Y0)
-        // endregion
-        localWrapper.border = null
+
+        // 远程列表窗口组件
+        remoteActionGroup.addAll(
+            explore,
+            dropdown,
+            reload,
+            suspend,
+            newTerminal,
+            Separator.create(),
+            localToggle
+        )
+
         remoteWrapper.border = null
-        splitter.firstComponent = localWrapper
-        splitter.secondComponent = remoteWrapper
-        panelWrapper.add(splitter, BorderLayout.CENTER)
-        panelWrapper.border = null
     }
+
 
     /**
      * 获取当前window的UI内容
      */
     open fun getUI(): JComponent {
         return panelWrapper
+    }
+
+    /**
+     * 设置需要进行连接后才能使用的按钮的状态
+     * @param enable 是否启用
+     */
+    protected fun setRemoteButtonsEnable(enable: Boolean) {
+        explore.setEnabled(!enable)
+        dropdown.setEnabled(enable)
+        reload.setEnabled(enable)
+        suspend.setEnabled(enable)
+        newTerminal.setEnabled(enable)
     }
 
     /**
@@ -250,9 +294,6 @@ class Explorer(
     // 传输中的
     private val transferring: ArrayList<Transfer> = ArrayList(100)
 
-    // 窗口content
-    private lateinit var content: Content
-
     // 上一次选择文件
     private var lastFile: FileModel? = null
 
@@ -265,99 +306,6 @@ class Explorer(
     // 修改中的远程文件, 用于文件修改后自动上传 key: remote file, value: local file
     private val remoteEditingFiles: HashMap<RemoteFileObject, String> = HashMap(COLLECTION_SIZE)
 
-    // 当前配置的连接器
-    private var connector: SshConfigConnector? = null
-    // 当前配置
-    private var credentials: RemoteCredentials? = null
-    // 当前配置的连接创建者
-    private var connectionBuilder: ConnectionBuilder? = null
-    // 当前开启的channel
-    private var sftpChannel: SftpChannel? = null
-    // 当前channel中的sftp client
-    private var sftpClient: SFTPClient? = null
-
-    // region actions图标按钮
-
-    // 建立连接
-    private val explore: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Start New Session", "Start a sftp session",
-        AllIcons.Webreferences.Server
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            connectSftp()
-        }
-    }
-
-    // 显示combobox的下拉内容
-    private val dropdown: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Dropdown", "Display remote access history",
-        AllIcons.Actions.MoveDown
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            remotePath.isPopupVisible = true
-        }
-    }
-
-    // 刷新
-    private val reload: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Reload Remote", "Reload current remote folder",
-        AllIcons.Actions.Refresh
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            reloadRemote()
-        }
-    }
-
-    // 断开连接
-    private val suspend: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Disconnect", "Disconnect from sftp server",
-        AllIcons.Actions.Suspend
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            if (MessageDialogBuilder.yesNo("Disconnecting", "Do you really want to close this session?")
-                    .asWarning()
-                    .yesText("Disconnect")
-                    .ask(project)
-            ) {
-                disconnect(true)
-            }
-        }
-    }
-
-    // 命令行打开
-    private val newTerminal: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Open In Terminal", "Open current folder in ssh terminal",
-        TerminalIcons.OpenTerminal_13x13
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            val state = TerminalTabState()
-            state.myWorkingDirectory = remotePath.getMemoItem()
-            TerminalView.getInstance(project).createNewSession(
-                SshTerminalDirectRunner(project, credentials, Charset.defaultCharset()),
-                state
-            )
-        }
-    }
-
-    // 隐藏本地浏览器
-    private val localToggle: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Toggle Local Explorer", "Hide or display local file list",
-        AllIcons.Diff.ApplyNotConflictsRight
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            val to: Boolean = !splitter.firstComponent.isVisible
-            splitter.firstComponent.isVisible = to
-            this.setIcon(if (to) AllIcons.Diff.ApplyNotConflictsRight else AllIcons.Diff.ApplyNotConflictsLeft)
-        }
-    }
-
-    // endregion
 
     init {
         setCurrentLocalPath(this.project.basePath ?: "/")
@@ -382,18 +330,18 @@ class Explorer(
             }
         })
 
-        initUI()
+        buildUI()
     }
 
     override fun dispose() {
         super.dispose()
 
         // 关闭连接
-        disconnect(true)
+        disconnect()
     }
 
-    override fun initUI() {
-        super.initUI()
+    override fun buildUI() {
+        super.buildUI()
 
         localActionGroup.addAll(
             object : DumbAwareAction(
@@ -582,7 +530,7 @@ class Explorer(
                     Services.message("Please connect to server first!", MessageType.INFO)
                 } else if (!sftpChannel!!.isConnected) {
                     Services.message("SFTP lost connection, retrying...", MessageType.ERROR)
-                    connectSftp()
+                    connect()
                 }
                 remoteFileList.isEnabled = false
                 remotePath.isEnabled = false
@@ -639,17 +587,6 @@ class Explorer(
                 }
             }
         }
-
-
-        remoteActionGroup.addAll(
-            explore,
-            dropdown,
-            reload,
-            suspend,
-            newTerminal,
-            Separator.create(),
-            localToggle
-        )
         setRemoteButtonsEnable(false)
 
         remoteFileList.selectionModel.addListSelectionListener {
@@ -771,21 +708,9 @@ class Explorer(
     }
 
     /**
-     * 设置需要进行连接后才能使用的按钮的状态
-     * @param enable 是否启用
-     */
-    private fun setRemoteButtonsEnable(enable: Boolean) {
-        explore.setEnabled(!enable)
-        dropdown.setEnabled(enable)
-        reload.setEnabled(enable)
-        suspend.setEnabled(enable)
-        newTerminal.setEnabled(enable)
-    }
-
-    /**
      * 使用当前选择的配置进行连接
      */
-    fun connectSftp() {
+    override fun connect() {
         try {
             RemoteDataProducerWrapper()
                 .withProject(project)
@@ -876,7 +801,7 @@ class Explorer(
     /**
      * 断开当前连接
      */
-    fun disconnect(triggerEvent: Boolean) {
+    override fun disconnect(triggerEvent: Boolean) {
         // 断开连接
         if (sftpChannel != null && sftpChannel!!.isConnected) {
             try {
@@ -895,16 +820,31 @@ class Explorer(
     }
 
     /**
+     * 检查当前channel是否可用, 长时间不使用可能会断开连接
+     */
+    fun isChannelAvailable (): Boolean {
+        try {
+            val file = this.sftpChannel?.file("/dev/null")
+            if (file != null) {
+                return true
+            }
+        } catch (e: Exception) {
+            disconnect()
+        }
+        return false
+    }
+
+    /**
      * 设置当前状态为连接中
      */
-    private fun triggerConnecting() {
+    override fun triggerConnecting() {
         application.invokeLater { explore.setEnabled(false) }
     }
 
     /**
      * 设置当前状态为已连接
      */
-    private fun triggerConnected() {
+    override fun triggerConnected() {
         application.invokeLater {
             remotePath.isEnabled = true
             this.setRemoteButtonsEnable(true)
@@ -920,11 +860,11 @@ class Explorer(
     /**
      * 设置当前状态为未连接
      */
-    private fun triggerDisconnected() {
+    override fun triggerDisconnected() {
         application.invokeLater {
 
             // 设置远程路径输入框
-            remotePath.setItem(null)
+            remotePath.item = null
             remotePath.isEnabled = false
             this.setRemoteButtonsEnable(false)
 
@@ -950,7 +890,7 @@ class Explorer(
     /**
      * 刷新本地资源
      */
-    fun reloadLocal() {
+    override fun reloadLocal() {
         setCurrentLocalPath(localPath.getMemoItem()!!)
     }
 
@@ -969,7 +909,7 @@ class Explorer(
     /**
      * 刷新远程资源
      */
-    fun reloadRemote() {
+    override fun reloadRemote() {
         setCurrentRemotePath(remotePath.getMemoItem()!!)
     }
 
@@ -1297,7 +1237,7 @@ class Explorer(
                             MessageType.ERROR,
                         )
                         if (e is SocketException) {
-                            disconnect(true)
+                            disconnect()
                         }
                     }
                 }
@@ -1313,21 +1253,6 @@ class Explorer(
 
             e.printStackTrace()
         }
-    }
-
-    // endregion
-
-    // region getter / setter
-
-    fun setContent(content: Content?) {
-        if (content != null) {
-            this.content = content
-            ExplorerWindowTabCloseListener(this.content, project, this)
-        }
-    }
-
-    fun getSftpClient(): SFTPClient? {
-        return sftpClient
     }
 
     // endregion
