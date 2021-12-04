@@ -1,7 +1,7 @@
 package net.allape.common
 
 import com.intellij.ui.content.Content
-import net.allape.xftp.Explorer
+import net.allape.xftp.ExplorerWindow
 
 class Windows {
 
@@ -11,7 +11,7 @@ class Windows {
         const val WINDOW_DEFAULT_NAME = "Explorer"
 
         // 当前打开的窗口
-        val windows: HashMap<Content, Explorer> = HashMap(10)
+        val windows: HashMap<Content, ExplorerWindow> = HashMap(10)
 
     }
 

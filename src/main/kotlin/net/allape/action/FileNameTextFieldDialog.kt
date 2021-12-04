@@ -12,7 +12,7 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.ssh.channels.SftpChannel
 import com.intellij.util.Consumer
-import net.allape.xftp.SuperExplorer
+import net.allape.xftp.ExplorerBaseWindow
 import java.awt.event.InputEvent
 import java.util.*
 
@@ -62,8 +62,8 @@ class FileNameValidator(private val channel: SftpChannel) : InputValidatorEx {
 
     override fun checkInput(inputString: String?): Boolean {
         val tokenizer = StringTokenizer(
-            inputString?.replace("\\", SuperExplorer.SERVER_FILE_SYSTEM_SEPARATOR),
-            SuperExplorer.SERVER_FILE_SYSTEM_SEPARATOR,
+            inputString?.replace("\\", ExplorerBaseWindow.FILE_SEP),
+            ExplorerBaseWindow.FILE_SEP,
         )
         while (tokenizer.hasMoreTokens()) {
             val token = tokenizer.nextToken()

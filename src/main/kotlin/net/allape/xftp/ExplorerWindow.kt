@@ -1,24 +1,13 @@
 package net.allape.xftp
 
-import com.intellij.icons.AllIcons
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.DefaultActionGroup
-import com.intellij.openapi.actionSystem.Separator
-import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.fileEditor.OpenFileDescriptor
-import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
-import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.JBMenuItem
 import com.intellij.openapi.ui.JBPopupMenu
 import com.intellij.openapi.ui.MessageDialogBuilder
 import com.intellij.openapi.ui.MessageType
-import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
@@ -26,30 +15,16 @@ import com.intellij.openapi.wm.ToolWindow
 import com.intellij.ssh.RemoteFileObject
 import com.intellij.ssh.SshTransportException
 import com.intellij.ssh.connectionBuilder
-import com.intellij.ui.JBSplitter
-import com.intellij.ui.OnePixelSplitter
-import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ReflectionUtil
 import com.jetbrains.plugins.remotesdk.console.SshConfigConnector
-import com.jetbrains.plugins.remotesdk.console.SshTerminalDirectRunner
-import icons.TerminalIcons
-import net.allape.action.ActionToolbarFastEnableAnAction
-import net.allape.common.HistoryTopicHandler
 import net.allape.common.RemoteDataProducerWrapper
 import net.allape.common.Services
 import net.allape.common.Windows
 import net.allape.component.FileTable
-import net.allape.component.FileTableModel
-import net.allape.component.MemoComboBox
 import net.allape.model.*
 import net.allape.util.Maps
-import net.schmizz.sshj.common.StreamCopier
 import net.schmizz.sshj.sftp.SFTPClient
-import net.schmizz.sshj.sftp.SFTPFileTransfer
-import net.schmizz.sshj.xfer.TransferListener
-import org.jetbrains.plugins.terminal.TerminalTabState
-import org.jetbrains.plugins.terminal.TerminalView
-import java.awt.*
+import java.awt.Desktop
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
 import java.awt.event.MouseEvent
@@ -57,242 +32,17 @@ import java.awt.event.MouseListener
 import java.io.File
 import java.io.IOException
 import java.lang.reflect.Field
-import java.net.SocketException
-import java.nio.charset.Charset
 import java.util.*
 import java.util.stream.Collectors
 import javax.swing.DropMode
 import javax.swing.JComponent
-import javax.swing.JPanel
 import javax.swing.event.PopupMenuEvent
 import javax.swing.event.PopupMenuListener
-import kotlin.math.roundToInt
 
-abstract class ExplorerUI(
+class ExplorerWindow(
     project: Project,
     toolWindow: ToolWindow,
-) : SuperExplorer(project, toolWindow, ApplicationManager.getApplication()) {
-
-    companion object {
-        private val noYWeightX0Y0 = X0Y0.clone() as GridBagConstraints
-        private val noXWeightX0Y0 = X0Y0.clone() as GridBagConstraints
-        private val noXWeightX1Y0 = X1Y0.clone() as GridBagConstraints
-        init {
-            noYWeightX0Y0.weighty = 0.0
-            noXWeightX0Y0.weightx = 0.0
-            noXWeightX1Y0.weightx = 0.0
-        }
-    }
-
-    protected var panelWrapper = JPanel(BorderLayout())
-    protected var splitter: JBSplitter = OnePixelSplitter("xftp-main-window", .5f)
-
-    protected var localWrapper = JPanel(GridBagLayout())
-    protected var localPathWrapper = JPanel(GridBagLayout())
-    protected var localPath = MemoComboBox<String>(LOCAL_HISTORY_PERSISTENCE_KEY)
-    protected var localFileList: FileTable = FileTable()
-    protected var localFileListWrapper: JBScrollPane = JBScrollPane(localFileList)
-    protected var localActionGroup = DefaultActionGroup()
-    protected var localActionToolBar = ActionToolbarImpl(LOCAL_TOOL_BAR_PLACE, localActionGroup, false)
-    protected var remoteWrapper = JPanel(GridBagLayout())
-
-    protected var remotePathWrapper = JPanel(GridBagLayout())
-    protected var remotePath = MemoComboBox<String>(REMOTE_HISTORY_PERSISTENCE_KEY)
-    protected var remoteActionGroup = DefaultActionGroup()
-    protected var remoteActionToolBar = ActionToolbarImpl(REMOTE_TOOL_BAR_PLACE, remoteActionGroup, false)
-    protected var remoteFileList = FileTable()
-    protected var remoteFileListWrapper = JBScrollPane(remoteFileList)
-
-    // region actions图标按钮
-
-    // 建立连接
-    protected val explore: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Start New Session", "Start a sftp session",
-        AllIcons.Webreferences.Server
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            connect()
-        }
-    }
-
-    // 显示combobox的下拉内容
-    protected val dropdown: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Dropdown", "Display remote access history",
-        AllIcons.Actions.MoveDown
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            remotePath.isPopupVisible = true
-        }
-    }
-
-    // 刷新
-    protected val reload: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Reload Remote", "Reload current remote folder",
-        AllIcons.Actions.Refresh
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            reloadRemote()
-        }
-    }
-
-    // 断开连接
-    protected val suspend: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Disconnect", "Disconnect from sftp server",
-        AllIcons.Actions.Suspend
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            if (MessageDialogBuilder.yesNo("Disconnecting", "Do you really want to close this session?")
-                    .asWarning()
-                    .yesText("Disconnect")
-                    .ask(project)
-            ) {
-                disconnect()
-            }
-        }
-    }
-
-    // 命令行打开
-    protected val newTerminal: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Open In Terminal", "Open current folder in ssh terminal",
-        TerminalIcons.OpenTerminal_13x13
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            val state = TerminalTabState()
-            state.myWorkingDirectory = remotePath.getMemoItem()
-            TerminalView.getInstance(project).createNewSession(
-                SshTerminalDirectRunner(project, credentials, Charset.defaultCharset()),
-                state
-            )
-        }
-    }
-
-    // 隐藏本地浏览器
-    protected val localToggle: ActionToolbarFastEnableAnAction = object : ActionToolbarFastEnableAnAction(
-        remoteActionToolBar,
-        "Toggle Local Explorer", "Hide or display local file list",
-        AllIcons.Diff.ApplyNotConflictsRight
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            val to: Boolean = !splitter.firstComponent.isVisible
-            splitter.firstComponent.isVisible = to
-            this.setIcon(if (to) AllIcons.Diff.ApplyNotConflictsRight else AllIcons.Diff.ApplyNotConflictsLeft)
-        }
-    }
-
-    // endregion
-
-    /**
-     * 初始化UI样式
-     */
-    protected open fun buildUI() {
-        this.buildLocalUI()
-        this.buildRemoteUI()
-
-        splitter.firstComponent = localWrapper
-        splitter.secondComponent = remoteWrapper
-        panelWrapper.add(splitter, BorderLayout.CENTER)
-        panelWrapper.border = null
-    }
-
-    /**
-     * 构建本地文件列表
-     */
-    protected open fun buildLocalUI() {
-        localPath.setMinimumAndPreferredWidth(100)
-        localPathWrapper.add(localPath, noYWeightX0Y0)
-        localFileListWrapper.border = null
-        localPathWrapper.add(localFileListWrapper, X0Y1)
-        localWrapper.add(localPathWrapper, X0Y0)
-        val localActionToolBarWrapper = JPanel(BorderLayout())
-        localActionToolBarWrapper.minimumSize = Dimension(48, 0)
-        localActionToolBarWrapper.add(localActionToolBar)
-        localWrapper.add(localActionToolBarWrapper, noXWeightX1Y0)
-
-        localWrapper.border = null
-    }
-
-    /**
-     * 构建远程文件列表
-     */
-    protected open fun buildRemoteUI() {
-        val remoteActionToolBarWrapper = JPanel(BorderLayout())
-        remoteActionToolBarWrapper.minimumSize = Dimension(48, 0)
-        remoteActionToolBarWrapper.add(remoteActionToolBar)
-        remoteWrapper.add(remoteActionToolBarWrapper, noXWeightX0Y0)
-        remotePath.setMinimumAndPreferredWidth(100)
-        remotePathWrapper.add(remotePath, noYWeightX0Y0)
-        remoteFileListWrapper.border = null
-        remotePathWrapper.add(remoteFileListWrapper, X0Y1)
-        remoteWrapper.add(remotePathWrapper, X1Y0)
-
-        // 远程列表窗口组件
-        remoteActionGroup.addAll(
-            explore,
-            dropdown,
-            reload,
-            suspend,
-            newTerminal,
-            Separator.create(),
-            localToggle
-        )
-
-        remoteWrapper.border = null
-    }
-
-
-    /**
-     * 获取当前window的UI内容
-     */
-    open fun getUI(): JComponent {
-        return panelWrapper
-    }
-
-    /**
-     * 设置需要进行连接后才能使用的按钮的状态
-     * @param enable 是否启用
-     */
-    protected fun setRemoteButtonsEnable(enable: Boolean) {
-        explore.setEnabled(!enable)
-        dropdown.setEnabled(enable)
-        reload.setEnabled(enable)
-        suspend.setEnabled(enable)
-        newTerminal.setEnabled(enable)
-    }
-
-    /**
-     * 设置当前远程内容锁定
-     */
-    protected open fun lockRemoteUIs() {
-        application.invokeLater { remoteWrapper.isEnabled = false }
-    }
-
-    /**
-     * 设置当前远程内容锁定
-     */
-    protected open fun unlockRemoteUIs() {
-        application.invokeLater { remoteWrapper.isEnabled = true }
-    }
-
-}
-
-class Explorer(
-    project: Project,
-    toolWindow: ToolWindow,
-) : ExplorerUI(project, toolWindow) {
-
-    // 传输历史记录topic的publisher
-    private val historyTopicHandler: HistoryTopicHandler = project.messageBus.syncPublisher(HistoryTopicHandler.HISTORY_TOPIC)
-
-    // 传输历史
-    private val history: ArrayList<Transfer> = ArrayList(100)
-
-    // 传输中的
-    private val transferring: ArrayList<Transfer> = ArrayList(100)
+) : ExplorerWindowUI(project, toolWindow) {
 
     // 上一次选择文件
     private var lastFile: FileModel? = null
@@ -305,7 +55,6 @@ class Explorer(
 
     // 修改中的远程文件, 用于文件修改后自动上传 key: remote file, value: local file
     private val remoteEditingFiles: HashMap<RemoteFileObject, String> = HashMap(COLLECTION_SIZE)
-
 
     init {
         setCurrentLocalPath(this.project.basePath ?: "/")
@@ -343,39 +92,8 @@ class Explorer(
     override fun buildUI() {
         super.buildUI()
 
-        localActionGroup.addAll(
-            object : DumbAwareAction(
-                "Refresh Local",
-                "Refresh current local folder",
-                AllIcons.Actions.Refresh
-            ) {
-                override fun actionPerformed(e: AnActionEvent) {
-                    reloadLocal()
-                }
-            },
-            object : DumbAwareAction(
-                "Open In FileManager",
-                "Display folder in system file manager",
-                AllIcons.Actions.MenuOpen
-            ) {
-                override fun actionPerformed(e: AnActionEvent) {
-                    localPath.getMemoItem()?.let { path ->
-                        try {
-                            Desktop.getDesktop().open(File(path))
-                        } catch (ioException: IOException) {
-                            ioException.printStackTrace()
-                            Services.message("Failed to open \"$path\"", MessageType.ERROR)
-                        }
-                    }
-                }
-            }
-        )
-
         localPath.addActionListener {
-            var path = localPath.getMemoItem()
-            if (path == null || path.isEmpty()) {
-                path = "/"
-            }
+            var path = getCurrentLocalPath().ifEmpty { File.separator }
             try {
                 val file = File(path)
                 if (!file.exists()) {
@@ -503,7 +221,7 @@ class Explorer(
 
             override fun importData(support: TransferSupport): Boolean {
                 try {
-                    localPath.getMemoItem()?.let { currentLocalPath ->
+                    getCurrentLocalPath().let { currentLocalPath ->
                         @Suppress("UNCHECKED_CAST")
                         for (file in support.transferable.getTransferData(remoteFileListFlavor) as List<RemoteFileObject>) {
                             application.executeOnPooledThread {
@@ -524,7 +242,10 @@ class Explorer(
 
         remotePath.isEnabled = false
         remotePath.addActionListener {
-            val remoteFilePath = remotePath.getMemoItem() ?: return@addActionListener
+            val remoteFilePath = getCurrentRemotePath()
+
+            if (remoteFilePath.isEmpty()) return@addActionListener
+
             application.executeOnPooledThread {
                 if (sftpChannel == null) {
                     Services.message("Please connect to server first!", MessageType.INFO)
@@ -537,8 +258,7 @@ class Explorer(
                 // 是否接下来加载父文件夹
                 var loadParent: String? = null
                 try {
-                    var path =
-                        remoteFilePath.ifEmpty { SERVER_FILE_SYSTEM_SEPARATOR }
+                    var path = remoteFilePath.ifEmpty { FILE_SEP }
                     val file = sftpChannel!!.file(path)
                     path = file.path()
                     if (!file.exists()) {
@@ -552,14 +272,14 @@ class Explorer(
                         }
                     } else if (!file.isDir()) {
                         downloadFileAndEdit(file)
-                        loadParent = getParentFolderPath(file.path(), SERVER_FILE_SYSTEM_SEPARATOR)
+                        loadParent = getParentFolderPath(file.path(), FILE_SEP)
                     } else {
                         val files = file.list()
                         val fileModels: MutableList<FileModel> =
                             ArrayList(files.size)
 
                         // 添加返回上一级目录
-                        fileModels.add(getParentFolder(path, SERVER_FILE_SYSTEM_SEPARATOR))
+                        fileModels.add(getParentFolder(path, FILE_SEP))
                         for (f in files) {
                             fileModels.add(
                                 FileModel(
@@ -632,12 +352,12 @@ class Explorer(
                 try {
                     @Suppress("UNCHECKED_CAST")
                     val files = support.transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<File>
-                    remotePath.getMemoItem()?.let { currentRemotePath ->
+                    getCurrentRemotePath().let { currentRemotePath ->
                         for (file in files) {
                             application.executeOnPooledThread {
                                 transfer(
                                     file,
-                                    sftpChannel!!.file(currentRemotePath + SERVER_FILE_SYSTEM_SEPARATOR + file.name),
+                                    sftpChannel!!.file(currentRemotePath + FILE_SEP + file.name),
                                     TransferType.UPLOAD
                                 )
                             }
@@ -651,7 +371,7 @@ class Explorer(
         }
 
 
-        val remoteFileListPopupMenuDelete = JBMenuItem("rm -Rf")
+        val remoteFileListPopupMenuDelete = JBMenuItem("rm -Rf ...")
         remoteFileListPopupMenuDelete.addActionListener {
             if (!MessageDialogBuilder.yesNo("Delete Confirm", "This operation is irreversible, continue?")
                     .asWarning()
@@ -707,9 +427,6 @@ class Explorer(
         remoteFileList.componentPopupMenu = remoteFileListPopupMenu
     }
 
-    /**
-     * 使用当前选择的配置进行连接
-     */
     override fun connect() {
         try {
             RemoteDataProducerWrapper()
@@ -719,7 +436,7 @@ class Explorer(
                     null
                 ) { c ->
                     c?.let { connector ->
-                        this@Explorer.connector = connector as SshConfigConnector
+                        this@ExplorerWindow.connector = connector as SshConfigConnector
                         connector.produceRemoteCredentials { data ->
                             if (data != null) {
                                 credentials = data
@@ -798,9 +515,6 @@ class Explorer(
         }
     }
 
-    /**
-     * 断开当前连接
-     */
     override fun disconnect(triggerEvent: Boolean) {
         // 断开连接
         if (sftpChannel != null && sftpChannel!!.isConnected) {
@@ -819,10 +533,7 @@ class Explorer(
         }
     }
 
-    /**
-     * 检查当前channel是否可用, 长时间不使用可能会断开连接
-     */
-    fun isChannelAvailable (): Boolean {
+    override fun isChannelAvailable (): Boolean {
         try {
             val file = this.sftpChannel?.file("/dev/null")
             if (file != null) {
@@ -834,16 +545,10 @@ class Explorer(
         return false
     }
 
-    /**
-     * 设置当前状态为连接中
-     */
     override fun triggerConnecting() {
         application.invokeLater { explore.setEnabled(false) }
     }
 
-    /**
-     * 设置当前状态为已连接
-     */
     override fun triggerConnected() {
         application.invokeLater {
             remotePath.isEnabled = true
@@ -857,12 +562,8 @@ class Explorer(
         }
     }
 
-    /**
-     * 设置当前状态为未连接
-     */
     override fun triggerDisconnected() {
         application.invokeLater {
-
             // 设置远程路径输入框
             remotePath.item = null
             remotePath.isEnabled = false
@@ -880,67 +581,35 @@ class Explorer(
      * @param currentLocalPath 本地文件路径
      */
     fun setCurrentLocalPath(currentLocalPath: String) {
-        val fireEventManually = currentLocalPath == localPath.getMemoItem()
+        val fireEventManually = currentLocalPath == getCurrentLocalPath()
         localPath.push(currentLocalPath)
         if (fireEventManually) {
             localPath.actionPerformed(null)
         }
     }
 
-    /**
-     * 刷新本地资源
-     */
+    override fun getCurrentLocalPath(defaultValue: String?): String = localPath.getMemoItem(defaultValue) ?: ""
+
     override fun reloadLocal() {
-        setCurrentLocalPath(localPath.getMemoItem()!!)
+        setCurrentLocalPath(getCurrentLocalPath())
     }
 
     /**
-     * 谁当前显示的远程路径
+     * 设置当前显示的远程路径
      * @param currentRemotePath 远程文件路径
      */
     fun setCurrentRemotePath(currentRemotePath: String) {
-        val fireEventManually = currentRemotePath == remotePath.getMemoItem()
+        val fireEventManually = currentRemotePath == getCurrentRemotePath()
         remotePath.push(currentRemotePath)
         if (fireEventManually) {
             remotePath.actionPerformed(null)
         }
     }
 
-    /**
-     * 刷新远程资源
-     */
+    override fun getCurrentRemotePath(defaultValue: String?): String  = remotePath.getMemoItem(defaultValue) ?: ""
+
     override fun reloadRemote() {
-        setCurrentRemotePath(remotePath.getMemoItem()!!)
-    }
-
-    /**
-     * 获取上一级目录
-     * @param path 当前目录
-     * @param separator 文件系统分隔符
-     */
-    private fun getParentFolder(path: String, separator: String): FileModel {
-        return FileModel(getParentFolderPath(path, separator), "..", true, 0, 0, false)
-    }
-
-    /**
-     * 获取上一级目录
-     * @param path 当前目录
-     * @param separator 文件系统分隔符
-     */
-    private fun getParentFolderPath(path: String, separator: String): String {
-        // 添加返回上一级目录
-        val lastIndexOfSep = path.lastIndexOf(separator)
-        val parentFolder = if (lastIndexOfSep == -1 || lastIndexOfSep == 0) "" else path.substring(0, lastIndexOfSep)
-        return if (parentFolder.isEmpty()) separator else parentFolder
-    }
-
-    /**
-     * 格式化远程文件的路径, 因为有的文件开头是//
-     * @param file 远程文件信息
-     * @return 格式化后的文件路径
-     */
-    private fun normalizeRemoteFileObjectPath(file: RemoteFileObject): String {
-        return if (file.path().startsWith("//")) file.path().substring(1) else file.path()
+        setCurrentRemotePath(getCurrentRemotePath())
     }
 
     /**
@@ -975,15 +644,6 @@ class Explorer(
             files.add(fileModels[row])
         }
         return files
-    }
-
-    /**
-     * 获取当前连接名称
-     */
-    private fun getWindowName(): String {
-        return if (connector != null) connector!!.name
-            else if (credentials != null) "${credentials!!.userName}@${credentials!!.host}:${credentials!!.port}"
-            else Windows.WINDOW_DEFAULT_NAME
     }
 
     /**
@@ -1050,15 +710,13 @@ class Explorer(
 //                }
                 val localFile = File.createTempFile("jb-ide-xftp-", formattedFileName)
                 application.executeOnPooledThread {
-                    transfer(localFile, remoteFile, TransferType.DOWNLOAD, object : OnTransferResult {
-                        override fun onResult(result: Transfer) {
-                            if (result.result == TransferResult.SUCCESS) {
-                                openFileInEditor(localFile)
-                                // 加入文件监听队列
-                                remoteEditingFiles[remoteFile] = localFile.absolutePath
-                            }
+                    transfer(localFile, remoteFile, TransferType.DOWNLOAD) {
+                        if (it.result == TransferResult.SUCCESS) {
+                            openFileInEditor(localFile)
+                            // 加入文件监听队列
+                            remoteEditingFiles[remoteFile] = localFile.absolutePath
                         }
-                    })
+                    }
                 }
             } catch (e: IOException) {
                 e.printStackTrace()
@@ -1067,196 +725,4 @@ class Explorer(
         }
     }
 
-    /**
-     * 打开文件<br/>
-     * 参考: [com.intellij.openapi.fileEditor.impl.text.FileDropHandler.openFiles]
-     * @param file 文件
-     */
-    private fun openFileInEditor(file: File) {
-        val virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(file)
-        if (virtualFile == null) {
-            Services.message("${file.absolutePath} does not exists!")
-            return
-        }
-        NonProjectFileWritingAccessProvider.allowWriting(listOf(virtualFile))
-        application.invokeLater {
-            FileEditorManager.getInstance(project).openTextEditor(
-                OpenFileDescriptor(
-                    project,
-                    virtualFile,
-                    0
-                ),
-                true
-            )
-        }
-    }
-
-    // region 上传下载
-
-    @Synchronized
-    private fun transfer(
-        localFile: File,
-        remoteFile: RemoteFileObject,
-        type: TransferType,
-        onTransferResult: OnTransferResult? = null,
-    ) {
-        if (sftpChannel == null || !sftpChannel!!.isConnected) {
-            Services.message("Please start a sftp session first!", MessageType.INFO)
-            throw IllegalStateException("No SFTP session available!")
-        }
-
-        // 格式化远程路径
-        val normalizedRemotePath = getWindowName() + ":" + normalizeRemoteFileObjectPath(remoteFile)
-        // 远程路径
-        val remoteFilePath = remoteFile.path()
-        // 本地绝对路径
-        val localFileAbsPath = localFile.absolutePath
-
-        // 检查当前传输的队列, 存在相同target的, 取消上一个任务
-        for (exists in transferring) {
-            // 移除非运行中的内容
-            if (exists.result !== TransferResult.TRANSFERRING) {
-                application.invokeLater { transferring.remove(exists) }
-            } else if (type === exists.type && exists.target == if (type === TransferType.UPLOAD) normalizedRemotePath else localFileAbsPath) {
-                exists.result = TransferResult.CANCELLED
-            }
-        }
-
-        // 设置传输对象
-        val transfer = Transfer(
-            type = type,
-            source = if (type === TransferType.UPLOAD) localFileAbsPath else normalizedRemotePath,
-            target = if (type === TransferType.UPLOAD) normalizedRemotePath else localFileAbsPath,
-            size = if (type === TransferType.UPLOAD) localFile.length() else remoteFile.size(),
-        )
-
-        transferring.add(transfer)
-        history.add(transfer)
-        historyTopicHandler.before(HistoryTopicHandler.HAction.RERENDER)
-
-        val onResultProxy = object : OnTransferResult {
-            override fun onResult(result: Transfer) {
-                transferring.remove(transfer)
-                historyTopicHandler.before(HistoryTopicHandler.HAction.RERENDER)
-                onTransferResult?.onResult(result)
-            }
-        }
-
-        try {
-            if (type === TransferType.UPLOAD) {
-                if (!localFile.exists()) {
-                    val e = "Can't find local file $localFileAbsPath"
-                    Services.message(e, MessageType.ERROR)
-                    throw TransferException(e)
-                }
-            } else {
-                if (!remoteFile.exists()) {
-                    val e = "Can't find remote file $remoteFilePath"
-                    Services.message(e, MessageType.ERROR)
-                    throw TransferException(e)
-                }
-            }
-
-            ProgressManager.getInstance().run(object : Task.Backgroundable(
-                project,
-                if (type === TransferType.UPLOAD) "Uploading" else "Downloading",
-            ) {
-                override fun run(indicator: ProgressIndicator) {
-                    indicator.isIndeterminate =
-                        if (type === TransferType.UPLOAD) localFile.isDirectory else remoteFile.isDir()
-                    try {
-                        val fileTransfer = SFTPFileTransfer(sftpClient!!.sftpEngine)
-                        fileTransfer.transferListener = object : TransferListener {
-                            override fun directory(name: String): TransferListener {
-                                return this
-                            }
-                            override fun file(name: String, size: Long): StreamCopier.Listener {
-                                val total: String = FileTableModel.byteCountToDisplaySize(size)
-                                return StreamCopier.Listener { transferred: Long ->
-                                    if (indicator.isCanceled || transfer.result === TransferResult.CANCELLED) {
-                                        throw TransferCancelledException("Operation cancelled!")
-                                    }
-                                    transfer.transferred = transferred
-                                    historyTopicHandler.before(HistoryTopicHandler.HAction.RERENDER)
-                                    indicator.text2 = "${(if (type === TransferType.UPLOAD) "Uploading" else "Downloading")} " +
-                                            "${transfer.source} to ${transfer.target}"
-                                    val percent = transferred.toDouble() / size
-
-                                    // 文件夹的不显示百分比进度
-                                    if (!indicator.isIndeterminate) {
-                                        indicator.fraction = percent
-                                    }
-                                    indicator.text = "${((percent * 10000).roundToInt() / 100)}% " +
-                                            "${FileTableModel.byteCountToDisplaySize(transferred)}/$total"
-                                }
-                            }
-                        }
-
-                        // 开始传输
-                        if (type === TransferType.UPLOAD) {
-                            fileTransfer.upload(localFileAbsPath, remoteFilePath)
-                        } else {
-                            fileTransfer.download(remoteFilePath, localFileAbsPath)
-                        }
-
-                        // 如果上传目录和当前目录相同, 则刷新目录
-                        if (type === TransferType.UPLOAD) {
-                            val currentRemotePath: String = remotePath.getMemoItem() ?: ""
-                            if (
-                                getParentFolderPath(remoteFilePath, SERVER_FILE_SYSTEM_SEPARATOR)
-                                ==
-                                currentRemotePath
-                            ) {
-                                reloadRemote()
-                            }
-                        } else {
-                            val currentLocalPath: String = localPath.getMemoItem() ?: ""
-                            if (
-                                getParentFolderPath(localFileAbsPath, File.separator)
-                                ==
-                                currentLocalPath
-                            ) {
-                                reloadLocal()
-                            }
-                        }
-
-                        transfer.result = TransferResult.SUCCESS
-                        onResultProxy.onResult(transfer)
-                    } catch (e: TransferCancelledException) {
-                        transfer.result = TransferResult.CANCELLED
-                        transfer.exception = e.message ?: "cancelled"
-                        onResultProxy.onResult(transfer)
-                    } catch (e: Exception) {
-                        transfer.result = TransferResult.FAIL
-                        transfer.exception = e.message ?: "failed"
-                        onResultProxy.onResult(transfer)
-
-                        e.printStackTrace()
-                        Services.message(
-                            "Error occurred while transferring ${transfer.source} to ${transfer.target}, ${e.message}",
-                            MessageType.ERROR,
-                        )
-                        if (e is SocketException) {
-                            disconnect()
-                        }
-                    }
-                }
-                override fun onCancel() {
-                    super.onCancel()
-                    this.cancelText = "Cancelling..."
-                }
-            })
-        } catch (e: Exception) {
-            transfer.result = TransferResult.FAIL
-            transfer.exception = e.message ?: "transfer failed"
-            onResultProxy.onResult(transfer)
-
-            e.printStackTrace()
-        }
-    }
-
-    // endregion
 }
-
-class TransferException(message: String): RuntimeException(message)
-class TransferCancelledException(message: String): RuntimeException(message)
