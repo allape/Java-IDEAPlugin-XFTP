@@ -21,8 +21,8 @@ import java.util.*
  */
 class FileNameTextFieldDialog(private val project: Project) {
 
-    fun openDialog (channel: SftpChannel, consumer: Consumer<String>) {
-        val validator = FileNameValidator(channel)
+    fun openDialog (isDirectory: Boolean, consumer: Consumer<String>) {
+        val validator = FileNameValidator(isDirectory)
         if (Experiments.getInstance().isFeatureEnabled("show.create.new.element.in.popup")) {
             createLightWeightPopup(validator, consumer).showCenteredInCurrentWindow(project)
         } else {
@@ -56,19 +56,30 @@ class FileNameTextFieldDialog(private val project: Project) {
 
 }
 
-class FileNameValidator(private val channel: SftpChannel) : InputValidatorEx {
+class FileNameValidator(private val isDirectory: Boolean) : InputValidatorEx {
+
+    private val objectName: String = if (isDirectory) "folder" else "file"
 
     private var errorText: String? = null
 
     override fun checkInput(inputString: String?): Boolean {
+        if (inputString == null || inputString.isEmpty()) {
+            errorText = "$objectName name can NOT be empty"
+            return false
+        }
+        val parsedName = inputString.replace("\\", ExplorerBaseWindow.FILE_SEP)
+        if (!isDirectory && inputString.endsWith(ExplorerBaseWindow.FILE_SEP)) {
+            errorText = "$objectName name can NOT end withs ${ExplorerBaseWindow.FILE_SEP}"
+            return false
+        }
         val tokenizer = StringTokenizer(
-            inputString?.replace("\\", ExplorerBaseWindow.FILE_SEP),
+            parsedName,
             ExplorerBaseWindow.FILE_SEP,
         )
         while (tokenizer.hasMoreTokens()) {
             val token = tokenizer.nextToken()
-            if ((token == "." || token == "..") && !tokenizer.hasMoreTokens()) {
-                errorText = "invalid file name: $token"
+            if ((token == "." || token == "..")) {
+                errorText = "invalid $objectName name: $token"
                 return false
             }
         }

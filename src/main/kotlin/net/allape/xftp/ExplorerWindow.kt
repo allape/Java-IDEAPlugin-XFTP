@@ -524,7 +524,7 @@ class ExplorerWindow(
             }
         }
         touch.addActionListener {
-            FileNameTextFieldDialog(project).openDialog(sftpChannel!!) { filename ->
+            FileNameTextFieldDialog(project).openDialog(false) { filename ->
                 application.executeOnPooledThread {
                     lockRemoteUIs()
                     var requiredReload = true
@@ -558,7 +558,7 @@ class ExplorerWindow(
             }
         }
         mkdirp.addActionListener {
-            FileNameTextFieldDialog(project).openDialog(sftpChannel!!) { filename ->
+            FileNameTextFieldDialog(project).openDialog(true) { filename ->
                 application.executeOnPooledThread {
                     lockRemoteUIs()
                     var requiredReload = true
