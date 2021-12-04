@@ -1,34 +1,19 @@
-# XFTP - A SFTP tools for IntelliJ IDEA Ultimate
+# XFTP - SFTP tool for IntelliJ Ultimate Edition IDE, like IDEA, WebStorm, PHPStorm and more.
 
-### [GitHub](https://github.com/ALLAPE/Java-IDEAPlugin-XFTP) | [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/16590-xftp)
+### [GitHub](https://github.com/allape/Java-IDEAPlugin-XFTP) | [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/16590-xftp)
 
 ### Screen Shots
 ![ScreenShot1](examples/screenshot-1.png)
 
 ### Features
-- ✔️ Editing remote files just by double-click it, and saving (Ctrl s or Cmd s by default) for uploading.
-- ✔️ Drop on remote view port to upload (just available for dragging from Finder or Explorer).
-- ✔️️ Dragging from local file view port to remote file view port, and vice versa.
+- ✔️ Editing a remote file just by double-click it, and auto upload on saving.
+- ✔️ Drop on remote list to upload (also available for dragging from Finder and Explorer).
+- ✔️️ Dragging from local file list to remote file list to transfer, and vice versa.
 - ✔️️ Open new terminal session in current folder.
-- ✔️️️ Autocomplete for history paths.
-- ✖️ Transferring history list with re-try button.
-- ✖️ sftp FileSystem with custom VirtualFile.
-- ➖️ More operations in file view port: delete, copy, paste, etc...
+- ✔️️️ Memo for history locations.
+- ➖️ More operations in context menu: rm, touch, mkdir, cp, mv...
+- ✖️ Transferring history list with retry button.
+- ✖️ Custom remote file VirtualFile.
 
 ## Known Issues
-- Make sure the double-clicked remote file is not in the downloading queue.
-- Folder uploading progress(Task.Backgroundable) calculation error.
-
-### Nuts-pain
-```java
-ConnectionBuilder connectionBuilder = RemoteCredentialsUtil.connectionBuilder(data, this.project);
-SftpChannel sftpChannel = connectionBuilder.openSftpChannel();
-sftpChannel.uploadFileOrDir(local, remote, ""); // -> throws some exceptions because the remote variable has been appended a "/" at its tail
-```
-- Why there is no function for creating a file
-
-### Enhancements
-- UI needs obey [IntelliJ Platform UI Guidelines](https://jetbrains.github.io/ui/)
-- Uploading and downloading performance test.
-- English JavaDoc and comments maybe?
-- More comfortable usage of SSHChannel?
+- Connection can NOT be cancelled in connecting progress.
