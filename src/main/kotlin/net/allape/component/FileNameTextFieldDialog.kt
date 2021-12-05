@@ -17,21 +17,22 @@ import java.util.*
  */
 class FileNameTextFieldDialog(private val project: Project) {
 
-    fun openDialog (isDirectory: Boolean, consumer: Consumer<String>) {
-        val validator = FileNameValidator(isDirectory)
+    fun openDialog (isDirectory: Boolean, value: String? = null, consumer: Consumer<String>) {
+        val validator = FileNameValidator(isDirectory, value)
         if (Experiments.getInstance().isFeatureEnabled("show.create.new.element.in.popup")) {
-            createLightWeightPopup(validator, consumer).showCenteredInCurrentWindow(project)
+            createLightWeightPopup(validator, value, consumer).showCenteredInCurrentWindow(project)
         } else {
             Messages.showInputDialog(
                 this.project, "Create something new",
-                "New File", null, null, validator
+                "New ${if (isDirectory) "Folder" else "File"}", null, value, validator
             )
         }
     }
 
-    private fun createLightWeightPopup(validator: FileNameValidator, consumer: Consumer<String>): JBPopup {
+    private fun createLightWeightPopup(validator: FileNameValidator, value: String? = null, consumer: Consumer<String>): JBPopup {
         val contentPanel = NewItemSimplePopupPanel()
         val nameField = contentPanel.textField
+        if (value != null) nameField.text = value
         return NewItemPopupUtil.createNewItemPopup("New ${validator.objectName.replaceFirstChar { it.uppercaseChar() }}", contentPanel, nameField).also { popup ->
             contentPanel.applyAction = Consumer { event: InputEvent? ->
                 val name = nameField.text
@@ -47,7 +48,10 @@ class FileNameTextFieldDialog(private val project: Project) {
 
 }
 
-class FileNameValidator(private val isDirectory: Boolean) : InputValidatorEx {
+class FileNameValidator(
+    private val isDirectory: Boolean,
+    private val value: String? = null,
+) : InputValidatorEx {
 
     val objectName: String = if (isDirectory) "folder" else "file"
 
@@ -61,6 +65,10 @@ class FileNameValidator(private val isDirectory: Boolean) : InputValidatorEx {
         val parsedName = inputString.replace("\\", ExplorerBaseWindow.FILE_SEP)
         if (!isDirectory && inputString.endsWith(ExplorerBaseWindow.FILE_SEP)) {
             errorText = "$objectName name can NOT end withs ${ExplorerBaseWindow.FILE_SEP}"
+            return false
+        }
+        if (value == inputString) {
+            errorText = "$value already exists"
             return false
         }
         val tokenizer = StringTokenizer(

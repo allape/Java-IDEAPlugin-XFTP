@@ -555,7 +555,7 @@ class ExplorerWindow(
             val file = files[0]
             val isDir = file.isDir()
 
-            FileNameTextFieldDialog(project).openDialog(isDir) { filename ->
+            FileNameTextFieldDialog(project).openDialog(isDir, file.name()) { filename ->
                 executeOnPooledThreadWithRemoteUILocked({
                     val parsedFileName = joinWithCurrentRemotePath(filename.trim())
 
@@ -584,7 +584,7 @@ class ExplorerWindow(
             val file = files[0]
             val isDir = file.isDir()
 
-            FileNameTextFieldDialog(project).openDialog(isDir) { filename ->
+            FileNameTextFieldDialog(project).openDialog(isDir, file.name()) { filename ->
                 executeOnPooledThreadWithRemoteUILocked({
                     val parsedFileName = joinWithCurrentRemotePath(filename.trim())
 
