@@ -10,6 +10,7 @@ import com.intellij.ssh.RemoteFileObject
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.util.Consumer
 import net.allape.action.ActionToolbarFastEnableAnAction
 import net.allape.component.FileTable
 import net.allape.component.MemoComboBox
@@ -18,6 +19,7 @@ import java.awt.Dimension
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.datatransfer.DataFlavor
+import java.util.function.Supplier
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -72,7 +74,9 @@ abstract class ExplorerWindowUI(
         // endregion
 
         const val RM_RF_TEXT = "rm -Rf"
+        const val MV_TEXT = "mv"
         const val TOUCH_TEXT = "touch"
+        const val CP_TEXT = "cp"
         const val MKDIR_P_TEXT = "mkdir -p"
     }
 
@@ -120,6 +124,8 @@ abstract class ExplorerWindowUI(
 
     // 删除
     protected val rmRf = JBMenuItem(RM_RF_TEXT)
+    // 克隆
+    protected val duplicate = JBMenuItem(CP_TEXT)
     // 新建文件
     protected val touch = JBMenuItem(TOUCH_TEXT)
     // 新建文件夹
@@ -179,6 +185,7 @@ abstract class ExplorerWindowUI(
 
         resetRemoteListContentMenuItemsText()
         remoteFileListPopupMenu.add(rmRf)
+        remoteFileListPopupMenu.add(duplicate)
         remoteFileListPopupMenu.add(touch)
         remoteFileListPopupMenu.add(mkdirp)
         remoteFileList.componentPopupMenu = remoteFileListPopupMenu
@@ -219,6 +226,7 @@ abstract class ExplorerWindowUI(
      */
     protected fun setRemoteListContentMenuItems(enable: Boolean) {
         rmRf.isEnabled = enable
+        duplicate.isEnabled = enable
         touch.isEnabled = enable
         mkdirp.isEnabled = enable
     }
@@ -228,6 +236,7 @@ abstract class ExplorerWindowUI(
      */
     protected fun resetRemoteListContentMenuItemsText() {
         rmRf.text = "$RM_RF_TEXT ..."
+        duplicate.text = "$CP_TEXT ... ..."
         touch.text = TOUCH_TEXT
         mkdirp.text = MKDIR_P_TEXT
     }
@@ -253,6 +262,26 @@ abstract class ExplorerWindowUI(
             remoteWrapper.isEnabled = true
             remoteFileList.isEnabled = true
             remotePath.isEnabled = true
+        }
+    }
+
+    /**
+     * 执行application.executeOnPooledThread并锁定远程列表
+     * @param callback 返回值将用于是否刷新远程列表
+     * @param errConsumer 出错时将调用的方法
+     */
+    protected open fun executeOnPooledThreadWithRemoteUILocked(callback: Supplier<Boolean>, errConsumer: Consumer<Exception>? = null) {
+        application.executeOnPooledThread {
+            lockRemoteUIs()
+            var requiredReload = true
+            try {
+                requiredReload = callback.get()
+            } catch (err: Exception) {
+                err.printStackTrace()
+                errConsumer?.consume(err)
+            }
+            unlockRemoteUIs()
+            if (requiredReload) reloadRemote()
         }
     }
 

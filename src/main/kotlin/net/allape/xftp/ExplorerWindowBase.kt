@@ -3,6 +3,7 @@ package net.allape.xftp
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.Application
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider
@@ -33,7 +34,6 @@ import net.schmizz.sshj.xfer.TransferListener
 import java.io.File
 import java.io.IOException
 import java.net.SocketException
-import java.util.HashMap
 import kotlin.math.roundToInt
 
 class TransferException(message: String): RuntimeException(message)
@@ -43,6 +43,8 @@ abstract class ExplorerBaseWindow(
     protected val project: Project,
     protected val toolWindow: ToolWindow,
 ) : Disposable {
+
+    private val logger = Logger.getInstance(ExplorerBaseWindow::class.java)
 
     protected val application: Application = ApplicationManager.getApplication()
 
@@ -217,6 +219,8 @@ abstract class ExplorerBaseWindow(
             size = if (type === TransferType.UPLOAD) localFile.length() else remoteFile.size(),
         )
 
+        logger.info("Transfer ${transfer.source} to ${transfer.target}...")
+
         transferring.add(transfer)
         history.add(transfer)
         historyTopicHandler.before(HistoryTopicHandler.HAction.RERENDER)
@@ -348,6 +352,7 @@ abstract class ExplorerBaseWindow(
     @Synchronized
     open fun executeSync(command: String, timeoutInSeconds: Int = 30) {
         if (connectionBuilder != null) {
+            logger.info("Execute \"$command\" with timeout $timeoutInSeconds seconds")
             connectionBuilder!!.execBuilder(command).execute(timeoutInSeconds).waitFor()
         } else {
             Services.message(

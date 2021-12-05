@@ -3,6 +3,7 @@ package net.allape.xftp
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.Separator
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
@@ -33,6 +34,7 @@ import net.allape.util.Maps
 import net.schmizz.sshj.sftp.SFTPClient
 import org.jetbrains.plugins.terminal.TerminalTabState
 import org.jetbrains.plugins.terminal.TerminalView
+import org.junit.Assert
 import java.awt.Desktop
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
@@ -59,6 +61,8 @@ class ExplorerWindow(
         // 双击间隔, 毫秒
         const val DOUBLE_CLICK_INTERVAL: Long = 350
     }
+
+    private val logger = Logger.getInstance(ExplorerWindow::class.java)
 
     private var clickWatcher: Long = System.currentTimeMillis()
 
@@ -494,89 +498,99 @@ class ExplorerWindow(
             val files: List<RemoteFileObject> = getSelectedRemoteFileList()
             if (MessageDialogBuilder.yesNo(
                     "Delete Confirm",
-                    "${files.joinToString(separator = "\n") { it.name() }}\n\nThis operation is irreversible, continue?"
+                    "${files.joinToString(separator = "\n") { it.name() }}\n"
                 )
                 .asWarning()
-                .yesText("Continue")
+                .yesText("Delete")
                 .noText("Cancel")
                 .ask(project)
             ) {
-                application.executeOnPooledThread {
-                    lockRemoteUIs()
+                executeOnPooledThreadWithRemoteUILocked({
                     // 开启一个ExecChannel来删除非空的文件夹
                     for (file in files) {
                         if (file.exists()) {
                             try {
-                                executeSync("rm -Rf ${file.path()}")
+                                executeSync("rm -Rf \"${file.path()}\"")
                             } catch (err: java.lang.Exception) {
                                 err.printStackTrace()
                                 Services.message(
-                                    "Error occurred while delete file: ${file.path()}",
+                                    "Error occurred while deleting file: ${file.path()}",
                                     MessageType.ERROR
                                 )
                             }
                         }
                     }
-                    unlockRemoteUIs()
-                    // 刷新当前页面
-                    reloadRemote()
-                }
+
+                    true
+                })
             }
         }
         touch.addActionListener {
             FileNameTextFieldDialog(project).openDialog(false) { filename ->
-                application.executeOnPooledThread {
-                    lockRemoteUIs()
-                    var requiredReload = true
-                    try {
-                        val parsedFileName = joinWithCurrentRemotePath(filename.trim())
+                executeOnPooledThreadWithRemoteUILocked({
+                    val parsedFileName = joinWithCurrentRemotePath(filename.trim())
 
-                        // 如果包含文件分隔符且对应的文件夹不存在, 则先去创建文件夹
-                        val folderName: String? =
-                            if (parsedFileName.contains(FILE_SEP))
-                                parsedFileName.substring(0, parsedFileName.lastIndexOf(FILE_SEP))
-                            else null
-
-                        if (folderName != null) {
-                            sftpClient!!.mkdirs(folderName)
-                        }
-
-                        executeSync("touch $parsedFileName")
-                        requiredReload = false
-                        // 打开当前文件
-                        setCurrentRemotePath(parsedFileName)
-                    } catch (err: java.lang.Exception) {
-                        err.printStackTrace()
-                        Services.message(
-                            "Error occurred while create file: ${err.message}",
-                            MessageType.ERROR
-                        )
+                    val folderName = getParentFolderPath(parsedFileName, FILE_SEP)
+                    if (folderName != FILE_SEP) {
+                        sftpClient!!.mkdirs(folderName)
                     }
-                    unlockRemoteUIs()
-                    if (requiredReload) reloadRemote()
+
+                    executeSync("touch \"$parsedFileName\"")
+                    // 打开当前文件
+                    setCurrentRemotePath(parsedFileName)
+
+                    false
+                }) {
+                    Services.message(
+                        "Error occurred while creating file: ${it.message}",
+                        MessageType.ERROR
+                    )
+                }
+            }
+        }
+        duplicate.addActionListener {
+            val files: List<RemoteFileObject> = getSelectedRemoteFileList()
+            Assert.assertTrue("duplicate only accepts one selection", files.size == 1)
+
+            val file = files[0]
+            val isDir = file.isDir()
+
+            FileNameTextFieldDialog(project).openDialog(isDir) { filename ->
+                executeOnPooledThreadWithRemoteUILocked({
+                    val parsedFileName = joinWithCurrentRemotePath(filename.trim())
+
+                    val folderName = getParentFolderPath(parsedFileName, FILE_SEP)
+                    if (folderName != FILE_SEP) {
+                        sftpClient!!.mkdirs(folderName)
+                    }
+
+                    executeSync("cp${if (isDir) " -R" else ""} \"${file.path()}\" \"$parsedFileName\"")
+
+                    setCurrentRemotePath(parsedFileName)
+
+                    false
+                }) {
+                    Services.message(
+                        "Error occurred while duplicating file: ${it.message}",
+                        MessageType.ERROR
+                    )
                 }
             }
         }
         mkdirp.addActionListener {
             FileNameTextFieldDialog(project).openDialog(true) { filename ->
-                application.executeOnPooledThread {
-                    lockRemoteUIs()
-                    var requiredReload = true
-                    try {
-                        val fullPath = joinWithCurrentRemotePath(filename.trim())
-                        sftpClient!!.mkdirs(fullPath)
+                executeOnPooledThreadWithRemoteUILocked({
+                    val fullPath = joinWithCurrentRemotePath(filename.trim())
+                    sftpClient!!.mkdirs(fullPath)
 
-                        requiredReload = false
-                        setCurrentRemotePath(fullPath)
-                    } catch (err: java.lang.Exception) {
-                        err.printStackTrace()
-                        Services.message(
-                            "Error occurred while create folder: ${err.message}",
-                            MessageType.ERROR
-                        )
-                    }
-                    unlockRemoteUIs()
-                    if (requiredReload) reloadRemote()
+                    setCurrentRemotePath(fullPath)
+
+                    false
+                }) {
+                    Services.message(
+                        "Error occurred while creating folder: ${it.message}",
+                        MessageType.ERROR
+                    )
                 }
             }
         }
@@ -585,10 +599,17 @@ class ExplorerWindow(
             override fun popupMenuWillBecomeVisible(e: PopupMenuEvent) {
                 if (isConnected()) {
                     setRemoteListContentMenuItems(true)
+
                     val selectedFiles = remoteFileList.selected()
+
                     rmRf.isEnabled = selectedFiles.isNotEmpty()
                     if (rmRf.isEnabled) {
                         rmRf.text = "$RM_RF_TEXT ${selectedFiles[0].name} ${if (selectedFiles.size > 1) "and ${selectedFiles.size-1} more" else ""}"
+                    }
+
+                    duplicate.isEnabled = selectedFiles.size == 1
+                    if (duplicate.isEnabled) {
+                        duplicate.text = "$CP_TEXT${if (selectedFiles[0].directory) " -R" else ""} ${selectedFiles[0].name} ..."
                     }
                 } else {
                     setRemoteListContentMenuItems(false)
@@ -627,6 +648,9 @@ class ExplorerWindow(
                                         true
                                     ).withConnectionTimeout(30L)
 
+                                    val connectionLogName = "${credentials!!.userName}@${credentials!!.host}:${credentials!!.port}"
+                                    logger.info("Start to connect to $connectionLogName...")
+
                                     ProgressManager.getInstance().run(object : Task.Backgroundable(
                                         project,
                                         "Connecting to " + getWindowName(),
@@ -641,6 +665,8 @@ class ExplorerWindow(
                                             try {
                                                 sftpChannel = connectionBuilder!!.openSftpChannel()
                                                 triggerConnected()
+
+                                                logger.info("Connection established with $connectionLogName")
 
                                                 try {
                                                     // 获取sftpClient
@@ -674,6 +700,7 @@ class ExplorerWindow(
                                             super.onCancel()
                                             cancelled = true
                                             connectionThread?.cancel(true)
+                                            logger.info("Cancelling connection of $connectionLogName...")
                                         }
                                     })
                                 }
