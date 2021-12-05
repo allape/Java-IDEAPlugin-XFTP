@@ -62,13 +62,17 @@ class FileNameValidator(
             errorText = "$objectName name can NOT be empty"
             return false
         }
+        if (value == inputString) {
+            errorText = "$value already exists"
+            return false
+        }
         val parsedName = inputString.replace("\\", ExplorerBaseWindow.FILE_SEP)
         if (!isDirectory && inputString.endsWith(ExplorerBaseWindow.FILE_SEP)) {
             errorText = "$objectName name can NOT end withs ${ExplorerBaseWindow.FILE_SEP}"
             return false
         }
-        if (value == inputString) {
-            errorText = "$value already exists"
+        if (inputString.contains(Regex("[\"'`\$]"))) {
+            errorText = "$objectName name can NOT contain [\"'`$]"
             return false
         }
         val tokenizer = StringTokenizer(
