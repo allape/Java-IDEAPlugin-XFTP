@@ -498,7 +498,7 @@ class ExplorerWindow(
             val files: List<RemoteFileObject> = getSelectedRemoteFileList()
             if (MessageDialogBuilder.yesNo(
                     "Delete Confirm",
-                    "${files.joinToString(separator = "\n") { it.name() }}\n"
+                    "${files.joinToString(separator = "\n") { it.name() }}\n\n${files.size} item${if (files.size > 1) "s" else ""} will be deleted."
                 )
                 .asWarning()
                 .yesText("Delete")
@@ -577,6 +577,35 @@ class ExplorerWindow(
                 }
             }
         }
+        mv.addActionListener {
+            val files: List<RemoteFileObject> = getSelectedRemoteFileList()
+            Assert.assertTrue("mv only accepts one selection", files.size == 1)
+
+            val file = files[0]
+            val isDir = file.isDir()
+
+            FileNameTextFieldDialog(project).openDialog(isDir) { filename ->
+                executeOnPooledThreadWithRemoteUILocked({
+                    val parsedFileName = joinWithCurrentRemotePath(filename.trim())
+
+                    val folderName = getParentFolderPath(parsedFileName, FILE_SEP)
+                    if (folderName != FILE_SEP) {
+                        sftpClient!!.mkdirs(folderName)
+                    }
+
+                    executeSync("mv \"${file.path()}\" \"$parsedFileName\"")
+
+                    setCurrentRemotePath(parsedFileName)
+
+                    false
+                }) {
+                    Services.message(
+                        "Error occurred while renaming file: ${it.message}",
+                        MessageType.ERROR
+                    )
+                }
+            }
+        }
         mkdirp.addActionListener {
             FileNameTextFieldDialog(project).openDialog(true) { filename ->
                 executeOnPooledThreadWithRemoteUILocked({
@@ -608,8 +637,12 @@ class ExplorerWindow(
                     }
 
                     duplicate.isEnabled = selectedFiles.size == 1
+                    mv.isEnabled = duplicate.isEnabled
                     if (duplicate.isEnabled) {
                         duplicate.text = "$CP_TEXT${if (selectedFiles[0].directory) " -R" else ""} ${selectedFiles[0].name} ..."
+                    }
+                    if (mv.isEnabled) {
+                        mv.text = "$MV_TEXT ${selectedFiles[0].name} ..."
                     }
                 } else {
                     setRemoteListContentMenuItems(false)

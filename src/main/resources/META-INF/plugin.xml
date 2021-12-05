@@ -53,63 +53,30 @@
     </description>
 
     <change-notes><![CDATA[
-        <h5>2021-12-04</h5>
+        <h5>2021-10-10 ~ 2021-12-05</h5>
         <ul>
+            <li>Add cp and mv into context menu of remote list.</li>
             <li>Add touch and mkdir into context menu of remote list.</li>
             <li>Refactor delete warning confirm, default action is "no" now.</li>
-        </ul>
-        <h5>2021-11-12</h5>
-        <ul>
             <li>Fix #1.1: Unable to get connections of project-level.</li>
             <li>Update Gson.</li>
-        </ul>
-        <h5>2021-10-10</h5>
-        <ul>
             <li>Fix #1.</li>
         </ul>
-        <h5>2021-09-07</h5>
+        <h5>2021-04-28 ~ 2021-09-07</h5>
         <ul>
             <li>Rewrite code with kotlin.</li>
-        </ul>
-        <h5>2021-07-28</h5>
-        <ul>
             <li>Change IDEA version for compatibility.</li>
             <li>Add icon.</li>
-        </ul>
-        <h5>2021-06-14</h5>
-        <ul>
             <li>Fix buttons' state after failed to connect to a server.</li>
-        </ul>
-        <h5>2021-05-18</h5>
-        <ul>
-            <li>Fix some bugs.</li>
-        </ul>
-        <h5>2021-05-17</h5>
-        <ul>
-            <li>Fix some bugs.</li>
             <li>Add display/hide local file list button.</li>
             <li>Change file list minimum width.</li>
             <li>Change title font size in plugin description.</li>
-        </ul>
-        <h5>2021-05-13</h5>
-        <ul>
             <li>Change buttons position, put all buttons together for minimizing the mouse operation distance.</li>
-        </ul>
-        <h5>2021-05-12</h5>
-        <ul>
-            <li>Fix some bugs.</li>
             <li>Add remote reload button.</li>
             <li>Add a confirmation on closing tab while connected to a server.</li>
-        </ul>
-        <h5>2021-04-28</h5>
-        <ul>
             <li>Change all buttons to tool bar.</li>
             <li>Add tooltip for all buttons.</li>
             <li>Fix remote not reloading after deleting or transferring.</li>
-        </ul>
-        <h5>2021-04-17</h5>
-        <ul>
-            <li>A first usable Version.</li>
         </ul>
         <h5>2020-11-02</h5>
         <ul>

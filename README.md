@@ -1,4 +1,4 @@
-# XFTP - SFTP tool for IntelliJ Ultimate Edition IDE, like IDEA, WebStorm, PHPStorm and more.
+# XFTP - A SFTP Plugin for IntelliJ Ultimate Edition IDE, like IDEA, WebStorm, PHPStorm and more.
 
 ### [GitHub](https://github.com/allape/Java-IDEAPlugin-XFTP) | [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/16590-xftp)
 
@@ -11,7 +11,8 @@
 - ✔️️ Dragging from local file list to remote file list to transfer, and vice versa.
 - ✔️️ Open new terminal session in current folder.
 - ✔️️️ Memo for history locations.
-- ➖️ More operations in context menu: rm, touch, mkdir, cp, mv...
+- ✔️️️ Operations in context menu: rm, cp, mv, touch, mkdir.
+- ✖️ Copy and Paste actions in both list...
 - ✖️ Transferring history list with retry button.
 - ✖️ Custom remote file VirtualFile.
 

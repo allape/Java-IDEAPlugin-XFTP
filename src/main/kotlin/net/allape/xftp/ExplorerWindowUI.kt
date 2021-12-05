@@ -126,6 +126,8 @@ abstract class ExplorerWindowUI(
     protected val rmRf = JBMenuItem(RM_RF_TEXT)
     // 克隆
     protected val duplicate = JBMenuItem(CP_TEXT)
+    // 重命名
+    protected val mv = JBMenuItem(MV_TEXT)
     // 新建文件
     protected val touch = JBMenuItem(TOUCH_TEXT)
     // 新建文件夹
@@ -186,6 +188,7 @@ abstract class ExplorerWindowUI(
         resetRemoteListContentMenuItemsText()
         remoteFileListPopupMenu.add(rmRf)
         remoteFileListPopupMenu.add(duplicate)
+        remoteFileListPopupMenu.add(mv)
         remoteFileListPopupMenu.add(touch)
         remoteFileListPopupMenu.add(mkdirp)
         remoteFileList.componentPopupMenu = remoteFileListPopupMenu
@@ -227,6 +230,7 @@ abstract class ExplorerWindowUI(
     protected fun setRemoteListContentMenuItems(enable: Boolean) {
         rmRf.isEnabled = enable
         duplicate.isEnabled = enable
+        mv.isEnabled = enable
         touch.isEnabled = enable
         mkdirp.isEnabled = enable
     }
@@ -237,6 +241,7 @@ abstract class ExplorerWindowUI(
     protected fun resetRemoteListContentMenuItemsText() {
         rmRf.text = "$RM_RF_TEXT ..."
         duplicate.text = "$CP_TEXT ... ..."
+        mv.text = "$MV_TEXT ... ..."
         touch.text = TOUCH_TEXT
         mkdirp.text = MKDIR_P_TEXT
     }
