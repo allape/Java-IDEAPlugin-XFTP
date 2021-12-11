@@ -22,6 +22,7 @@ import com.intellij.ssh.channels.SftpChannel
 import com.intellij.ui.content.Content
 import com.intellij.util.Consumer
 import com.jetbrains.plugins.remotesdk.console.SshConfigConnector
+import com.jetbrains.plugins.remotesdk.console.SshTerminalDirectRunner
 import net.allape.common.HistoryTopicHandler
 import net.allape.common.XFTPManager
 import net.allape.component.FileTableModel
@@ -30,9 +31,12 @@ import net.schmizz.sshj.common.StreamCopier
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.sftp.SFTPFileTransfer
 import net.schmizz.sshj.xfer.TransferListener
+import org.jetbrains.plugins.terminal.TerminalTabState
+import org.jetbrains.plugins.terminal.TerminalView
 import java.io.File
 import java.io.IOException
 import java.net.SocketException
+import java.nio.charset.Charset
 import kotlin.math.roundToInt
 
 class TransferException(message: String): RuntimeException(message)
@@ -106,7 +110,8 @@ abstract class ExplorerBaseWindow(
     // 当前配置的连接创建者
     protected var connectionBuilder: ConnectionBuilder? = null
     // 当前开启的channel
-    protected var sftpChannel: SftpChannel? = null
+    var sftpChannel: SftpChannel? = null
+        protected set
     // 当前channel中的sftp client
     var sftpClient: SFTPClient? = null
         protected set
@@ -362,9 +367,26 @@ abstract class ExplorerBaseWindow(
     }
 
     /**
+     * 在新的terminal窗口打开提供的路径
+     * @param path 打开的terminal session的工作目录
+     */
+    open fun openInNewTerminal(path: String?) {
+        sftpChannel?.isConnected?.let {
+            if (it && credentials != null) {
+                val state = TerminalTabState()
+                state.myWorkingDirectory = path
+                TerminalView.getInstance(project).createNewSession(
+                    SshTerminalDirectRunner(project, credentials, Charset.defaultCharset()),
+                    state
+                )
+            }
+        }
+    }
+
+    /**
      * 断开SFTP连接
      */
-    protected open fun disconnect(triggerEvent: Boolean = true) {
+    open fun disconnect(triggerEvent: Boolean = true) {
         // 断开连接
         if (sftpChannel != null && sftpChannel!!.isConnected) {
             try {

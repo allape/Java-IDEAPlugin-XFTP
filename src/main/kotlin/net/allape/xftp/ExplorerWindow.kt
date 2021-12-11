@@ -4,6 +4,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
@@ -22,6 +23,7 @@ import com.intellij.util.ReflectionUtil
 import com.jetbrains.plugins.remotesdk.console.SshConfigConnector
 import com.jetbrains.plugins.remotesdk.console.SshTerminalDirectRunner
 import icons.TerminalIcons
+import net.allape.action.Actions
 import net.allape.action.EnablableAction
 import net.allape.common.RemoteDataProducerWrapper
 import net.allape.common.XFTPManager
@@ -419,7 +421,8 @@ class ExplorerWindow(
         explore = object : EnablableAction(
             remoteActionToolBar,
             "Start New Session", "Start a sftp session",
-            AllIcons.Webreferences.Server
+            AllIcons.Webreferences.Server,
+            KeymapUtil.getActiveKeymapShortcuts(Actions.MakeAConnectionAction),
         ) {
             override fun actionPerformed(e: AnActionEvent) {
                 connect()
@@ -428,16 +431,18 @@ class ExplorerWindow(
         dropdown = object : EnablableAction(
             remoteActionToolBar,
             "Dropdown", "Display remote access history",
-            AllIcons.Actions.MoveDown
+            AllIcons.Actions.MoveDown,
+            KeymapUtil.getActiveKeymapShortcuts(Actions.RemoteMemoSelectorDropdownAction),
         ) {
             override fun actionPerformed(e: AnActionEvent) {
-                remotePath.isPopupVisible = true
+                remotePath.isPopupVisible = !remotePath.isPopupVisible
             }
         }
         reload = object : EnablableAction(
             remoteActionToolBar,
             "Reload Remote", "Reload current remote folder",
-            AllIcons.Actions.Refresh
+            AllIcons.Actions.Refresh,
+            KeymapUtil.getActiveKeymapShortcuts(Actions.ReloadRemoteAction),
         ) {
             override fun actionPerformed(e: AnActionEvent) {
                 reloadRemote()
@@ -446,7 +451,8 @@ class ExplorerWindow(
         suspend = object : EnablableAction(
             remoteActionToolBar,
             "Disconnect", "Disconnect from sftp server",
-            AllIcons.Actions.Suspend
+            AllIcons.Actions.Suspend,
+            KeymapUtil.getActiveKeymapShortcuts(Actions.DisconnectAction),
         ) {
             override fun actionPerformed(e: AnActionEvent) {
                 if (MessageDialogBuilder.yesNo("Disconnecting", "Do you really want to close this session?")
@@ -461,21 +467,18 @@ class ExplorerWindow(
         newTerminal = object : EnablableAction(
             remoteActionToolBar,
             "Open In Terminal", "Open current folder in ssh terminal",
-            TerminalIcons.OpenTerminal_13x13
+            TerminalIcons.OpenTerminal_13x13,
+            KeymapUtil.getActiveKeymapShortcuts(Actions.NewTerminalAction),
         ) {
             override fun actionPerformed(e: AnActionEvent) {
-                val state = TerminalTabState()
-                state.myWorkingDirectory = remotePath.getMemoItem()
-                TerminalView.getInstance(project).createNewSession(
-                    SshTerminalDirectRunner(project, credentials, Charset.defaultCharset()),
-                    state
-                )
+                this@ExplorerWindow.openInNewTerminal(remotePath.getMemoItem())
             }
         }
         localToggle = object : EnablableAction(
             remoteActionToolBar,
             "Toggle Local Explorer", "Hide or display local file list",
-            AllIcons.Diff.ApplyNotConflictsRight
+            AllIcons.Diff.ApplyNotConflictsRight,
+            KeymapUtil.getActiveKeymapShortcuts(Actions.ToggleVisibilityLocalListAction),
         ) {
             override fun actionPerformed(e: AnActionEvent) {
                 val to: Boolean = !splitter.firstComponent.isVisible

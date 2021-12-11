@@ -38,6 +38,15 @@ class XFTPManager {
             Notifications.Bus.notify(notification)
         }
 
+        /**
+         * 获取当前选中的窗口, 可能为null
+         */
+        fun getCurrentSelectedWindow(): ExplorerWindow? {
+            return toolWindow.contentManager.selectedContent?.let { content ->
+                windows[content]
+            }
+        }
+
     }
 
 }

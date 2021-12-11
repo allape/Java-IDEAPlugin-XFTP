@@ -83,11 +83,11 @@ abstract class ExplorerWindowUI(
     // region UI组件
 
     protected var panelWrapper = JPanel(BorderLayout())
-    protected var splitter: JBSplitter = OnePixelSplitter("xftp-main-window", .5f)
+    val splitter: JBSplitter = OnePixelSplitter("xftp-main-window", .5f)
 
     protected var localWrapper = JPanel(GridBagLayout())
     protected var localPathWrapper = JPanel(GridBagLayout())
-    protected var localPath = MemoComboBox<String>(LOCAL_HISTORY_PERSISTENCE_KEY)
+    val localPath = MemoComboBox<String>(LOCAL_HISTORY_PERSISTENCE_KEY)
     protected var localFileList: FileTable = FileTable()
     protected var localFileListWrapper: JBScrollPane = JBScrollPane(localFileList)
     protected var localActionGroup = DefaultActionGroup()
@@ -95,7 +95,7 @@ abstract class ExplorerWindowUI(
     protected var remoteWrapper = JPanel(GridBagLayout())
 
     protected var remotePathWrapper = JPanel(GridBagLayout())
-    protected var remotePath = MemoComboBox<String>(REMOTE_HISTORY_PERSISTENCE_KEY)
+    val remotePath = MemoComboBox<String>(REMOTE_HISTORY_PERSISTENCE_KEY)
     protected var remoteActionGroup = DefaultActionGroup()
     protected var remoteActionToolBar = ActionToolbarImpl(REMOTE_TOOL_BAR_PLACE, remoteActionGroup, false)
     protected var remoteFileList = FileTable()
@@ -114,7 +114,8 @@ abstract class ExplorerWindowUI(
     // 命令行打开
     protected lateinit var newTerminal: EnablableAction
     // 隐藏本地浏览器
-    protected lateinit var localToggle: EnablableAction
+    lateinit var localToggle: EnablableAction
+        protected set
 
     // endregion
 
