@@ -23,8 +23,7 @@ import com.intellij.ui.content.Content
 import com.intellij.util.Consumer
 import com.jetbrains.plugins.remotesdk.console.SshConfigConnector
 import net.allape.common.HistoryTopicHandler
-import net.allape.common.Services
-import net.allape.common.Windows
+import net.allape.common.XFTPManager
 import net.allape.component.FileTableModel
 import net.allape.model.*
 import net.schmizz.sshj.common.StreamCopier
@@ -142,7 +141,7 @@ abstract class ExplorerBaseWindow(
     fun getWindowName(): String {
         return if (connector != null) connector!!.name
         else if (credentials != null) "${credentials!!.userName}@${credentials!!.host}:${credentials!!.port}"
-        else Windows.WINDOW_DEFAULT_NAME
+        else XFTPManager.DEFAULT_NAME
     }
 
     /**
@@ -160,10 +159,10 @@ abstract class ExplorerBaseWindow(
      */
     protected open fun isChannelAlive(): Boolean {
         if (sftpChannel == null) {
-            Services.message("Please connect to server first!", MessageType.INFO)
+            XFTPManager.message("Please connect to server first!", MessageType.INFO)
             return false
         } else if (!sftpChannel!!.isConnected) {
-            Services.message("SFTP lost connection, retrying...", MessageType.ERROR)
+            XFTPManager.message("SFTP lost connection, retrying...", MessageType.ERROR)
             connect()
             return false
         }
@@ -175,7 +174,7 @@ abstract class ExplorerBaseWindow(
         } catch (e: Exception) {
             disconnect()
         }
-        Services.message("Connection is not alive any more, please make a new connection!", MessageType.WARNING)
+        XFTPManager.message("Connection is not alive any more, please make a new connection!", MessageType.WARNING)
         return false
     }
 
@@ -190,7 +189,7 @@ abstract class ExplorerBaseWindow(
         resultConsumer: Consumer<Transfer>? = null,
     ) {
         if (sftpChannel == null || !sftpChannel!!.isConnected) {
-            Services.message("Please start a sftp session first!", MessageType.INFO)
+            XFTPManager.message("Please start a sftp session first!", MessageType.INFO)
             throw IllegalStateException("No SFTP session available!")
         }
 
@@ -235,13 +234,13 @@ abstract class ExplorerBaseWindow(
             if (type === TransferType.UPLOAD) {
                 if (!localFile.exists()) {
                     val e = "Can't find local file $localFileAbsPath"
-                    Services.message(e, MessageType.ERROR)
+                    XFTPManager.message(e, MessageType.ERROR)
                     throw TransferException(e)
                 }
             } else {
                 if (!remoteFile.exists()) {
                     val e = "Can't find remote file $remoteFilePath"
-                    Services.message(e, MessageType.ERROR)
+                    XFTPManager.message(e, MessageType.ERROR)
                     throw TransferException(e)
                 }
             }
@@ -321,7 +320,7 @@ abstract class ExplorerBaseWindow(
                         resultConsumerProxy.consume(transfer)
 
                         e.printStackTrace()
-                        Services.message(
+                        XFTPManager.message(
                             "Error occurred while transferring ${transfer.source} to ${transfer.target}, ${e.message}",
                             MessageType.ERROR,
                         )
@@ -355,7 +354,7 @@ abstract class ExplorerBaseWindow(
             logger.info("Execute \"$command\" with timeout $timeoutInSeconds seconds")
             connectionBuilder!!.execBuilder(command).execute(timeoutInSeconds).waitFor()
         } else {
-            Services.message(
+            XFTPManager.message(
                 "No available connection to execute \"$command\" within $timeoutInSeconds seconds.",
                 MessageType.WARNING
             )
@@ -379,7 +378,7 @@ abstract class ExplorerBaseWindow(
         connectionBuilder = null
         sftpChannel = null
         sftpClient = null
-        content.displayName = Windows.WINDOW_DEFAULT_NAME
+        content.displayName = XFTPManager.DEFAULT_NAME
         history.clear()
         transferring.clear()
         remoteEditingFiles.clear()
@@ -428,7 +427,7 @@ abstract class ExplorerBaseWindow(
     protected fun openFileInEditor(file: File) {
         val virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(file)
         if (virtualFile == null) {
-            Services.message("${file.absolutePath} does not exists!")
+            XFTPManager.message("${file.absolutePath} does not exists!")
             return
         }
         NonProjectFileWritingAccessProvider.allowWriting(listOf(virtualFile))
@@ -518,7 +517,7 @@ abstract class ExplorerBaseWindow(
                 }
             } catch (e: IOException) {
                 e.printStackTrace()
-                Services.message("Unable to create cache file: " + e.message, MessageType.ERROR)
+                XFTPManager.message("Unable to create cache file: " + e.message, MessageType.ERROR)
             }
         }
     }

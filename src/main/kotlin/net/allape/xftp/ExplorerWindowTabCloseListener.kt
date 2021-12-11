@@ -5,7 +5,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.MessageDialogBuilder
 import com.intellij.ui.content.Content
-import net.allape.common.Windows
+import net.allape.common.XFTPManager
 
 class ExplorerWindowTabCloseListener(
     private val content: Content,
@@ -17,7 +17,7 @@ class ExplorerWindowTabCloseListener(
 
     override fun closeQuery(content: Content, projectClosing: Boolean): Boolean {
         if (projectClosing) return true
-        val window = Windows.windows[content]
+        val window = XFTPManager.windows[content]
         return if (window?.sftpClient != null) {
             MessageDialogBuilder.yesNo("A server is connected", "Do you really want to close this tab?")
                 .asWarning()

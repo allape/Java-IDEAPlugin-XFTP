@@ -4,12 +4,20 @@ import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.Notifications
 import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.wm.ToolWindow
+import com.intellij.ui.content.Content
+import net.allape.xftp.ExplorerWindow
 
-class Services {
+class XFTPManager {
 
     companion object {
 
         lateinit var toolWindow: ToolWindow
+
+        // 默认的窗口名称
+        const val DEFAULT_NAME = "Explorer"
+
+        // 当前打开的窗口
+        val windows: HashMap<Content, ExplorerWindow> = HashMap(10)
 
         /**
          * message中用到的group

@@ -11,7 +11,7 @@ import com.intellij.ui.JBSplitter
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.Consumer
-import net.allape.action.ActionToolbarFastEnableAnAction
+import net.allape.action.EnablableAction
 import net.allape.component.FileTable
 import net.allape.component.MemoComboBox
 import java.awt.BorderLayout
@@ -104,17 +104,17 @@ abstract class ExplorerWindowUI(
     // region 远程actions图标按钮
 
     // 建立连接
-    protected lateinit var explore: ActionToolbarFastEnableAnAction
+    protected lateinit var explore: EnablableAction
     // 显示combobox的下拉内容
-    protected lateinit var dropdown: ActionToolbarFastEnableAnAction
+    protected lateinit var dropdown: EnablableAction
     // 刷新
-    protected lateinit var reload: ActionToolbarFastEnableAnAction
+    protected lateinit var reload: EnablableAction
     // 断开连接
-    protected lateinit var suspend: ActionToolbarFastEnableAnAction
+    protected lateinit var suspend: EnablableAction
     // 命令行打开
-    protected lateinit var newTerminal: ActionToolbarFastEnableAnAction
+    protected lateinit var newTerminal: EnablableAction
     // 隐藏本地浏览器
-    protected lateinit var localToggle: ActionToolbarFastEnableAnAction
+    protected lateinit var localToggle: EnablableAction
 
     // endregion
 

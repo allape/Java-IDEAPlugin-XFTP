@@ -13,8 +13,7 @@ import com.intellij.openapi.wm.ex.ToolWindowEx
 import com.intellij.ui.content.ContentFactory
 import com.intellij.ui.content.ContentManagerEvent
 import com.intellij.ui.content.ContentManagerListener
-import net.allape.common.Services
-import net.allape.common.Windows
+import net.allape.common.XFTPManager
 import net.allape.xftp.ExplorerWindow
 import java.util.function.Supplier
 
@@ -30,7 +29,7 @@ class App: ToolWindowFactory, DumbAware {
             val contentFactory = ContentFactory.SERVICE.getInstance()
 
             //获取用于toolWindow显示的内容
-            val content = contentFactory.createContent(window.getUI(), Windows.WINDOW_DEFAULT_NAME, false)
+            val content = contentFactory.createContent(window.getUI(), XFTPManager.DEFAULT_NAME, false)
             content.isCloseable = true
 
             //给toolWindow设置内容
@@ -40,22 +39,22 @@ class App: ToolWindowFactory, DumbAware {
             window.bindContext(content)
 
             // 放入缓存
-            Windows.windows[content] = window
+            XFTPManager.windows[content] = window
         }
     }
 
     private val logger = Logger.getInstance(App::class.java)
 
     override fun init(toolWindow: ToolWindow) {
-        Services.toolWindow = toolWindow
+        XFTPManager.toolWindow = toolWindow
         toolWindow.addContentManagerListener(object : ContentManagerListener {
             override fun contentRemoved(event: ContentManagerEvent) {
-                val window = Windows.windows.get(event.content)
+                val window = XFTPManager.windows.get(event.content)
                 if (window == null) {
                     logger.warn("closed an un-cached window: $event")
                 } else {
                     window.dispose()
-                    Windows.windows.remove(event.content)
+                    XFTPManager.windows.remove(event.content)
                 }
                 if (toolWindow.contentManager.contents.isEmpty()) {
                     toolWindow.hide()
@@ -71,7 +70,7 @@ class App: ToolWindowFactory, DumbAware {
                     if (e.project != null) {
                         this@App.createToolWindowContent(e.project!!, toolWindow)
                     } else {
-                        Services.message("Explorer requires a project!", MessageType.INFO)
+                        XFTPManager.message("Explorer requires a project!", MessageType.INFO)
                     }
                 }
             })

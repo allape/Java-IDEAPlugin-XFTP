@@ -5,7 +5,7 @@ import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
 import com.intellij.openapi.project.DumbAwareAction
 import javax.swing.Icon
 
-abstract class ActionToolbarFastEnableAnAction(
+abstract class EnablableAction(
     private val toolbar: ActionToolbarImpl,
     text: String,
     description: String,

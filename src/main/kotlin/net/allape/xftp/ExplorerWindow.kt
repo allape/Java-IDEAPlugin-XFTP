@@ -22,9 +22,9 @@ import com.intellij.util.ReflectionUtil
 import com.jetbrains.plugins.remotesdk.console.SshConfigConnector
 import com.jetbrains.plugins.remotesdk.console.SshTerminalDirectRunner
 import icons.TerminalIcons
-import net.allape.action.ActionToolbarFastEnableAnAction
+import net.allape.action.EnablableAction
 import net.allape.common.RemoteDataProducerWrapper
-import net.allape.common.Services
+import net.allape.common.XFTPManager
 import net.allape.component.FileNameTextFieldDialog
 import net.allape.model.FileModel
 import net.allape.model.FileTransferHandler
@@ -56,6 +56,11 @@ class ExplorerWindow(
     project: Project,
     toolWindow: ToolWindow,
 ) : ExplorerWindowUI(project, toolWindow) {
+
+    // keymap
+    // com.intellij.openapi.keymap.KeymapUtil.getActiveKeymapShortcuts
+    // demo
+    // jetbrains://idea/navigate/reference?project=xftp-kt&path=/Applications/IntelliJ IDEA.app/Contents/plugins/terminal/lib/terminal.jar!/META-INF/plugin.xml
 
     companion object {
         // 双击间隔, 毫秒
@@ -129,7 +134,7 @@ class ExplorerWindow(
                             Desktop.getDesktop().open(File(path))
                         } catch (ioException: IOException) {
                             ioException.printStackTrace()
-                            Services.message("Failed to open \"$path\"", MessageType.ERROR)
+                            XFTPManager.message("Failed to open \"$path\"", MessageType.ERROR)
                         }
                     }
                 }
@@ -141,7 +146,7 @@ class ExplorerWindow(
             try {
                 val file = File(path)
                 if (!file.exists()) {
-                    Services.message("$path does not exist!", MessageType.INFO)
+                    XFTPManager.message("$path does not exist!", MessageType.INFO)
                     // 获取第二个历史, 不存在时加载项目路径
                     localPath.getItemAt(1)?.let { lastPath ->
                         if (lastPath.memo != null) {
@@ -182,7 +187,7 @@ class ExplorerWindow(
                                 Desktop.getDesktop().open(file)
                             } catch (ioException: IOException) {
                                 ioException.printStackTrace()
-                                Services.message(
+                                XFTPManager.message(
                                     "Failed to open file in system file manager",
                                     MessageType.INFO
                                 )
@@ -216,7 +221,7 @@ class ExplorerWindow(
                 }
             } catch (ex: java.lang.Exception) {
                 ex.printStackTrace()
-                Services.message(ex.message!!, MessageType.WARNING)
+                XFTPManager.message(ex.message!!, MessageType.WARNING)
             }
         }
 
@@ -302,7 +307,7 @@ class ExplorerWindow(
                         val file = sftpChannel!!.file(path)
                         path = file.path()
                         if (!file.exists()) {
-                            Services.message("$path does not exist!", MessageType.INFO)
+                            XFTPManager.message("$path does not exist!", MessageType.INFO)
                             loadParent = getParentFolderPath(file.path(), FILE_SEP)
                         } else if (!file.isDir()) {
                             downloadFileAndEdit(file)
@@ -327,7 +332,7 @@ class ExplorerWindow(
                         }
                     } catch (ex: java.lang.Exception) {
                         ex.printStackTrace()
-                        Services.message(
+                        XFTPManager.message(
                             "Error occurred while listing remote files: " + ex.message,
                             MessageType.ERROR
                         )
@@ -411,7 +416,7 @@ class ExplorerWindow(
      * 构建远程列表左侧action按钮
      */
     private fun buildRemoteListActionButtons() {
-        explore = object : ActionToolbarFastEnableAnAction(
+        explore = object : EnablableAction(
             remoteActionToolBar,
             "Start New Session", "Start a sftp session",
             AllIcons.Webreferences.Server
@@ -420,7 +425,7 @@ class ExplorerWindow(
                 connect()
             }
         }
-        dropdown = object : ActionToolbarFastEnableAnAction(
+        dropdown = object : EnablableAction(
             remoteActionToolBar,
             "Dropdown", "Display remote access history",
             AllIcons.Actions.MoveDown
@@ -429,7 +434,7 @@ class ExplorerWindow(
                 remotePath.isPopupVisible = true
             }
         }
-        reload = object : ActionToolbarFastEnableAnAction(
+        reload = object : EnablableAction(
             remoteActionToolBar,
             "Reload Remote", "Reload current remote folder",
             AllIcons.Actions.Refresh
@@ -438,7 +443,7 @@ class ExplorerWindow(
                 reloadRemote()
             }
         }
-        suspend = object : ActionToolbarFastEnableAnAction(
+        suspend = object : EnablableAction(
             remoteActionToolBar,
             "Disconnect", "Disconnect from sftp server",
             AllIcons.Actions.Suspend
@@ -453,7 +458,7 @@ class ExplorerWindow(
                 }
             }
         }
-        newTerminal = object : ActionToolbarFastEnableAnAction(
+        newTerminal = object : EnablableAction(
             remoteActionToolBar,
             "Open In Terminal", "Open current folder in ssh terminal",
             TerminalIcons.OpenTerminal_13x13
@@ -467,7 +472,7 @@ class ExplorerWindow(
                 )
             }
         }
-        localToggle = object : ActionToolbarFastEnableAnAction(
+        localToggle = object : EnablableAction(
             remoteActionToolBar,
             "Toggle Local Explorer", "Hide or display local file list",
             AllIcons.Diff.ApplyNotConflictsRight
@@ -513,7 +518,7 @@ class ExplorerWindow(
                                 executeSync("rm -Rf \"${file.path()}\"")
                             } catch (err: java.lang.Exception) {
                                 err.printStackTrace()
-                                Services.message(
+                                XFTPManager.message(
                                     "Error occurred while deleting file: ${file.path()}",
                                     MessageType.ERROR
                                 )
@@ -541,7 +546,7 @@ class ExplorerWindow(
 
                     false
                 }) {
-                    Services.message(
+                    XFTPManager.message(
                         "Error occurred while creating file: ${it.message}",
                         MessageType.ERROR
                     )
@@ -570,7 +575,7 @@ class ExplorerWindow(
 
                     false
                 }) {
-                    Services.message(
+                    XFTPManager.message(
                         "Error occurred while duplicating file: ${it.message}",
                         MessageType.ERROR
                     )
@@ -599,7 +604,7 @@ class ExplorerWindow(
 
                     false
                 }) {
-                    Services.message(
+                    XFTPManager.message(
                         "Error occurred while renaming file: ${it.message}",
                         MessageType.ERROR
                     )
@@ -616,7 +621,7 @@ class ExplorerWindow(
 
                     false
                 }) {
-                    Services.message(
+                    XFTPManager.message(
                         "Error occurred while creating folder: ${it.message}",
                         MessageType.ERROR
                     )
@@ -713,7 +718,7 @@ class ExplorerWindow(
                                                     sftpClient = field[sftpChannel] as SFTPClient
                                                 } catch (e: Exception) {
                                                     e.printStackTrace()
-                                                    Services.message(
+                                                    XFTPManager.message(
                                                         "Failed to get sftp client for this session, please try it again: ${e.message}",
                                                         MessageType.ERROR
                                                     )
@@ -722,7 +727,7 @@ class ExplorerWindow(
                                                 application.invokeLater { setCurrentRemotePath(sftpChannel!!.home) }
                                             } catch (e: SshTransportException) {
                                                 if (!cancelled) {
-                                                    Services.message("Failed to connect: " + e.message, MessageType.WARNING)
+                                                    XFTPManager.message("Failed to connect: " + e.message, MessageType.WARNING)
                                                 }
                                                 triggerDisconnected()
                                                 e.printStackTrace()
@@ -744,7 +749,7 @@ class ExplorerWindow(
         } catch (e: Exception) {
             e.printStackTrace()
             this.triggerDisconnected()
-            Services.message(
+            XFTPManager.message(
                 e.message ?: "Failed to create a connection, please try it later",
                 MessageType.ERROR,
             )
