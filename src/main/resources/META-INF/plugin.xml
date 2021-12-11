@@ -107,6 +107,7 @@
             <add-to-group group-id="ToolsMenu" anchor="first"/>
             <keyboard-shortcut keymap="$default" first-keystroke="shift alt X"/>
         </action>
+
         <action id="XFTP.MakeAConnection" class="net.allape.action.MakeAConnectAction" text="Make A Connection"
                 description="Make a new connection to a server if there is no connection established">
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta I"/>
@@ -135,6 +136,12 @@
                 description="Toggle visibility of local list">
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta L"/>
             <keyboard-shortcut keymap="$default" first-keystroke="control L"/>
+        </action>
+
+        <action id="XFTP.NewFile" class="net.allape.action.NewFileAction" text="Touch A New File"
+                description="Execute touch command">
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta N"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="control N"/>
         </action>
     </actions>
 </idea-plugin>

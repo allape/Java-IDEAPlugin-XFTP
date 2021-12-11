@@ -104,15 +104,20 @@ abstract class ExplorerWindowUI(
     // region 远程actions图标按钮
 
     // 建立连接
-    protected lateinit var explore: EnablableAction
+    lateinit var explore: EnablableAction
+        protected set
     // 显示combobox的下拉内容
-    protected lateinit var dropdown: EnablableAction
+    lateinit var dropdown: EnablableAction
+        protected set
     // 刷新
-    protected lateinit var reload: EnablableAction
+    lateinit var reload: EnablableAction
+        protected set
     // 断开连接
-    protected lateinit var suspend: EnablableAction
+    lateinit var suspend: EnablableAction
+        protected set
     // 命令行打开
-    protected lateinit var newTerminal: EnablableAction
+    lateinit var newTerminal: EnablableAction
+        protected set
     // 隐藏本地浏览器
     lateinit var localToggle: EnablableAction
         protected set
@@ -124,15 +129,15 @@ abstract class ExplorerWindowUI(
     protected val remoteFileListPopupMenu = JBPopupMenu()
 
     // 删除
-    protected val rmRf = JBMenuItem(RM_RF_TEXT)
+    val rmRf = JBMenuItem(RM_RF_TEXT)
     // 克隆
-    protected val duplicate = JBMenuItem(CP_TEXT)
+    val duplicate = JBMenuItem(CP_TEXT)
     // 重命名
-    protected val mv = JBMenuItem(MV_TEXT)
+    val mv = JBMenuItem(MV_TEXT)
     // 新建文件
-    protected val touch = JBMenuItem(TOUCH_TEXT)
+    val touch = JBMenuItem(TOUCH_TEXT)
     // 新建文件夹
-    protected val mkdirp = JBMenuItem(MKDIR_P_TEXT)
+    val mkdirp = JBMenuItem(MKDIR_P_TEXT)
 
     // endregion
 

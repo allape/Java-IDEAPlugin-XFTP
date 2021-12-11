@@ -157,7 +157,7 @@ abstract class ExplorerBaseWindow(
     /**
      * 检查当前是否建立连接(但不保证连接正常, 比如长时间未使用后的socket自动关闭)
      */
-    protected open fun isConnected(): Boolean = sftpChannel != null && sftpChannel!!.isConnected
+    open fun isConnected(): Boolean = sftpChannel != null && sftpChannel!!.isConnected
 
     /**
      * 检查当前channel是否可用, 长时间不使用可能会断开连接

@@ -13,7 +13,7 @@ import java.awt.event.InputEvent
 import java.util.*
 
 /**
- * @sample com.intellij.ide.actions.CreateFileAction
+ * @sample [com.intellij.ide.actions.CreateFileAction]
  */
 class FileNameTextFieldDialog(private val project: Project) {
 

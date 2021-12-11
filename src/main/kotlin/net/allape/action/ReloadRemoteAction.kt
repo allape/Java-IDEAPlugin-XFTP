@@ -7,9 +7,7 @@ import net.allape.common.XFTPManager
 class ReloadRemoteAction : AnAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
-        XFTPManager.getCurrentSelectedWindow()?.let { window ->
-            if (window.sftpChannel != null && window.sftpChannel!!.isConnected) window.reloadRemote()
-        }
+        XFTPManager.getCurrentSelectedWindow()?.reload?.actionPerformed(e)
     }
 
 }

@@ -6,12 +6,6 @@ import net.allape.common.XFTPManager
 
 class DisconnectAction: AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
-        XFTPManager.getCurrentSelectedWindow()?.let { window ->
-            window.sftpChannel?.isConnected?.let {
-                if (it) {
-                    window.disconnect()
-                }
-            }
-        }
+        XFTPManager.getCurrentSelectedWindow()?.suspend?.actionPerformed(e)
     }
 }

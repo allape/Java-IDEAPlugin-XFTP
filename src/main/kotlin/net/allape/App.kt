@@ -1,21 +1,17 @@
 package net.allape
 
-import com.intellij.icons.AllIcons
-import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.DumbAware
-import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.openapi.wm.ex.ToolWindowEx
 import com.intellij.ui.content.ContentFactory
 import com.intellij.ui.content.ContentManagerEvent
 import com.intellij.ui.content.ContentManagerListener
+import net.allape.action.NewWindowAction
 import net.allape.common.XFTPManager
 import net.allape.xftp.ExplorerWindow
-import java.util.function.Supplier
 
 class App: ToolWindowFactory, DumbAware {
 
@@ -62,18 +58,7 @@ class App: ToolWindowFactory, DumbAware {
             }
         })
         if (toolWindow is ToolWindowEx) {
-            toolWindow.setTabActions(object : DumbAwareAction(
-                Supplier { "New Explorer" },
-                Supplier { "Open a new explorer" }, AllIcons.General.Add
-            ) {
-                override fun actionPerformed(e: AnActionEvent) {
-                    if (e.project != null) {
-                        this@App.createToolWindowContent(e.project!!, toolWindow)
-                    } else {
-                        XFTPManager.message("Explorer requires a project!", MessageType.INFO)
-                    }
-                }
-            })
+            toolWindow.setTabActions(NewWindowAction())
         }
     }
 

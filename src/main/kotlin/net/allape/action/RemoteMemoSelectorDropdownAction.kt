@@ -6,12 +6,6 @@ import net.allape.common.XFTPManager
 
 class RemoteMemoSelectorDropdownAction: AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
-        XFTPManager.getCurrentSelectedWindow()?.let { window ->
-            window.sftpChannel?.isConnected?.let {
-                if (it)
-                    window.remotePath.isPopupVisible =
-                        !window.remotePath.isPopupVisible
-            }
-        }
+        XFTPManager.getCurrentSelectedWindow()?.dropdown?.actionPerformed(e)
     }
 }

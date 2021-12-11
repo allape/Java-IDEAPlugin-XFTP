@@ -59,11 +59,6 @@ class ExplorerWindow(
     toolWindow: ToolWindow,
 ) : ExplorerWindowUI(project, toolWindow) {
 
-    // keymap
-    // com.intellij.openapi.keymap.KeymapUtil.getActiveKeymapShortcuts
-    // demo
-    // jetbrains://idea/navigate/reference?project=xftp-kt&path=/Applications/IntelliJ IDEA.app/Contents/plugins/terminal/lib/terminal.jar!/META-INF/plugin.xml
-
     companion object {
         // 双击间隔, 毫秒
         const val DOUBLE_CLICK_INTERVAL: Long = 350
@@ -425,7 +420,9 @@ class ExplorerWindow(
             KeymapUtil.getActiveKeymapShortcuts(Actions.MakeAConnectionAction),
         ) {
             override fun actionPerformed(e: AnActionEvent) {
-                connect()
+                if (!isConnected()) {
+                    connect()
+                }
             }
         }
         dropdown = object : EnablableAction(
@@ -435,7 +432,9 @@ class ExplorerWindow(
             KeymapUtil.getActiveKeymapShortcuts(Actions.RemoteMemoSelectorDropdownAction),
         ) {
             override fun actionPerformed(e: AnActionEvent) {
-                remotePath.isPopupVisible = !remotePath.isPopupVisible
+                if (isConnected()) {
+                    remotePath.isPopupVisible = !remotePath.isPopupVisible
+                }
             }
         }
         reload = object : EnablableAction(
@@ -445,7 +444,9 @@ class ExplorerWindow(
             KeymapUtil.getActiveKeymapShortcuts(Actions.ReloadRemoteAction),
         ) {
             override fun actionPerformed(e: AnActionEvent) {
-                reloadRemote()
+                if (isConnected()) {
+                    reloadRemote()
+                }
             }
         }
         suspend = object : EnablableAction(
@@ -455,12 +456,14 @@ class ExplorerWindow(
             KeymapUtil.getActiveKeymapShortcuts(Actions.DisconnectAction),
         ) {
             override fun actionPerformed(e: AnActionEvent) {
-                if (MessageDialogBuilder.yesNo("Disconnecting", "Do you really want to close this session?")
-                        .asWarning()
-                        .yesText("Disconnect")
-                        .ask(project)
-                ) {
-                    disconnect()
+                if (isConnected() && isChannelAlive()) {
+                    if (MessageDialogBuilder.yesNo("Disconnecting", "Do you really want to close this session?")
+                            .asWarning()
+                            .yesText("Disconnect")
+                            .ask(project)
+                    ) {
+                        disconnect()
+                    }
                 }
             }
         }
@@ -471,7 +474,9 @@ class ExplorerWindow(
             KeymapUtil.getActiveKeymapShortcuts(Actions.NewTerminalAction),
         ) {
             override fun actionPerformed(e: AnActionEvent) {
-                this@ExplorerWindow.openInNewTerminal(remotePath.getMemoItem())
+                if (isConnected()) {
+                    openInNewTerminal(remotePath.getMemoItem())
+                }
             }
         }
         localToggle = object : EnablableAction(

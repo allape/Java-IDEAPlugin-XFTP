@@ -18,6 +18,8 @@ class Actions {
 
         const val ToggleVisibilityLocalListAction = "XFTP.ToggleVisibilityLocalList"
 
+        const val NewFileAction = "XFTP.NewFile"
+
     }
 
 }

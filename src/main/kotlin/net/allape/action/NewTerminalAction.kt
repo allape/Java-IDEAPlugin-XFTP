@@ -6,12 +6,6 @@ import net.allape.common.XFTPManager
 
 class NewTerminalAction : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
-        XFTPManager.getCurrentSelectedWindow()?.let { window ->
-            window.sftpChannel?.isConnected?.let {
-                if (it) {
-                    window.openInNewTerminal(window.remotePath.getMemoItem())
-                }
-            }
-        }
+        XFTPManager.getCurrentSelectedWindow()?.newTerminal?.actionPerformed(e)
     }
 }

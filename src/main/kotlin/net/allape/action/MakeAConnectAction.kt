@@ -7,9 +7,7 @@ import net.allape.common.XFTPManager
 class MakeAConnectAction: AnAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
-        XFTPManager.getCurrentSelectedWindow()?.let { window ->
-            if (window.sftpClient == null) window.connect()
-        }
+        XFTPManager.getCurrentSelectedWindow()?.explore?.actionPerformed(e)
     }
 
 }
