@@ -114,8 +114,8 @@
         </action>
         <action id="XFTP.OpenLocalInFileManager" class="net.allape.action.OpenLocalInFileManagerAction" text="Open In File Manager"
                 description="Open current local directory in system file manager">
-            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta E"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="control E"/>
+<!--            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta E"/>-->
+<!--            <keyboard-shortcut keymap="$default" first-keystroke="control E"/>-->
         </action>
 
         <action id="XFTP.MakeAConnection" class="net.allape.action.MakeAConnectAction" text="Make A Connection"
@@ -148,10 +148,18 @@
             <keyboard-shortcut keymap="$default" first-keystroke="control L"/>
         </action>
 
+        <action id="XFTP.Open" class="net.allape.action.OpenAction" text="Open"
+                description="Open the first item of selected items">
+            <keyboard-shortcut keymap="$default" first-keystroke="ENTER"/>
+        </action>
+        <action id="XFTP.GoUpper" class="net.allape.action.GoUpperAction" text="Open Parent"
+                description="Just like `cd ..`">
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta LEFT"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="control LEFT"/>
+        </action>
         <action id="XFTP.Delete" class="net.allape.action.DeleteAction" text="Delete"
                 description="Delete selected file(s) or folder(s)">
-            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta DELETE"/>
-            <keyboard-shortcut keymap="Default for XWin" first-keystroke="DELETE"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta BACKSPACE"/>
             <keyboard-shortcut keymap="$default" first-keystroke="DELETE"/>
         </action>
         <action id="XFTP.Duplicate" class="net.allape.action.DuplicateAction" text="Duplicate"

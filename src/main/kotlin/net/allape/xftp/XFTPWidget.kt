@@ -134,6 +134,10 @@ abstract class XFTPWidget(
 
     protected val remoteFileListPopupMenu = JBPopupMenu()
 
+    // 返回上一层
+    val goUpper = JBMenuItem("cd ..")
+    // 打开
+    val open = JBMenuItem("Open")
     // 删除
     val rmRf = JBMenuItem(RM_RF_TEXT)
     // 克隆
@@ -212,6 +216,9 @@ abstract class XFTPWidget(
         )
 
         resetRemoteListContentMenuItemsText()
+        remoteFileListPopupMenu.add(goUpper)
+        remoteFileListPopupMenu.add(open)
+        remoteFileListPopupMenu.addSeparator()
         remoteFileListPopupMenu.add(rmRf)
         remoteFileListPopupMenu.addSeparator()
         remoteFileListPopupMenu.add(duplicate)
@@ -256,6 +263,7 @@ abstract class XFTPWidget(
      * @param enable 是否启用
      */
     protected fun setRemoteListContentMenuItems(enable: Boolean) {
+        open.isEnabled = enable
         rmRf.isEnabled = enable
         duplicate.isEnabled = enable
         mv.isEnabled = enable

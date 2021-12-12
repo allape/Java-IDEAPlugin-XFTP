@@ -287,7 +287,10 @@ class XFTP(
                                     )
                                 )
                             }
-                            application.invokeLater { remoteFileList.resetData(fileModels) }
+                            application.invokeLater {
+                                remoteFileList.resetData(fileModels)
+                                remoteFileList.requestFocusInWindow()
+                            }
                         }
                     } catch (ex: java.lang.Exception) {
                         ex.printStackTrace()
@@ -375,10 +378,28 @@ class XFTP(
      * 构建远程列表右键菜单
      */
     private fun buildRemoteListContextMenu() {
+        goUpper.let {
+            it.addActionListener {
+                if (isConnected() && isChannelAlive()) {
+                    setCurrentRemotePath(remoteFileList.model.data[0].path)
+                }
+            }
+            it.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.GoUpperAction))
+        }
+        open.let {
+            it.addActionListener {
+                if (isConnected() && isChannelAlive()) {
+                    getSelectedRemoteFileList().takeIf { l -> l.isNotEmpty() }?.let { selectedFiles ->
+                        setCurrentRemotePath(selectedFiles[0].path())
+                    }
+                }
+            }
+            it.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.OpenAction))
+        }
         rmRf.let {
             it.addActionListener {
                 val files: List<RemoteFileObject> = getSelectedRemoteFileList()
-                if (files.isNotEmpty() && isChannelAlive()) {
+                if (files.isNotEmpty() && isConnected() && isChannelAlive()) {
                     if (MessageDialogBuilder.yesNo(
                             "Delete Confirm",
                             "${files.joinToString(separator = "\n") { it.name() }}\n\n${files.size} item${if (files.size > 1) "s" else ""} will be deleted."
@@ -415,7 +436,7 @@ class XFTP(
             it.addActionListener {
                 val files: List<RemoteFileObject> = getSelectedRemoteFileList()
 
-                if (files.size == 1 && isChannelAlive()) {
+                if (files.size == 1 && isConnected() && isChannelAlive()) {
                     val file = files[0]
                     val isDir = file.isDir()
 
@@ -448,7 +469,7 @@ class XFTP(
             it.addActionListener {
                 val files: List<RemoteFileObject> = getSelectedRemoteFileList()
 
-                if (files.size == 1 && isChannelAlive()) {
+                if (files.size == 1 && isConnected() && isChannelAlive()) {
                     val file = files[0]
                     val isDir = file.isDir()
 
@@ -479,7 +500,7 @@ class XFTP(
         }
         touch.let {
             it.addActionListener {
-                if (isChannelAlive()) {
+                if (isConnected() && isChannelAlive()) {
                     FileNameTextFieldDialog(project).openDialog(false) { filename ->
                         executeOnPooledThreadWithRemoteUILocked({
                             val parsedFileName = joinWithCurrentRemotePath(filename.trim())
@@ -507,7 +528,7 @@ class XFTP(
         }
         mkdirp.let {
             it.addActionListener {
-                if (isChannelAlive()) {
+                if (isConnected() && isChannelAlive()) {
                     FileNameTextFieldDialog(project).openDialog(true) { filename ->
                         executeOnPooledThreadWithRemoteUILocked({
                             val fullPath = joinWithCurrentRemotePath(filename.trim())
@@ -540,14 +561,17 @@ class XFTP(
                         rmRf.text = "$RM_RF_TEXT ${selectedFiles[0].name} ${if (selectedFiles.size > 1) "and ${selectedFiles.size-1} more" else ""}"
                     }
 
-                    duplicate.isEnabled = selectedFiles.size == 1
-                    mv.isEnabled = duplicate.isEnabled
+                    val hasFileSelected = selectedFiles.isNotEmpty()
+                    duplicate.isEnabled = hasFileSelected
                     if (duplicate.isEnabled) {
                         duplicate.text = "$CP_TEXT${if (selectedFiles[0].directory) " -R" else ""} ${selectedFiles[0].name} ..."
                     }
+                    mv.isEnabled = hasFileSelected
                     if (mv.isEnabled) {
                         mv.text = "$MV_TEXT ${selectedFiles[0].name} ..."
                     }
+
+                    open.isEnabled = hasFileSelected
                 } else {
                     setRemoteListContentMenuItems(false)
                 }
@@ -729,7 +753,7 @@ class XFTP(
      * 获取当前选中了的远程文件列表
      * @return 远程文件列表
      */
-    private fun getSelectedRemoteFileList(): List<RemoteFileObject> {
+    fun getSelectedRemoteFileList(): List<RemoteFileObject> {
         try {
             lockRemoteUIs()
             return remoteFileList.selected()

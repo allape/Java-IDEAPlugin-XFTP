@@ -22,6 +22,10 @@ class Actions {
 
         const val ToggleVisibilityLocalListAction = "XFTP.ToggleVisibilityLocalList"
 
+        const val OpenAction = "XFTP.Open"
+
+        const val GoUpperAction = "XFTP.GoUpper"
+
         const val DeleteAction = "XFTP.Delete"
 
         const val DuplicateAction = "XFTP.Duplicate"
