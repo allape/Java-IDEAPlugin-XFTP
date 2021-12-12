@@ -1,11 +1,17 @@
 package net.allape.action
 
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import icons.TerminalIcons
 import net.allape.common.XFTPManager
 
-class NewTerminalAction : AnAction() {
+class NewTerminalAction : EnablableAction(TerminalIcons.OpenTerminal_13x13) {
     override fun actionPerformed(e: AnActionEvent) {
-        XFTPManager.getCurrentSelectedWindow()?.newTerminal?.actionPerformed(e)
+        if (enabled) {
+            XFTPManager.getCurrentSelectedWindow()?.apply {
+                if (isConnected()) {
+                    openInNewTerminal(remotePath.getMemoItem())
+                }
+            }
+        }
     }
 }

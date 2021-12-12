@@ -1,14 +1,10 @@
 package net.allape.xftp
 
-import com.intellij.icons.AllIcons
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
-import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.MessageDialogBuilder
 import com.intellij.openapi.ui.MessageType
@@ -22,9 +18,7 @@ import com.intellij.ssh.SshTransportException
 import com.intellij.ssh.connectionBuilder
 import com.intellij.util.ReflectionUtil
 import com.jetbrains.plugins.remotesdk.console.SshConfigConnector
-import icons.TerminalIcons
 import net.allape.action.Actions
-import net.allape.action.EnablableAction
 import net.allape.common.RemoteDataProducerWrapper
 import net.allape.common.XFTPManager
 import net.allape.model.FileModel
@@ -108,11 +102,6 @@ class XFTP(
     }
 
     override fun bindLocalIU() {
-        localActionGroup.addAll(
-            reloadLocalActionButton,
-            openLocalInFileManager,
-        )
-
         localPath.addActionListener {
             var path = getCurrentLocalPath().ifEmpty { File.separator }
             try {
@@ -261,8 +250,6 @@ class XFTP(
     }
 
     override fun bindRemoteUI() {
-        buildRemoteListActionButtons()
-
         remotePath.isEnabled = false
         remotePath.addActionListener {
             val remoteFilePath = getCurrentRemotePath()
@@ -382,100 +369,6 @@ class XFTP(
         }
 
         buildRemoteListContextMenu()
-    }
-
-    /**
-     * 构建远程列表左侧action按钮
-     */
-    private fun buildRemoteListActionButtons() {
-        explore = object : EnablableAction(
-            remoteActionToolBar,
-            "Start New Session", "Start a sftp session",
-            AllIcons.Webreferences.Server,
-            KeymapUtil.getActiveKeymapShortcuts(Actions.MakeAConnectionAction),
-        ) {
-            override fun actionPerformed(e: AnActionEvent) {
-                if (!isConnected()) {
-                    connect()
-                }
-            }
-        }
-        dropdown = object : EnablableAction(
-            remoteActionToolBar,
-            "Dropdown", "Display remote access history",
-            AllIcons.Actions.MoveDown,
-            KeymapUtil.getActiveKeymapShortcuts(Actions.RemoteMemoSelectorDropdownAction),
-        ) {
-            override fun actionPerformed(e: AnActionEvent) {
-                if (isConnected()) {
-                    remotePath.isPopupVisible = !remotePath.isPopupVisible
-                }
-            }
-        }
-        reload = object : EnablableAction(
-            remoteActionToolBar,
-            "Reload Remote", "Reload current remote folder",
-            AllIcons.Actions.Refresh,
-            KeymapUtil.getActiveKeymapShortcuts(Actions.ReloadRemoteAction),
-        ) {
-            override fun actionPerformed(e: AnActionEvent) {
-                if (isConnected()) {
-                    reloadRemote()
-                }
-            }
-        }
-        suspend = object : EnablableAction(
-            remoteActionToolBar,
-            "Disconnect", "Disconnect from sftp server",
-            AllIcons.Actions.Suspend,
-            KeymapUtil.getActiveKeymapShortcuts(Actions.DisconnectAction),
-        ) {
-            override fun actionPerformed(e: AnActionEvent) {
-                if (isConnected() && isChannelAlive()) {
-                    if (MessageDialogBuilder.yesNo("Disconnecting", "Do you really want to close this session?")
-                            .asWarning()
-                            .yesText("Disconnect")
-                            .ask(project)
-                    ) {
-                        disconnect()
-                    }
-                }
-            }
-        }
-        newTerminal = object : EnablableAction(
-            remoteActionToolBar,
-            "Open In Terminal", "Open current folder in ssh terminal",
-            TerminalIcons.OpenTerminal_13x13,
-            KeymapUtil.getActiveKeymapShortcuts(Actions.NewTerminalAction),
-        ) {
-            override fun actionPerformed(e: AnActionEvent) {
-                if (isConnected()) {
-                    openInNewTerminal(remotePath.getMemoItem())
-                }
-            }
-        }
-        localToggle = object : EnablableAction(
-            remoteActionToolBar,
-            "Toggle Local Explorer", "Hide or display local file list",
-            AllIcons.Diff.ApplyNotConflictsRight,
-            KeymapUtil.getActiveKeymapShortcuts(Actions.ToggleVisibilityLocalListAction),
-        ) {
-            override fun actionPerformed(e: AnActionEvent) {
-                val to: Boolean = !splitter.firstComponent.isVisible
-                splitter.firstComponent.isVisible = to
-                this.setIcon(if (to) AllIcons.Diff.ApplyNotConflictsRight else AllIcons.Diff.ApplyNotConflictsLeft)
-            }
-        }
-        // 远程列表窗口组件
-        remoteActionGroup.addAll(
-            explore,
-            dropdown,
-            reload,
-            suspend,
-            newTerminal,
-            Separator.create(),
-            localToggle
-        )
     }
 
     /**
@@ -770,7 +663,7 @@ class XFTP(
     }
 
     override fun triggerConnecting() {
-        application.invokeLater { explore.setEnabled(false) }
+        application.invokeLater { explore.enabled = false }
     }
 
     override fun triggerConnected() {

@@ -135,8 +135,8 @@
         </action>
         <action id="XFTP.Disconnect" class="net.allape.action.DisconnectAction" text="Disconnect"
                 description="Disconnect from current server">
-            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta S"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="control S"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta shift D"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="control shift D"/>
         </action>
         <action id="XFTP.NewTerminal" class="net.allape.action.NewTerminalAction" text="New Terminal"
                 description="Create new terminal tool window for current remote location">

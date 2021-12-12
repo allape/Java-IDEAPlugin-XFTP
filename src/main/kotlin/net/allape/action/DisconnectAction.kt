@@ -1,11 +1,24 @@
 package net.allape.action
 
-import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.ui.MessageDialogBuilder
 import net.allape.common.XFTPManager
 
-class DisconnectAction: AnAction() {
+class DisconnectAction: EnablableAction(AllIcons.Actions.Suspend) {
     override fun actionPerformed(e: AnActionEvent) {
-        XFTPManager.getCurrentSelectedWindow()?.suspend?.actionPerformed(e)
+        if (enabled) {
+            XFTPManager.getCurrentSelectedWindow()?.apply {
+                if (isConnected() && isChannelAlive()) {
+                    if (MessageDialogBuilder.yesNo("Disconnecting", "Do you really want to close this session?")
+                            .asWarning()
+                            .yesText("Disconnect")
+                            .ask(project)
+                    ) {
+                        disconnect()
+                    }
+                }
+            }
+        }
     }
 }

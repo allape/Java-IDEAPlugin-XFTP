@@ -25,8 +25,8 @@ import com.jetbrains.plugins.remotesdk.console.SshConfigConnector
 import com.jetbrains.plugins.remotesdk.console.SshTerminalDirectRunner
 import net.allape.common.HistoryTopicHandler
 import net.allape.common.XFTPManager
-import net.allape.xftp.component.FileTableModel
 import net.allape.model.*
+import net.allape.xftp.component.FileTableModel
 import net.schmizz.sshj.common.StreamCopier
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.sftp.SFTPFileTransfer
@@ -43,8 +43,8 @@ class TransferException(message: String): RuntimeException(message)
 class TransferCancelledException(message: String): RuntimeException(message)
 
 abstract class XFTPCore(
-    protected val project: Project,
-    protected val toolWindow: ToolWindow,
+    val project: Project,
+    val toolWindow: ToolWindow,
 ) : Disposable {
 
     private val logger = Logger.getInstance(XFTPCore::class.java)
@@ -162,7 +162,7 @@ abstract class XFTPCore(
     /**
      * 检查当前channel是否可用, 长时间不使用可能会断开连接
      */
-    protected open fun isChannelAlive(): Boolean {
+    open fun isChannelAlive(): Boolean {
         if (sftpChannel == null) {
             XFTPManager.message("Please connect to server first!", MessageType.INFO)
             return false

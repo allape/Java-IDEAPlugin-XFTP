@@ -1,11 +1,17 @@
 package net.allape.action
 
-import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnActionEvent
 import net.allape.common.XFTPManager
 
-class RemoteMemoSelectorDropdownAction: AnAction() {
+class RemoteMemoSelectorDropdownAction: EnablableAction(AllIcons.Actions.MoveDown) {
     override fun actionPerformed(e: AnActionEvent) {
-        XFTPManager.getCurrentSelectedWindow()?.dropdown?.actionPerformed(e)
+        if (enabled) {
+            XFTPManager.getCurrentSelectedWindow()?.apply {
+                if (isConnected()) {
+                    remotePath.isPopupVisible = !remotePath.isPopupVisible
+                }
+            }
+        }
     }
 }

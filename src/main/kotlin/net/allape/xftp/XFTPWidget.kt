@@ -1,14 +1,12 @@
 package net.allape.xftp
 
-import com.intellij.icons.AllIcons
-import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
-import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.JBMenuItem
 import com.intellij.openapi.ui.JBPopupMenu
-import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.ssh.RemoteFileObject
 import com.intellij.ui.JBSplitter
@@ -17,14 +15,14 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.Consumer
 import net.allape.action.Actions
 import net.allape.action.EnablableAction
-import net.allape.common.XFTPManager
 import net.allape.xftp.component.FileTable
 import net.allape.xftp.component.MemoComboBox
-import java.awt.*
+import java.awt.BorderLayout
+import java.awt.Dimension
+import java.awt.GridBagConstraints
+import java.awt.GridBagLayout
 import java.awt.datatransfer.DataFlavor
 import java.awt.event.ActionEvent
-import java.io.File
-import java.io.IOException
 import java.util.function.Supplier
 import javax.swing.JComponent
 import javax.swing.JMenuItem
@@ -102,35 +100,8 @@ abstract class XFTPWidget(
 
     // region 本地actions图标按钮
 
-    val reloadLocalActionButton = object : EnablableAction(
-        localActionToolBar,
-        "Refresh Local",
-        "Refresh current local folder",
-        AllIcons.Actions.Refresh,
-        KeymapUtil.getActiveKeymapShortcuts(Actions.ReloadLocalAction),
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            reloadLocal()
-        }
-    }
-    val openLocalInFileManager = object : EnablableAction(
-        localActionToolBar,
-        "Open In FileManager",
-        "Open folder in system file manager",
-        AllIcons.Actions.MenuOpen,
-        KeymapUtil.getActiveKeymapShortcuts(Actions.OpenLocalInFileManagerAction),
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            getCurrentLocalPath().let { path ->
-                try {
-                    Desktop.getDesktop().open(File(path))
-                } catch (ioException: IOException) {
-                    ioException.printStackTrace()
-                    XFTPManager.message("Failed to open \"$path\"", MessageType.ERROR)
-                }
-            }
-        }
-    }
+    val reloadLocalActionButton = ActionManager.getInstance().getAction(Actions.ReloadLocalAction)
+    val openLocalInFileManager = ActionManager.getInstance().getAction(Actions.OpenLocalInFileManagerAction)
 
     // endregion
 
@@ -145,23 +116,17 @@ abstract class XFTPWidget(
     // region 远程actions图标按钮
 
     // 建立连接
-    lateinit var explore: EnablableAction
-        protected set
+    protected val explore: EnablableAction = ActionManager.getInstance().getAction(Actions.MakeAConnectionAction) as EnablableAction
     // 显示combobox的下拉内容
-    lateinit var dropdown: EnablableAction
-        protected set
+    protected val dropdown: EnablableAction = ActionManager.getInstance().getAction(Actions.RemoteMemoSelectorDropdownAction) as EnablableAction
     // 刷新
-    lateinit var reload: EnablableAction
-        protected set
+    protected val reload: EnablableAction = ActionManager.getInstance().getAction(Actions.ReloadRemoteAction) as EnablableAction
     // 断开连接
-    lateinit var suspend: EnablableAction
-        protected set
+    protected val suspend: EnablableAction = ActionManager.getInstance().getAction(Actions.DisconnectAction) as EnablableAction
     // 命令行打开
-    lateinit var newTerminal: EnablableAction
-        protected set
+    protected val newTerminal: EnablableAction = ActionManager.getInstance().getAction(Actions.NewTerminalAction) as EnablableAction
     // 隐藏本地浏览器
-    lateinit var localToggle: EnablableAction
-        protected set
+    protected val localToggle: EnablableAction = ActionManager.getInstance().getAction(Actions.ToggleVisibilityLocalListAction) as EnablableAction
 
     // endregion
 
@@ -214,6 +179,9 @@ abstract class XFTPWidget(
         localWrapper.add(localActionToolBarWrapper, noXWeightX1Y0)
 
         localWrapper.border = null
+
+        localActionGroup.add(reloadLocalActionButton)
+        localActionGroup.add(openLocalInFileManager)
     }
 
     /**
@@ -231,6 +199,17 @@ abstract class XFTPWidget(
         remoteWrapper.add(remotePathWrapper, X1Y0)
 
         remoteWrapper.border = null
+
+        // 远程列表窗口组件
+        remoteActionGroup.addAll(
+            explore,
+            dropdown,
+            reload,
+            suspend,
+            newTerminal,
+            Separator.create(),
+            localToggle,
+        )
 
         resetRemoteListContentMenuItemsText()
         remoteFileListPopupMenu.add(rmRf)
@@ -265,11 +244,11 @@ abstract class XFTPWidget(
      * @param enable 是否启用
      */
     protected fun setRemoteButtonsEnable(enable: Boolean) {
-        explore.setEnabled(!enable)
-        dropdown.setEnabled(enable)
-        reload.setEnabled(enable)
-        suspend.setEnabled(enable)
-        newTerminal.setEnabled(enable)
+        explore.enabled = !enable
+        dropdown.enabled = enable
+        reload.enabled = enable
+        suspend.enabled = enable
+        newTerminal.enabled = enable
     }
 
     /**
