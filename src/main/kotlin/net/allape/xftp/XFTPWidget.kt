@@ -1,26 +1,33 @@
 package net.allape.xftp
 
+import com.intellij.icons.AllIcons
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
+import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.JBMenuItem
 import com.intellij.openapi.ui.JBPopupMenu
+import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.ssh.RemoteFileObject
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.Consumer
+import net.allape.action.Actions
 import net.allape.action.EnablableAction
+import net.allape.common.XFTPManager
 import net.allape.xftp.component.FileTable
 import net.allape.xftp.component.MemoComboBox
-import java.awt.BorderLayout
-import java.awt.Dimension
-import java.awt.GridBagConstraints
-import java.awt.GridBagLayout
+import java.awt.*
 import java.awt.datatransfer.DataFlavor
+import java.awt.event.ActionEvent
+import java.io.File
+import java.io.IOException
 import java.util.function.Supplier
 import javax.swing.JComponent
+import javax.swing.JMenuItem
 import javax.swing.JPanel
 
 /**
@@ -92,8 +99,42 @@ abstract class XFTPWidget(
     protected var localFileListWrapper: JBScrollPane = JBScrollPane(localFileList)
     protected var localActionGroup = DefaultActionGroup()
     protected var localActionToolBar = ActionToolbarImpl(LOCAL_TOOL_BAR_PLACE, localActionGroup, false)
-    protected var remoteWrapper = JPanel(GridBagLayout())
 
+    // region 本地actions图标按钮
+
+    val reloadLocalActionButton = object : EnablableAction(
+        localActionToolBar,
+        "Refresh Local",
+        "Refresh current local folder",
+        AllIcons.Actions.Refresh,
+        KeymapUtil.getActiveKeymapShortcuts(Actions.ReloadLocalAction),
+    ) {
+        override fun actionPerformed(e: AnActionEvent) {
+            reloadLocal()
+        }
+    }
+    val openLocalInFileManager = object : EnablableAction(
+        localActionToolBar,
+        "Open In FileManager",
+        "Open folder in system file manager",
+        AllIcons.Actions.MenuOpen,
+        KeymapUtil.getActiveKeymapShortcuts(Actions.OpenLocalInFileManagerAction),
+    ) {
+        override fun actionPerformed(e: AnActionEvent) {
+            getCurrentLocalPath().let { path ->
+                try {
+                    Desktop.getDesktop().open(File(path))
+                } catch (ioException: IOException) {
+                    ioException.printStackTrace()
+                    XFTPManager.message("Failed to open \"$path\"", MessageType.ERROR)
+                }
+            }
+        }
+    }
+
+    // endregion
+
+    protected var remoteWrapper = JPanel(GridBagLayout())
     protected var remotePathWrapper = JPanel(GridBagLayout())
     val remotePath = MemoComboBox<String>(REMOTE_HISTORY_PERSISTENCE_KEY)
     protected var remoteActionGroup = DefaultActionGroup()
@@ -193,8 +234,10 @@ abstract class XFTPWidget(
 
         resetRemoteListContentMenuItemsText()
         remoteFileListPopupMenu.add(rmRf)
+        remoteFileListPopupMenu.addSeparator()
         remoteFileListPopupMenu.add(duplicate)
         remoteFileListPopupMenu.add(mv)
+        remoteFileListPopupMenu.addSeparator()
         remoteFileListPopupMenu.add(touch)
         remoteFileListPopupMenu.add(mkdirp)
         remoteFileList.componentPopupMenu = remoteFileListPopupMenu
@@ -293,6 +336,16 @@ abstract class XFTPWidget(
             }
             unlockRemoteUIs()
             if (requiredReload) reloadRemote()
+        }
+    }
+
+    /**
+     * 手动触发[JMenuItem]的事件
+     * @param menuItem 触发事件的菜单项
+     */
+    open fun performAnJMenuItemAction(menuItem: JMenuItem) {
+        menuItem.actionListeners.forEach { actionListener ->
+            actionListener.actionPerformed(object : ActionEvent(menuItem, ACTION_PERFORMED, null) {})
         }
     }
 

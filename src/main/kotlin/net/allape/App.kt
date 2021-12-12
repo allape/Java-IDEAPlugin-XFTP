@@ -27,6 +27,7 @@ class App: ToolWindowFactory, DumbAware {
             //获取用于toolWindow显示的内容
             val content = contentFactory.createContent(window.getUI(), XFTPManager.DEFAULT_NAME, false)
             content.isCloseable = true
+            content.putUserData(XFTP.XFTP_KEY, window)
 
             //给toolWindow设置内容
             val contentManager = toolWindow.contentManager
@@ -45,7 +46,7 @@ class App: ToolWindowFactory, DumbAware {
         XFTPManager.toolWindow = toolWindow
         toolWindow.addContentManagerListener(object : ContentManagerListener {
             override fun contentRemoved(event: ContentManagerEvent) {
-                val window = XFTPManager.windows.get(event.content)
+                val window = XFTPManager.windows[event.content]
                 if (window == null) {
                     logger.warn("closed an un-cached window: $event")
                 } else {

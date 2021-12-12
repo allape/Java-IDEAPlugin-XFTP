@@ -4,10 +4,10 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import net.allape.common.XFTPManager
 
-class NewFileAction : AnAction() {
+class OpenLocalInFileManagerAction : AnAction() {
+
     override fun actionPerformed(e: AnActionEvent) {
-        XFTPManager.getCurrentSelectedWindow()?.let { window ->
-            window.performAnJMenuItemAction(window.touch)
-        }
+        XFTPManager.getCurrentSelectedWindow()?.openLocalInFileManager?.actionPerformed(e)
     }
+
 }

@@ -108,6 +108,16 @@
             <keyboard-shortcut keymap="$default" first-keystroke="shift alt X"/>
         </action>
 
+        <action id="XFTP.ReloadLocal" class="net.allape.action.ReloadLocalAction" text="Reload Local List"
+                description="Reload local list">
+            <keyboard-shortcut keymap="$default" first-keystroke="shift R"/>
+        </action>
+        <action id="XFTP.OpenLocalInFileManager" class="net.allape.action.OpenLocalInFileManagerAction" text="Open In File Manager"
+                description="Open current local directory in system file manager">
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta E"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="control E"/>
+        </action>
+
         <action id="XFTP.MakeAConnection" class="net.allape.action.MakeAConnectAction" text="Make A Connection"
                 description="Make a new connection to a server if there is no connection established">
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta I"/>
@@ -125,8 +135,8 @@
         </action>
         <action id="XFTP.Disconnect" class="net.allape.action.DisconnectAction" text="Disconnect"
                 description="Disconnect from current server">
-            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta D"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="control D"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta S"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="control S"/>
         </action>
         <action id="XFTP.NewTerminal" class="net.allape.action.NewTerminalAction" text="New Terminal"
                 description="Create new terminal tool window for current remote location">
@@ -138,10 +148,30 @@
             <keyboard-shortcut keymap="$default" first-keystroke="control L"/>
         </action>
 
+        <action id="XFTP.Delete" class="net.allape.action.DeleteAction" text="Delete"
+                description="Delete selected file(s) or folder(s)">
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta DELETE"/>
+            <keyboard-shortcut keymap="Default for XWin" first-keystroke="DELETE"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="DELETE"/>
+        </action>
+        <action id="XFTP.Duplicate" class="net.allape.action.DuplicateAction" text="Duplicate"
+                description="Duplicate selected file or folder">
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta D"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="control D"/>
+        </action>
+        <action id="XFTP.Rename" class="net.allape.action.RenameAction" text="Rename"
+                description="Rename selected file or folder">
+            <keyboard-shortcut keymap="$default" first-keystroke="shift F6"/>
+        </action>
         <action id="XFTP.NewFile" class="net.allape.action.NewFileAction" text="Touch A New File"
                 description="Execute touch command">
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta N"/>
             <keyboard-shortcut keymap="$default" first-keystroke="control N"/>
+        </action>
+        <action id="XFTP.NewFolder" class="net.allape.action.NewFolderAction" text="Make A Directory"
+                description="Execute mkdir command">
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta F"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="control F"/>
         </action>
     </actions>
 </idea-plugin>

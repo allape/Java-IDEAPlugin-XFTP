@@ -12,6 +12,7 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.MessageDialogBuilder
 import com.intellij.openapi.ui.MessageType
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
@@ -26,14 +27,13 @@ import net.allape.action.Actions
 import net.allape.action.EnablableAction
 import net.allape.common.RemoteDataProducerWrapper
 import net.allape.common.XFTPManager
-import net.allape.xftp.component.FileNameTextFieldDialog
 import net.allape.model.FileModel
 import net.allape.model.FileTransferHandler
 import net.allape.model.FileTransferable
 import net.allape.model.TransferType
 import net.allape.util.Maps
+import net.allape.xftp.component.FileNameTextFieldDialog
 import net.schmizz.sshj.sftp.SFTPClient
-import org.junit.Assert
 import java.awt.Desktop
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
@@ -58,6 +58,8 @@ class XFTP(
     companion object {
         // 双击间隔, 毫秒
         const val DOUBLE_CLICK_INTERVAL: Long = 350
+        // 放入content.userData的key
+        val XFTP_KEY: Key<XFTP> = Key.create(XFTP::javaClass.name)
     }
 
     private val logger = Logger.getInstance(XFTP::class.java)
@@ -107,31 +109,8 @@ class XFTP(
 
     override fun bindLocalIU() {
         localActionGroup.addAll(
-            object : DumbAwareAction(
-                "Refresh Local",
-                "Refresh current local folder",
-                AllIcons.Actions.Refresh
-            ) {
-                override fun actionPerformed(e: AnActionEvent) {
-                    reloadLocal()
-                }
-            },
-            object : DumbAwareAction(
-                "Open In FileManager",
-                "Display folder in system file manager",
-                AllIcons.Actions.MenuOpen
-            ) {
-                override fun actionPerformed(e: AnActionEvent) {
-                    getCurrentLocalPath().let { path ->
-                        try {
-                            Desktop.getDesktop().open(File(path))
-                        } catch (ioException: IOException) {
-                            ioException.printStackTrace()
-                            XFTPManager.message("Failed to open \"$path\"", MessageType.ERROR)
-                        }
-                    }
-                }
-            }
+            reloadLocalActionButton,
+            openLocalInFileManager,
         )
 
         localPath.addActionListener {
@@ -503,134 +482,157 @@ class XFTP(
      * 构建远程列表右键菜单
      */
     private fun buildRemoteListContextMenu() {
-        rmRf.addActionListener {
-            val files: List<RemoteFileObject> = getSelectedRemoteFileList()
-            if (MessageDialogBuilder.yesNo(
-                    "Delete Confirm",
-                    "${files.joinToString(separator = "\n") { it.name() }}\n\n${files.size} item${if (files.size > 1) "s" else ""} will be deleted."
-                )
-                .asWarning()
-                .yesText("Delete")
-                .noText("Cancel")
-                .ask(project)
-            ) {
-                executeOnPooledThreadWithRemoteUILocked({
-                    // 开启一个ExecChannel来删除非空的文件夹
-                    for (file in files) {
-                        if (file.exists()) {
-                            try {
-                                executeSync("rm -Rf \"${file.path()}\"")
-                            } catch (err: java.lang.Exception) {
-                                err.printStackTrace()
-                                XFTPManager.message(
-                                    "Error occurred while deleting file: ${file.path()}",
-                                    MessageType.ERROR
-                                )
+        rmRf.let {
+            it.addActionListener {
+                val files: List<RemoteFileObject> = getSelectedRemoteFileList()
+                if (files.isNotEmpty() && isChannelAlive()) {
+                    if (MessageDialogBuilder.yesNo(
+                            "Delete Confirm",
+                            "${files.joinToString(separator = "\n") { it.name() }}\n\n${files.size} item${if (files.size > 1) "s" else ""} will be deleted."
+                        )
+                            .asWarning()
+                            .yesText("Delete")
+                            .noText("Cancel")
+                            .ask(project)
+                    ) {
+                        executeOnPooledThreadWithRemoteUILocked({
+                            // 开启一个ExecChannel来删除非空的文件夹
+                            for (file in files) {
+                                if (file.exists()) {
+                                    try {
+                                        executeSync("rm -Rf \"${file.path()}\"")
+                                    } catch (err: java.lang.Exception) {
+                                        err.printStackTrace()
+                                        XFTPManager.message(
+                                            "Error occurred while deleting file: ${file.path()}",
+                                            MessageType.ERROR
+                                        )
+                                    }
+                                }
                             }
+
+                            true
+                        })
+                    }
+                }
+            }
+            it.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.DeleteAction))
+        }
+        duplicate.let {
+            it.addActionListener {
+                val files: List<RemoteFileObject> = getSelectedRemoteFileList()
+
+                if (files.size == 1 && isChannelAlive()) {
+                    val file = files[0]
+                    val isDir = file.isDir()
+
+                    FileNameTextFieldDialog(project).openDialog(isDir, file.name()) { filename ->
+                        executeOnPooledThreadWithRemoteUILocked({
+                            val parsedFileName = joinWithCurrentRemotePath(filename.trim())
+
+                            val folderName = getParentFolderPath(parsedFileName, FILE_SEP)
+                            if (folderName != FILE_SEP) {
+                                sftpClient!!.mkdirs(folderName)
+                            }
+
+                            executeSync("cp${if (isDir) " -R" else ""} \"${file.path()}\" \"$parsedFileName\"")
+
+                            setCurrentRemotePath(parsedFileName)
+
+                            false
+                        }) {
+                            XFTPManager.message(
+                                "Error occurred while duplicating file: ${it.message}",
+                                MessageType.ERROR
+                            )
                         }
                     }
-
-                    true
-                })
+                }
             }
+            it.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.DuplicateAction))
         }
-        touch.addActionListener {
-            FileNameTextFieldDialog(project).openDialog(false) { filename ->
-                executeOnPooledThreadWithRemoteUILocked({
-                    val parsedFileName = joinWithCurrentRemotePath(filename.trim())
+        mv.let {
+            it.addActionListener {
+                val files: List<RemoteFileObject> = getSelectedRemoteFileList()
 
-                    val folderName = getParentFolderPath(parsedFileName, FILE_SEP)
-                    if (folderName != FILE_SEP) {
-                        sftpClient!!.mkdirs(folderName)
+                if (files.size == 1 && isChannelAlive()) {
+                    val file = files[0]
+                    val isDir = file.isDir()
+
+                    FileNameTextFieldDialog(project).openDialog(isDir, file.name()) { filename ->
+                        executeOnPooledThreadWithRemoteUILocked({
+                            val parsedFileName = joinWithCurrentRemotePath(filename.trim())
+
+                            val folderName = getParentFolderPath(parsedFileName, FILE_SEP)
+                            if (folderName != FILE_SEP) {
+                                sftpClient!!.mkdirs(folderName)
+                            }
+
+                            executeSync("mv \"${file.path()}\" \"$parsedFileName\"")
+
+                            setCurrentRemotePath(parsedFileName)
+
+                            false
+                        }) {
+                            XFTPManager.message(
+                                "Error occurred while renaming file: ${it.message}",
+                                MessageType.ERROR
+                            )
+                        }
                     }
-
-                    executeSync("touch \"$parsedFileName\"")
-                    // 打开当前文件
-                    setCurrentRemotePath(parsedFileName)
-
-                    false
-                }) {
-                    XFTPManager.message(
-                        "Error occurred while creating file: ${it.message}",
-                        MessageType.ERROR
-                    )
                 }
             }
+            it.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.RenameAction))
         }
-        duplicate.addActionListener {
-            val files: List<RemoteFileObject> = getSelectedRemoteFileList()
-            Assert.assertTrue("duplicate only accepts one selection", files.size == 1)
+        touch.let {
+            it.addActionListener {
+                if (isChannelAlive()) {
+                    FileNameTextFieldDialog(project).openDialog(false) { filename ->
+                        executeOnPooledThreadWithRemoteUILocked({
+                            val parsedFileName = joinWithCurrentRemotePath(filename.trim())
 
-            val file = files[0]
-            val isDir = file.isDir()
+                            val folderName = getParentFolderPath(parsedFileName, FILE_SEP)
+                            if (folderName != FILE_SEP) {
+                                sftpClient!!.mkdirs(folderName)
+                            }
 
-            FileNameTextFieldDialog(project).openDialog(isDir, file.name()) { filename ->
-                executeOnPooledThreadWithRemoteUILocked({
-                    val parsedFileName = joinWithCurrentRemotePath(filename.trim())
+                            executeSync("touch \"$parsedFileName\"")
+                            // 打开当前文件
+                            setCurrentRemotePath(parsedFileName)
 
-                    val folderName = getParentFolderPath(parsedFileName, FILE_SEP)
-                    if (folderName != FILE_SEP) {
-                        sftpClient!!.mkdirs(folderName)
+                            false
+                        }) {
+                            XFTPManager.message(
+                                "Error occurred while creating file: ${it.message}",
+                                MessageType.ERROR
+                            )
+                        }
                     }
-
-                    executeSync("cp${if (isDir) " -R" else ""} \"${file.path()}\" \"$parsedFileName\"")
-
-                    setCurrentRemotePath(parsedFileName)
-
-                    false
-                }) {
-                    XFTPManager.message(
-                        "Error occurred while duplicating file: ${it.message}",
-                        MessageType.ERROR
-                    )
                 }
             }
+            it.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.NewFileAction))
         }
-        mv.addActionListener {
-            val files: List<RemoteFileObject> = getSelectedRemoteFileList()
-            Assert.assertTrue("mv only accepts one selection", files.size == 1)
+        mkdirp.let {
+            it.addActionListener {
+                if (isChannelAlive()) {
+                    FileNameTextFieldDialog(project).openDialog(true) { filename ->
+                        executeOnPooledThreadWithRemoteUILocked({
+                            val fullPath = joinWithCurrentRemotePath(filename.trim())
+                            sftpClient!!.mkdirs(fullPath)
 
-            val file = files[0]
-            val isDir = file.isDir()
+                            setCurrentRemotePath(fullPath)
 
-            FileNameTextFieldDialog(project).openDialog(isDir, file.name()) { filename ->
-                executeOnPooledThreadWithRemoteUILocked({
-                    val parsedFileName = joinWithCurrentRemotePath(filename.trim())
-
-                    val folderName = getParentFolderPath(parsedFileName, FILE_SEP)
-                    if (folderName != FILE_SEP) {
-                        sftpClient!!.mkdirs(folderName)
+                            false
+                        }) {
+                            XFTPManager.message(
+                                "Error occurred while creating folder: ${it.message}",
+                                MessageType.ERROR
+                            )
+                        }
                     }
-
-                    executeSync("mv \"${file.path()}\" \"$parsedFileName\"")
-
-                    setCurrentRemotePath(parsedFileName)
-
-                    false
-                }) {
-                    XFTPManager.message(
-                        "Error occurred while renaming file: ${it.message}",
-                        MessageType.ERROR
-                    )
                 }
             }
-        }
-        mkdirp.addActionListener {
-            FileNameTextFieldDialog(project).openDialog(true) { filename ->
-                executeOnPooledThreadWithRemoteUILocked({
-                    val fullPath = joinWithCurrentRemotePath(filename.trim())
-                    sftpClient!!.mkdirs(fullPath)
-
-                    setCurrentRemotePath(fullPath)
-
-                    false
-                }) {
-                    XFTPManager.message(
-                        "Error occurred while creating folder: ${it.message}",
-                        MessageType.ERROR
-                    )
-                }
-            }
+            it.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.NewFolderAction))
         }
 
         remoteFileListPopupMenu.addPopupMenuListener(object : PopupMenuListener {
