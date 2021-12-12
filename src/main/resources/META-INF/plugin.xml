@@ -159,7 +159,7 @@
         </action>
         <action id="XFTP.Delete" class="net.allape.action.DeleteAction" text="Delete"
                 description="Delete selected file(s) or folder(s)">
-            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta BACKSPACE"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="DELETE"/>
             <keyboard-shortcut keymap="$default" first-keystroke="DELETE"/>
         </action>
         <action id="XFTP.Duplicate" class="net.allape.action.DuplicateAction" text="Duplicate"
