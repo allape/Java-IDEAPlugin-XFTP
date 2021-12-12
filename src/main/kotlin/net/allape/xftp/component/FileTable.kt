@@ -1,4 +1,4 @@
-package net.allape.component
+package net.allape.xftp.component
 
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.ui.DarculaColors

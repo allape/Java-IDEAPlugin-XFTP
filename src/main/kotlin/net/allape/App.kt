@@ -11,7 +11,7 @@ import com.intellij.ui.content.ContentManagerEvent
 import com.intellij.ui.content.ContentManagerListener
 import net.allape.action.NewWindowAction
 import net.allape.common.XFTPManager
-import net.allape.xftp.ExplorerWindow
+import net.allape.xftp.XFTP
 
 class App: ToolWindowFactory, DumbAware {
 
@@ -19,7 +19,7 @@ class App: ToolWindowFactory, DumbAware {
 
         fun createTheToolWindowContent(project: Project, toolWindow: ToolWindow) {
             // window实例
-            val window = ExplorerWindow(project, toolWindow)
+            val window = XFTP(project, toolWindow)
 
             //获取内容工厂的实例
             val contentFactory = ContentFactory.SERVICE.getInstance()

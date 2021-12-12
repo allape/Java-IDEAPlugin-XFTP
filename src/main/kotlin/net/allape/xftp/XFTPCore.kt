@@ -25,7 +25,7 @@ import com.jetbrains.plugins.remotesdk.console.SshConfigConnector
 import com.jetbrains.plugins.remotesdk.console.SshTerminalDirectRunner
 import net.allape.common.HistoryTopicHandler
 import net.allape.common.XFTPManager
-import net.allape.component.FileTableModel
+import net.allape.xftp.component.FileTableModel
 import net.allape.model.*
 import net.schmizz.sshj.common.StreamCopier
 import net.schmizz.sshj.sftp.SFTPClient
@@ -42,12 +42,12 @@ import kotlin.math.roundToInt
 class TransferException(message: String): RuntimeException(message)
 class TransferCancelledException(message: String): RuntimeException(message)
 
-abstract class ExplorerBaseWindow(
+abstract class XFTPCore(
     protected val project: Project,
     protected val toolWindow: ToolWindow,
 ) : Disposable {
 
-    private val logger = Logger.getInstance(ExplorerBaseWindow::class.java)
+    private val logger = Logger.getInstance(XFTPCore::class.java)
 
     protected val application: Application = ApplicationManager.getApplication()
 

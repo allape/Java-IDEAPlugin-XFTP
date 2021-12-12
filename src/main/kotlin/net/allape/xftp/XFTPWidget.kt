@@ -12,8 +12,8 @@ import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.Consumer
 import net.allape.action.EnablableAction
-import net.allape.component.FileTable
-import net.allape.component.MemoComboBox
+import net.allape.xftp.component.FileTable
+import net.allape.xftp.component.MemoComboBox
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.GridBagConstraints
@@ -26,10 +26,10 @@ import javax.swing.JPanel
 /**
  * 纯UI组件
  */
-abstract class ExplorerWindowUI(
+abstract class XFTPWidget(
     project: Project,
     toolWindow: ToolWindow,
-) : ExplorerBaseWindow(project, toolWindow) {
+) : XFTPCore(project, toolWindow) {
 
     companion object {
         private fun defaultConfig(): GridBagConstraints {

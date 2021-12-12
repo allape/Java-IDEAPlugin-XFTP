@@ -1,4 +1,4 @@
-package net.allape.component
+package net.allape.xftp.component
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -97,7 +97,7 @@ class MemoComboBox<E>(
                     i?.memo != null && i.memo!! == value
                 }
                 if (vector.size > maxCount) {
-                    vector.removeAll(vector.subList(maxCount - 1, vector.size))
+                    vector.removeAll(vector.subList(maxCount - 1, vector.size).toSet())
                 }
                 val model = dataModel as DefaultComboBoxModel<MemoComboBoxPersistenceModel<E>>
                 val newMemo = MemoComboBoxPersistenceModel(value)

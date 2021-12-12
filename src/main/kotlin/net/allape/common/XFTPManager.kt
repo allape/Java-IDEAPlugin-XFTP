@@ -5,7 +5,7 @@ import com.intellij.notification.Notifications
 import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.ui.content.Content
-import net.allape.xftp.ExplorerWindow
+import net.allape.xftp.XFTP
 
 class XFTPManager {
 
@@ -17,7 +17,7 @@ class XFTPManager {
         const val DEFAULT_NAME = "Explorer"
 
         // 当前打开的窗口
-        val windows: HashMap<Content, ExplorerWindow> = HashMap(10)
+        val windows: HashMap<Content, XFTP> = HashMap(10)
 
         /**
          * message中用到的group
@@ -41,7 +41,7 @@ class XFTPManager {
         /**
          * 获取当前选中的窗口, 可能为null
          */
-        fun getCurrentSelectedWindow(): ExplorerWindow? {
+        fun getCurrentSelectedWindow(): XFTP? {
             return toolWindow.contentManager.selectedContent?.let { content ->
                 windows[content]
             }

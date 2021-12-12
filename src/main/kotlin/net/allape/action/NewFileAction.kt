@@ -8,6 +8,7 @@ import java.awt.event.ActionEvent
 
 class NewFileAction : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
+        // FIXME NPE
         XFTPManager.getCurrentSelectedWindow()?.let { window ->
             window.touch.action.
             actionPerformed(object : ActionEvent(window.touch, ACTION_PERFORMED, null) {})

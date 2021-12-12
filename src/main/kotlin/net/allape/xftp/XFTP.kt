@@ -21,21 +21,18 @@ import com.intellij.ssh.SshTransportException
 import com.intellij.ssh.connectionBuilder
 import com.intellij.util.ReflectionUtil
 import com.jetbrains.plugins.remotesdk.console.SshConfigConnector
-import com.jetbrains.plugins.remotesdk.console.SshTerminalDirectRunner
 import icons.TerminalIcons
 import net.allape.action.Actions
 import net.allape.action.EnablableAction
 import net.allape.common.RemoteDataProducerWrapper
 import net.allape.common.XFTPManager
-import net.allape.component.FileNameTextFieldDialog
+import net.allape.xftp.component.FileNameTextFieldDialog
 import net.allape.model.FileModel
 import net.allape.model.FileTransferHandler
 import net.allape.model.FileTransferable
 import net.allape.model.TransferType
 import net.allape.util.Maps
 import net.schmizz.sshj.sftp.SFTPClient
-import org.jetbrains.plugins.terminal.TerminalTabState
-import org.jetbrains.plugins.terminal.TerminalView
 import org.junit.Assert
 import java.awt.Desktop
 import java.awt.datatransfer.DataFlavor
@@ -45,7 +42,6 @@ import java.awt.event.MouseListener
 import java.io.File
 import java.io.IOException
 import java.lang.reflect.Field
-import java.nio.charset.Charset
 import java.util.*
 import java.util.concurrent.Future
 import java.util.stream.Collectors
@@ -54,17 +50,17 @@ import javax.swing.JComponent
 import javax.swing.event.PopupMenuEvent
 import javax.swing.event.PopupMenuListener
 
-class ExplorerWindow(
+class XFTP(
     project: Project,
     toolWindow: ToolWindow,
-) : ExplorerWindowUI(project, toolWindow) {
+) : XFTPWidget(project, toolWindow) {
 
     companion object {
         // 双击间隔, 毫秒
         const val DOUBLE_CLICK_INTERVAL: Long = 350
     }
 
-    private val logger = Logger.getInstance(ExplorerWindow::class.java)
+    private val logger = Logger.getInstance(XFTP::class.java)
 
     private var clickWatcher: Long = System.currentTimeMillis()
 
@@ -677,7 +673,7 @@ class ExplorerWindow(
                     null
                 ) { c ->
                     c?.let { connector ->
-                        this@ExplorerWindow.connector = connector as SshConfigConnector
+                        this@XFTP.connector = connector as SshConfigConnector
                         connector.produceRemoteCredentials { data ->
                             if (data != null) {
                                 this.triggerConnecting()

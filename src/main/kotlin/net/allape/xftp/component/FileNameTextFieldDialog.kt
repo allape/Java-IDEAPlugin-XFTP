@@ -1,4 +1,4 @@
-package net.allape.component
+package net.allape.xftp.component
 
 import com.intellij.ide.ui.newItemPopup.NewItemPopupUtil
 import com.intellij.ide.ui.newItemPopup.NewItemSimplePopupPanel
@@ -8,7 +8,7 @@ import com.intellij.openapi.ui.InputValidatorEx
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.util.Consumer
-import net.allape.xftp.ExplorerBaseWindow
+import net.allape.xftp.XFTPCore
 import java.awt.event.InputEvent
 import java.util.*
 
@@ -66,9 +66,9 @@ class FileNameValidator(
             errorText = "$value already exists"
             return false
         }
-        val parsedName = inputString.replace("\\", ExplorerBaseWindow.FILE_SEP)
-        if (!isDirectory && inputString.endsWith(ExplorerBaseWindow.FILE_SEP)) {
-            errorText = "$objectName name can NOT end withs ${ExplorerBaseWindow.FILE_SEP}"
+        val parsedName = inputString.replace("\\", XFTPCore.FILE_SEP)
+        if (!isDirectory && inputString.endsWith(XFTPCore.FILE_SEP)) {
+            errorText = "$objectName name can NOT end withs ${XFTPCore.FILE_SEP}"
             return false
         }
         if (inputString.contains(Regex("[\"'`\$]"))) {
@@ -77,7 +77,7 @@ class FileNameValidator(
         }
         val tokenizer = StringTokenizer(
             parsedName,
-            ExplorerBaseWindow.FILE_SEP,
+            XFTPCore.FILE_SEP,
         )
         while (tokenizer.hasMoreTokens()) {
             val token = tokenizer.nextToken()
