@@ -7,7 +7,13 @@ import net.allape.common.XFTPManager
 class OpenAction : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
         XFTPManager.getCurrentSelectedWindow()?.apply {
-            performAnJMenuItemAction(open)
+            if (localPath.isPopupVisible) {
+                localPath.isPopupVisible = false
+            } else if (remotePath.isPopupVisible) {
+                remotePath.isPopupVisible = false
+            } else {
+                performAnJMenuItemAction(open)
+            }
         }
     }
 }

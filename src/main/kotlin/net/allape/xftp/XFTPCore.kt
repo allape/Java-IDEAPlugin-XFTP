@@ -33,6 +33,7 @@ import net.schmizz.sshj.sftp.SFTPFileTransfer
 import net.schmizz.sshj.xfer.TransferListener
 import org.jetbrains.plugins.terminal.TerminalTabState
 import org.jetbrains.plugins.terminal.TerminalView
+import org.junit.Assert
 import java.io.File
 import java.io.IOException
 import java.net.SocketException
@@ -54,6 +55,10 @@ abstract class XFTPCore(
     companion object {
         // 服务器文件系统分隔符
         const val FILE_SEP = "/"
+        init {
+            Assert.assertTrue("FILE_SEP Only accepts one character", FILE_SEP.length == 1)
+        }
+
         // 分隔符重复替换正则
         val duplicateRegex = Regex("$FILE_SEP$FILE_SEP+")
         // 分隔符头部替换正则
@@ -76,7 +81,7 @@ abstract class XFTPCore(
          * @return 格式化后的文件路径
          */
         fun normalizeRemoteFileObjectPath(file: RemoteFileObject): String {
-            return if (file.path().startsWith("//")) file.path().substring(1) else file.path()
+            return file.path().replace(Regex("\\\\"), FILE_SEP).replace(Regex("//+"), FILE_SEP)
         }
 
         /**

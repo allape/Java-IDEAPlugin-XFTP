@@ -36,7 +36,6 @@ import java.awt.event.MouseListener
 import java.io.File
 import java.io.IOException
 import java.lang.reflect.Field
-import java.util.*
 import java.util.concurrent.Future
 import java.util.stream.Collectors
 import javax.swing.DropMode
@@ -102,87 +101,19 @@ class XFTP(
     }
 
     override fun bindLocalIU() {
+        localPath.addPopupMenuListener(object : PopupMenuListener {
+            override fun popupMenuWillBecomeVisible(e: PopupMenuEvent?) {
+                localFileList.clearSelection()
+                remoteFileList.clearSelection()
+            }
+            override fun popupMenuWillBecomeInvisible(e: PopupMenuEvent?) {
+                fetchLocalList(localPath.getMemoItem() ?: FILE_SEP)
+            }
+            override fun popupMenuCanceled(e: PopupMenuEvent?) {}
+        })
         localPath.addActionListener {
-            var path = getCurrentLocalPath().ifEmpty { File.separator }
-            try {
-                val file = File(path)
-                if (!file.exists()) {
-                    XFTPManager.message("$path does not exist!", MessageType.INFO)
-                    // 获取第二个历史, 不存在时加载项目路径
-                    localPath.getItemAt(1)?.let { lastPath ->
-                        if (lastPath.memo != null) {
-                            setCurrentLocalPath(lastPath.memo.toString())
-                        } else {
-                            setCurrentLocalPath(Objects.requireNonNull(project.basePath)!!)
-                        }
-                    }
-                } else if (!file.isDirectory) {
-                    // 加载父文件夹
-                    setCurrentLocalPath(file.parent)
-                    if (file.length() > EDITABLE_FILE_SIZE) {
-                        if (MessageDialogBuilder.yesNo(
-                                "This file is too large for text editor",
-                                "Do you still want to edit it?"
-                            )
-                                .asWarning()
-                                .yesText("Edit it")
-                                .ask(project)
-                        ) {
-                            openFileInEditor(file)
-                        }
-                    } else {
-                        openFileInEditor(file)
-                    }
-                } else {
-                    val files = file.listFiles()
-                    if (files == null) {
-                        if (MessageDialogBuilder.yesNo(
-                                "It is an unavailable folder!",
-                                "This folder is not available, do you want to open it in system file manager?"
-                            )
-                                .asWarning()
-                                .yesText("Open")
-                                .ask(project)
-                        ) {
-                            try {
-                                Desktop.getDesktop().open(file)
-                            } catch (ioException: IOException) {
-                                ioException.printStackTrace()
-                                XFTPManager.message(
-                                    "Failed to open file in system file manager",
-                                    MessageType.INFO
-                                )
-                            }
-                        }
-                        return@addActionListener
-                    }
-                    path = file.absolutePath
-                    val fileModels: MutableList<FileModel> = ArrayList(
-                        if (file.length() == 0L) 1 else if (file.length() > Int.MAX_VALUE) Int.MAX_VALUE else file.length()
-                            .toString().toInt()
-                    )
-
-                    // 添加返回上一级目录
-                    fileModels.add(getParentFolder(path, File.separator))
-                    for (currentFile in files) {
-                        fileModels.add(
-                            FileModel(
-                                currentFile.absolutePath,
-                                currentFile.name,
-                                currentFile.isDirectory,
-                                currentFile.length(),
-                                (if (currentFile.canRead()) 4 else 0) or
-                                        (if (currentFile.canWrite()) 2 else 0) or
-                                        if (currentFile.canExecute()) 1 else 0,
-                                true
-                            )
-                        )
-                    }
-                    localFileList.resetData(fileModels)
-                }
-            } catch (ex: java.lang.Exception) {
-                ex.printStackTrace()
-                XFTPManager.message(ex.message!!, MessageType.WARNING)
+            if (it.actionCommand == "comboBoxEdited") {
+                fetchRemoteList(localPath.getMemoItem() ?: FILE_SEP)
             }
         }
 
@@ -251,61 +182,19 @@ class XFTP(
 
     override fun bindRemoteUI() {
         remotePath.isEnabled = false
+        remotePath.addPopupMenuListener(object : PopupMenuListener {
+            override fun popupMenuWillBecomeVisible(e: PopupMenuEvent?) {
+                localFileList.clearSelection()
+                remoteFileList.clearSelection()
+            }
+            override fun popupMenuWillBecomeInvisible(e: PopupMenuEvent?) {
+                fetchRemoteList(remotePath.getMemoItem() ?: FILE_SEP)
+            }
+            override fun popupMenuCanceled(e: PopupMenuEvent?) {}
+        })
         remotePath.addActionListener {
-            val remoteFilePath = getCurrentRemotePath()
-
-            if (remoteFilePath.isEmpty()) return@addActionListener
-
-            application.executeOnPooledThread {
-                if (this.isChannelAlive()) {
-                    lockRemoteUIs()
-                    // 是否接下来加载父文件夹
-                    var loadParent: String? = null
-                    try {
-                        var path = remoteFilePath.ifEmpty { FILE_SEP }
-                        val file = sftpChannel!!.file(path)
-                        path = file.path()
-                        if (!file.exists()) {
-                            XFTPManager.message("$path does not exist!", MessageType.INFO)
-                            loadParent = getParentFolderPath(file.path(), FILE_SEP)
-                        } else if (!file.isDir()) {
-                            downloadFileAndEdit(file)
-                            loadParent = getParentFolderPath(file.path(), FILE_SEP)
-                        } else {
-                            val files = file.list()
-                            val fileModels: MutableList<FileModel> =
-                                ArrayList(files.size)
-
-                            // 添加返回上一级目录
-                            fileModels.add(getParentFolder(path, FILE_SEP))
-                            for (f in files) {
-                                fileModels.add(
-                                    FileModel(
-                                        // 处理有些文件夹是//开头的
-                                        normalizeRemoteFileObjectPath(f),
-                                        f.name(), f.isDir(), f.size(), f.permissions, false
-                                    )
-                                )
-                            }
-                            application.invokeLater {
-                                remoteFileList.resetData(fileModels)
-                                remoteFileList.requestFocusInWindow()
-                            }
-                        }
-                    } catch (ex: java.lang.Exception) {
-                        ex.printStackTrace()
-                        XFTPManager.message(
-                            "Error occurred while listing remote files: " + ex.message,
-                            MessageType.ERROR
-                        )
-                    } finally {
-                        unlockRemoteUIs()
-                        if (loadParent != null) {
-                            // 加载父文件夹
-                            setCurrentRemotePath(loadParent)
-                        }
-                    }
-                }
+            if (it.actionCommand == "comboBoxEdited") {
+                fetchRemoteList(remotePath.getMemoItem() ?: FILE_SEP)
             }
         }
         setRemoteButtonsEnable(false)
@@ -730,11 +619,8 @@ class XFTP(
      * @param currentLocalPath 本地文件路径
      */
     fun setCurrentLocalPath(currentLocalPath: String) {
-        val fireEventManually = currentLocalPath == getCurrentLocalPath()
         localPath.push(currentLocalPath)
-        if (fireEventManually) {
-            localPath.actionPerformed(null)
-        }
+        fetchLocalList(currentLocalPath)
     }
 
     /**
@@ -742,11 +628,8 @@ class XFTP(
      * @param currentRemotePath 远程文件路径
      */
     fun setCurrentRemotePath(currentRemotePath: String) {
-        val fireEventManually = currentRemotePath == getCurrentRemotePath()
         remotePath.push(currentRemotePath)
-        if (fireEventManually) {
-            remotePath.actionPerformed(null)
-        }
+        fetchRemoteList(currentRemotePath)
     }
 
     /**
@@ -766,6 +649,154 @@ class XFTP(
                 .collect(Collectors.toList())
         } finally {
             unlockRemoteUIs()
+        }
+    }
+
+    /**
+     * 加载指定路径的本地文件列表
+     */
+    private fun fetchLocalList(targetPath: String) {
+        var path = targetPath.ifEmpty { File.separator }
+        var nextDir: String? = null
+        try {
+            val file = File(path)
+            if (!file.exists()) {
+                XFTPManager.message("$path does not exist!", MessageType.INFO)
+                // 获取第二个历史, 不存在时加载项目路径
+                if (project.basePath != null) {
+                    nextDir = project.basePath
+                } else if (!path.equals(File.separator)) {
+                    nextDir = File.separator
+                }
+            } else if (!file.isDirectory) {
+                // 加载父文件夹
+                nextDir = file.parent
+                if (file.length() > EDITABLE_FILE_SIZE) {
+                    if (MessageDialogBuilder.yesNo(
+                            "This file is too large for text editor",
+                            "Do you still want to edit it?"
+                        )
+                            .asWarning()
+                            .yesText("Edit it")
+                            .ask(project)
+                    ) {
+                        openFileInEditor(file)
+                    }
+                } else {
+                    openFileInEditor(file)
+                }
+            } else {
+                val files = file.listFiles()
+                if (files == null) {
+                    if (MessageDialogBuilder.yesNo(
+                            "It is an unavailable folder!",
+                            "This folder is not available, do you want to open it in system file manager?"
+                        )
+                            .asWarning()
+                            .yesText("Open")
+                            .ask(project)
+                    ) {
+                        try {
+                            Desktop.getDesktop().open(file)
+                        } catch (ioException: IOException) {
+                            ioException.printStackTrace()
+                            XFTPManager.message(
+                                "Failed to open file in system file manager",
+                                MessageType.INFO
+                            )
+                        }
+                    }
+                    return
+                }
+                path = file.absolutePath
+                val fileModels: MutableList<FileModel> = ArrayList(
+                    if (file.length() == 0L) 1 else if (file.length() > Int.MAX_VALUE) Int.MAX_VALUE else file.length()
+                        .toString().toInt()
+                )
+
+                // 添加返回上一级目录
+                fileModels.add(getParentFolder(path, File.separator))
+                for (currentFile in files) {
+                    fileModels.add(
+                        FileModel(
+                            currentFile.absolutePath,
+                            currentFile.name,
+                            currentFile.isDirectory,
+                            currentFile.length(),
+                            (if (currentFile.canRead()) 4 else 0) or
+                                    (if (currentFile.canWrite()) 2 else 0) or
+                                    if (currentFile.canExecute()) 1 else 0,
+                            true
+                        )
+                    )
+                }
+                localFileList.resetData(fileModels)
+            }
+        } catch (ex: java.lang.Exception) {
+            ex.printStackTrace()
+            XFTPManager.message(ex.message!!, MessageType.WARNING)
+        } finally {
+            if (nextDir != null && nextDir != path) {
+                setCurrentLocalPath(nextDir)
+            }
+        }
+    }
+
+    /**
+     * 加载指定路径的远程目录列表
+     */
+    private fun fetchRemoteList(targetPath: String) {
+        if (targetPath.isEmpty()) return
+        application.executeOnPooledThread {
+            if (this.isChannelAlive()) {
+                lockRemoteUIs()
+                // 是否接下来加载父文件夹
+                var loadParent: String? = null
+                try {
+                    var path = targetPath.ifEmpty { FILE_SEP }
+                    val file = sftpChannel!!.file(path)
+                    path = file.path()
+                    if (!file.exists()) {
+                        XFTPManager.message("$path does not exist!", MessageType.INFO)
+                        loadParent = getParentFolderPath(file.path(), FILE_SEP)
+                    } else if (!file.isDir()) {
+                        downloadFileAndEdit(file)
+                        loadParent = getParentFolderPath(file.path(), FILE_SEP)
+                    } else {
+                        val files = file.list()
+                        val fileModels: MutableList<FileModel> =
+                            ArrayList(files.size)
+
+                        // 添加返回上一级目录
+                        fileModels.add(getParentFolder(path, FILE_SEP))
+                        for (f in files) {
+                            fileModels.add(
+                                FileModel(
+                                    // 处理有些文件夹是//开头的
+                                    normalizeRemoteFileObjectPath(f),
+                                    f.name(), f.isDir(), f.size(), f.permissions, false
+                                )
+                            )
+                        }
+                        application.invokeLater {
+                            remoteFileList.resetData(fileModels)
+                            remoteFileList.requestFocusInWindow()
+                        }
+                    }
+                } catch (ex: java.lang.Exception) {
+                    ex.printStackTrace()
+                    XFTPManager.message(
+                        "Error occurred while listing remote files: " + ex.message,
+                        MessageType.ERROR
+                    )
+                } finally {
+                    unlockRemoteUIs()
+                    if (loadParent != null && loadParent != targetPath) {
+                        // 加载父文件夹
+                        setCurrentRemotePath(loadParent)
+                    }
+                }
+            }
         }
     }
 
