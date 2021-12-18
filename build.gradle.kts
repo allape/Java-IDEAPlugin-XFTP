@@ -5,14 +5,14 @@ plugins {
 }
 
 group = "net.allape"
-version = "0.10.3"
+version = "0.10.4"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.5.21")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.6.0")
     implementation("com.google.code.gson:gson:2.8.9")
 
     compileOnly(files("/Applications/IntelliJ IDEA.app/Contents/plugins/remote-run/lib/remote-run.jar"))

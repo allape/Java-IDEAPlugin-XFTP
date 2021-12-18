@@ -1,15 +1,15 @@
 package net.allape.action
 
 import com.intellij.icons.AllIcons
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.ui.MessageType
 import net.allape.common.XFTPManager
 import java.awt.Desktop
 import java.io.File
 import java.io.IOException
 
-class OpenLocalInFileManagerAction : AnAction(AllIcons.Actions.MenuOpen) {
+class OpenLocalInFileManagerAction : DumbAwareAction(AllIcons.Actions.MenuOpen) {
 
     override fun actionPerformed(e: AnActionEvent) {
         XFTPManager.getCurrentSelectedWindow()?.apply {
