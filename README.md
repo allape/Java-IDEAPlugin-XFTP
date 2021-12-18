@@ -18,3 +18,4 @@
 
 ## Known Issues
 - Connection can NOT be cancelled in connecting progress.
+- Shift Option R is not working in macOS
