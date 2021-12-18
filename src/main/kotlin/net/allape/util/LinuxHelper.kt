@@ -1,6 +1,6 @@
 package net.allape.util
 
-class LinuxPermissions {
+class LinuxHelper {
 
     companion object {
 
@@ -25,6 +25,13 @@ class LinuxPermissions {
                 }
             }
             return builder.toString()
+        }
+
+        /**
+         * 转译shell字符串, 所有单引号被
+         */
+        fun escapeShellString(string: String): String {
+            return "'${string.replace(Regex("'"), "'\\\\''")}'"
         }
 
     }

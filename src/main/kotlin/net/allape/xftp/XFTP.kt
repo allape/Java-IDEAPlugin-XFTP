@@ -25,6 +25,7 @@ import net.allape.model.FileModel
 import net.allape.model.FileTransferHandler
 import net.allape.model.FileTransferable
 import net.allape.model.TransferType
+import net.allape.util.LinuxHelper
 import net.allape.util.Maps
 import net.allape.xftp.component.FileNameTextFieldDialog
 import net.schmizz.sshj.sftp.SFTPClient
@@ -285,8 +286,8 @@ class XFTP(
             }
             it.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.OpenAction))
         }
-        rmRf.let {
-            it.addActionListener {
+        rmRf.let { rmRf ->
+            rmRf.addActionListener {
                 val files: List<RemoteFileObject> = getSelectedRemoteFileList()
                 if (files.isNotEmpty() && isConnected() && isChannelAlive()) {
                     if (MessageDialogBuilder.yesNo(
@@ -303,7 +304,7 @@ class XFTP(
                             for (file in files) {
                                 if (file.exists()) {
                                     try {
-                                        executeSync("rm -Rf \"${file.path()}\"")
+                                        executeSync("rm -Rf ${LinuxHelper.escapeShellString(file.path())}")
                                     } catch (err: java.lang.Exception) {
                                         err.printStackTrace()
                                         XFTPManager.message(
@@ -319,7 +320,7 @@ class XFTP(
                     }
                 }
             }
-            it.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.DeleteAction))
+            rmRf.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.DeleteAction))
         }
         duplicate.let {
             it.addActionListener {
@@ -338,7 +339,7 @@ class XFTP(
                                 sftpClient!!.mkdirs(folderName)
                             }
 
-                            executeSync("cp${if (isDir) " -R" else ""} \"${file.path()}\" \"$parsedFileName\"")
+                            executeSync("cp${if (isDir) " -R" else ""} ${LinuxHelper.escapeShellString(file.path())} ${LinuxHelper.escapeShellString(parsedFileName)}")
 
                             setCurrentRemotePath(parsedFileName)
 
@@ -371,7 +372,7 @@ class XFTP(
                                 sftpClient!!.mkdirs(folderName)
                             }
 
-                            executeSync("mv \"${file.path()}\" \"$parsedFileName\"")
+                            executeSync("mv ${LinuxHelper.escapeShellString(file.path())} ${LinuxHelper.escapeShellString(parsedFileName)}")
 
                             setCurrentRemotePath(parsedFileName)
 
@@ -399,14 +400,14 @@ class XFTP(
                                 sftpClient!!.mkdirs(folderName)
                             }
 
-                            executeSync("touch \"$parsedFileName\"")
+                            executeSync("touch ${LinuxHelper.escapeShellString(parsedFileName)}")
                             // 打开当前文件
                             setCurrentRemotePath(parsedFileName)
 
                             false
-                        }) {
+                        }) { ex ->
                             XFTPManager.message(
-                                "Error occurred while creating file: ${it.message}",
+                                "Error occurred while creating file: ${ex.message}",
                                 MessageType.ERROR
                             )
                         }
@@ -444,23 +445,31 @@ class XFTP(
                     setRemoteListContentMenuItems(true)
 
                     val selectedFiles = remoteFileList.selected()
+                    val hasFileSelected = selectedFiles.isNotEmpty()
 
-                    rmRf.isEnabled = selectedFiles.isNotEmpty()
+                    rmRf.isEnabled = hasFileSelected
                     if (rmRf.isEnabled) {
-                        rmRf.text = "$RM_RF_TEXT ${selectedFiles[0].name} ${if (selectedFiles.size > 1) "and ${selectedFiles.size-1} more" else ""}"
+                        rmRf.text = "$RM_RF_TEXT ${LinuxHelper.escapeShellString(selectedFiles[0].name)}${if (selectedFiles.size > 1) " # and ${selectedFiles.size-1} more" else ""}"
                     }
 
-                    val hasFileSelected = selectedFiles.isNotEmpty()
                     duplicate.isEnabled = hasFileSelected
                     if (duplicate.isEnabled) {
-                        duplicate.text = "$CP_TEXT${if (selectedFiles[0].directory) " -R" else ""} ${selectedFiles[0].name} ..."
+                        duplicate.text = "$CP_TEXT${if (selectedFiles[0].directory) " -R" else ""} ${LinuxHelper.escapeShellString(selectedFiles[0].name)} \$1"
                     }
                     mv.isEnabled = hasFileSelected
                     if (mv.isEnabled) {
-                        mv.text = "$MV_TEXT ${selectedFiles[0].name} ..."
+                        mv.text = "$MV_TEXT ${LinuxHelper.escapeShellString(selectedFiles[0].name)} $1"
                     }
 
                     open.isEnabled = hasFileSelected
+                    if (open.isEnabled) {
+                        val file = selectedFiles[0]
+                        if (file.directory) {
+                            open.text = "$CD_TEXT ${LinuxHelper.escapeShellString(file.name)}"
+                        } else {
+                            open.text = "$CAT_TEXT ${LinuxHelper.escapeShellString(file.name)}"
+                        }
+                    }
                 } else {
                     setRemoteListContentMenuItems(false)
                 }

@@ -71,10 +71,6 @@ class FileNameValidator(
             errorText = "$objectName name can NOT end withs ${XFTPCore.FILE_SEP}"
             return false
         }
-        if (inputString.contains(Regex("[\"'`\$]"))) {
-            errorText = "$objectName name can NOT contain [\"'`$]"
-            return false
-        }
         val tokenizer = StringTokenizer(
             parsedName,
             XFTPCore.FILE_SEP,

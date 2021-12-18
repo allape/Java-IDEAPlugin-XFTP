@@ -7,7 +7,7 @@ import com.intellij.ui.table.JBTable
 import com.intellij.util.IconUtil
 import net.allape.model.FileModel
 import net.allape.model.FileModelType
-import net.allape.util.LinuxPermissions
+import net.allape.util.LinuxHelper
 import java.awt.Component
 import java.io.File
 import java.math.BigInteger
@@ -110,7 +110,7 @@ class FileTableModel(
                 0 -> return icon
                 1 -> return model.name
                 2 -> return if (model.directory) "" else byteCountToDisplaySize(model.size)
-                3 -> return LinuxPermissions.humanReadable(model.permissions)
+                3 -> return LinuxHelper.humanReadable(model.permissions)
             }
         } catch (e: Exception) {
             e.printStackTrace()

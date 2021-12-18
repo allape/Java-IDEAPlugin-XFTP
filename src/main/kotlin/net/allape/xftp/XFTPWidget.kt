@@ -78,6 +78,8 @@ abstract class XFTPWidget(
 
         // endregion
 
+        const val CAT_TEXT = "cat"
+        const val CD_TEXT = "cd"
         const val RM_RF_TEXT = "rm -Rf"
         const val MV_TEXT = "mv"
         const val TOUCH_TEXT = "touch"
@@ -275,6 +277,7 @@ abstract class XFTPWidget(
      * 重置远程列表右键菜单的text
      */
     protected fun resetRemoteListContentMenuItemsText() {
+        open.text = "$CD_TEXT ..."
         rmRf.text = "$RM_RF_TEXT ..."
         duplicate.text = "$CP_TEXT ... ..."
         mv.text = "$MV_TEXT ... ..."

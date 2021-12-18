@@ -7,11 +7,14 @@ import com.intellij.openapi.application.Application
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ui.ComboBox
 import java.awt.Component
+import java.awt.event.FocusEvent
+import java.awt.event.FocusListener
 import java.lang.reflect.Field
 import java.util.*
 import javax.swing.DefaultComboBoxModel
 import javax.swing.JList
 import javax.swing.plaf.basic.BasicComboBoxRenderer
+import kotlin.concurrent.schedule
 
 class ComboBoxCellRenderer: BasicComboBoxRenderer() {
     override fun getListCellRendererComponent(
@@ -61,6 +64,16 @@ class MemoComboBox<E>(
      */
     private var dataField: Field? = null
 
+    /**
+     * 是否在下一次获取焦点时显示dropdown
+     */
+    private var popupAfterGainedFocus: Boolean = false
+
+    /**
+     * 当前组件是否获取了焦点
+     */
+    private var focued: Boolean = false
+
     init {
         setRenderer(ComboBoxCellRenderer())
         setEditable(true)
@@ -78,6 +91,23 @@ class MemoComboBox<E>(
             e.printStackTrace()
             propertiesComponent.unsetValue(persistenceKey)
         }
+
+        // 初始化focus监听
+        addFocusListener(object : FocusListener {
+            override fun focusGained(e: FocusEvent?) {
+                focued = true
+                if (popupAfterGainedFocus) {
+                    popupAfterGainedFocus = false
+                    // FIXME 因为马上设置为true时, 因为焦点获取延时的问题, 会导致popup马上关闭
+                    Timer().schedule(200) {
+                        isPopupVisible = true
+                    }
+                }
+            }
+            override fun focusLost(e: FocusEvent?) {
+                focued = false
+            }
+        })
     }
 
     /**
@@ -134,5 +164,21 @@ class MemoComboBox<E>(
      * @return 当前选中的值
      */
     fun getMemoItem(defaultValue: E? = null): E? = item?.memo ?: defaultValue
+
+    /**
+     * 获取焦点并显示下拉框内容
+     */
+    fun focusAndPopup() {
+        if (isPopupVisible) {
+            isPopupVisible = false
+        } else {
+            if (focued) {
+                isPopupVisible = true
+            } else {
+                popupAfterGainedFocus = true
+                requestFocus()
+            }
+        }
+    }
 
 }
