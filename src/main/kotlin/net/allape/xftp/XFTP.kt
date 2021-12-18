@@ -686,7 +686,7 @@ class XFTP(
                             "Do you still want to edit it?"
                         )
                             .asWarning()
-                            .yesText("Edit it")
+                            .yesText("Edit")
                             .ask(project)
                     ) {
                         openFileInEditor(file)

@@ -81,7 +81,7 @@ abstract class XFTPCore(
          * @return 格式化后的文件路径
          */
         fun normalizeRemoteFileObjectPath(file: RemoteFileObject): String {
-            return file.path().replace(Regex("\\\\"), FILE_SEP).replace(Regex("//+"), FILE_SEP)
+            return file.path().replace(Regex("//+"), FILE_SEP)
         }
 
         /**
@@ -484,7 +484,7 @@ abstract class XFTPCore(
                         "This file is too large for text editor",
                         "Do you still want to download and edit it?"
                     ).asWarning()
-                        .yesText("Do it")
+                        .yesText("Edit")
                         .ask(project)
                 ) {
                     return@invokeLater

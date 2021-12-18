@@ -111,12 +111,11 @@
 
         <action id="XFTP.ReloadLocal" class="net.allape.action.ReloadLocalAction" text="Reload Local List"
                 description="Reload local list">
-            <keyboard-shortcut keymap="$default" first-keystroke="shift R"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift alt R"/>
         </action>
         <action id="XFTP.OpenLocalInFileManager" class="net.allape.action.OpenLocalInFileManagerAction" text="Open In File Manager"
                 description="Open current local directory in system file manager">
-            <keyboard-shortcut keymap="$default" first-keystroke="shift E"/>
-            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="shift E"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="shift alt E"/>
         </action>
 
         <action id="XFTP.MakeAConnection" class="net.allape.action.MakeAConnectAction" text="Make A Connection"
