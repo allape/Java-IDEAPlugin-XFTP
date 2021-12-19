@@ -12,7 +12,7 @@ class OpenAction : DumbAwareAction() {
             } else if (remotePath.isPopupVisible) {
                 remotePath.isPopupVisible = false
             } else {
-                performAnJMenuItemAction(open)
+                if (isRemoteListFocused()) performAnJMenuItemAction(cdOrCat)
             }
         }
     }

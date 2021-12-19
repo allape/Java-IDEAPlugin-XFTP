@@ -9,6 +9,8 @@ import net.allape.model.FileModel
 import net.allape.model.FileModelType
 import net.allape.util.LinuxHelper
 import java.awt.Component
+import java.awt.event.FocusEvent
+import java.awt.event.FocusListener
 import java.io.File
 import java.math.BigInteger
 import java.util.*
@@ -154,6 +156,9 @@ class FileTable: JBTable(FileTableModel()) {
             return sortedList
         }
     }
+
+    var focused: Boolean = false
+        private set
     
     init {
         setSelectionBackground(
@@ -187,6 +192,16 @@ class FileTable: JBTable(FileTableModel()) {
         permissionCell.horizontalAlignment = SwingConstants.CENTER
         val permissionsColumn = getColumnModel().getColumn(3)
         permissionsColumn.cellRenderer = permissionCell
+
+        addFocusListener(object : FocusListener {
+            override fun focusGained(e: FocusEvent?) {
+                focused = true
+            }
+
+            override fun focusLost(e: FocusEvent?) {
+                focused = false
+            }
+        })
     }
 
     /**

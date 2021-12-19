@@ -6,8 +6,8 @@ import net.allape.common.XFTPManager
 
 class DuplicateAction : DumbAwareAction() {
     override fun actionPerformed(e: AnActionEvent) {
-        XFTPManager.getCurrentSelectedWindow()?.let { window ->
-            window.performAnJMenuItemAction(window.duplicate)
+        XFTPManager.getCurrentSelectedWindow()?.apply {
+            if (isRemoteListFocused()) performAnJMenuItemAction(duplicate)
         }
     }
 }

@@ -18,4 +18,9 @@
 
 ## Known Issues
 - Connection can NOT be cancelled in connecting progress.
-- Shift Option R is not working in macOS
+  - Wait for 30s with timeout exception...
+- Shift Option R is not working in macOS.
+  - Manually to reload local list.
+- Shift F6 conflicts with Refactor/Rename action.
+  - <= v0.10.4: Remove XFTP rename action shortcuts in Preference / Keymap.
+  - \> v0.10.4: Change shortcut to Shift F7

@@ -6,8 +6,8 @@ import net.allape.common.XFTPManager
 
 class DeleteAction : DumbAwareAction() {
     override fun actionPerformed(e: AnActionEvent) {
-        XFTPManager.getCurrentSelectedWindow()?.let { window ->
-            window.performAnJMenuItemAction(window.rmRf)
+        XFTPManager.getCurrentSelectedWindow()?.apply {
+            if (isRemoteListFocused()) performAnJMenuItemAction(rmRf)
         }
     }
 }

@@ -6,8 +6,8 @@ import net.allape.common.XFTPManager
 
 class RenameAction : DumbAwareAction() {
     override fun actionPerformed(e: AnActionEvent) {
-        XFTPManager.getCurrentSelectedWindow()?.let { window ->
-            window.performAnJMenuItemAction(window.mv)
+        XFTPManager.getCurrentSelectedWindow()?.apply {
+            if (isRemoteListFocused()) performAnJMenuItemAction(mv)
         }
     }
 }

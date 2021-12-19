@@ -13,8 +13,7 @@ import com.intellij.ui.JBSplitter
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.Consumer
-import net.allape.action.Actions
-import net.allape.action.EnablableAction
+import net.allape.action.*
 import net.allape.xftp.component.FileTable
 import net.allape.xftp.component.MemoComboBox
 import java.awt.BorderLayout
@@ -118,17 +117,17 @@ abstract class XFTPWidget(
     // region 远程actions图标按钮
 
     // 建立连接
-    protected val explore: EnablableAction = ActionManager.getInstance().getAction(Actions.MakeAConnectionAction) as EnablableAction
+    protected val explore: EnablableAction = (ActionManager.getInstance().getAction(Actions.MakeAConnectionAction) ?: MakeAConnectAction()) as EnablableAction
     // 显示combobox的下拉内容
-    protected val dropdown: EnablableAction = ActionManager.getInstance().getAction(Actions.RemoteMemoSelectorDropdownAction) as EnablableAction
+    protected val dropdown: EnablableAction = (ActionManager.getInstance().getAction(Actions.RemoteMemoSelectorDropdownAction) ?: RemoteMemoSelectorDropdownAction()) as EnablableAction
     // 刷新
-    protected val reload: EnablableAction = ActionManager.getInstance().getAction(Actions.ReloadRemoteAction) as EnablableAction
+    protected val reload: EnablableAction = (ActionManager.getInstance().getAction(Actions.ReloadRemoteAction) ?: ReloadRemoteAction()) as EnablableAction
     // 断开连接
-    protected val suspend: EnablableAction = ActionManager.getInstance().getAction(Actions.DisconnectAction) as EnablableAction
+    protected val suspend: EnablableAction = (ActionManager.getInstance().getAction(Actions.DisconnectAction) ?: DisconnectAction()) as EnablableAction
     // 命令行打开
-    protected val newTerminal: EnablableAction = ActionManager.getInstance().getAction(Actions.NewTerminalAction) as EnablableAction
+    protected val newTerminal: EnablableAction = (ActionManager.getInstance().getAction(Actions.NewTerminalAction) ?: NewTerminalAction()) as EnablableAction
     // 隐藏本地浏览器
-    protected val localToggle: EnablableAction = ActionManager.getInstance().getAction(Actions.ToggleVisibilityLocalListAction) as EnablableAction
+    protected val localToggle: EnablableAction = (ActionManager.getInstance().getAction(Actions.ToggleVisibilityLocalListAction) ?: ToggleVisibilityLocalListAction()) as EnablableAction
 
     // endregion
 
@@ -137,9 +136,9 @@ abstract class XFTPWidget(
     protected val remoteFileListPopupMenu = JBPopupMenu()
 
     // 返回上一层
-    val goUpper = JBMenuItem("cd ..")
+    val cdDotDot = JBMenuItem("cd ..")
     // 打开
-    val open = JBMenuItem("Open")
+    val cdOrCat = JBMenuItem("cd/cat")
     // 删除
     val rmRf = JBMenuItem(RM_RF_TEXT)
     // 克隆
@@ -218,8 +217,8 @@ abstract class XFTPWidget(
         )
 
         resetRemoteListContentMenuItemsText()
-        remoteFileListPopupMenu.add(goUpper)
-        remoteFileListPopupMenu.add(open)
+        remoteFileListPopupMenu.add(cdDotDot)
+        remoteFileListPopupMenu.add(cdOrCat)
         remoteFileListPopupMenu.addSeparator()
         remoteFileListPopupMenu.add(rmRf)
         remoteFileListPopupMenu.addSeparator()
@@ -265,7 +264,7 @@ abstract class XFTPWidget(
      * @param enable 是否启用
      */
     protected fun setRemoteListContentMenuItems(enable: Boolean) {
-        open.isEnabled = enable
+        cdOrCat.isEnabled = enable
         rmRf.isEnabled = enable
         duplicate.isEnabled = enable
         mv.isEnabled = enable
@@ -277,7 +276,7 @@ abstract class XFTPWidget(
      * 重置远程列表右键菜单的text
      */
     protected fun resetRemoteListContentMenuItemsText() {
-        open.text = "$CD_TEXT ..."
+        cdOrCat.text = "$CD_TEXT ..."
         rmRf.text = "$RM_RF_TEXT ..."
         duplicate.text = "$CP_TEXT ... ..."
         mv.text = "$MV_TEXT ... ..."
@@ -338,5 +337,10 @@ abstract class XFTPWidget(
             actionListener.actionPerformed(object : ActionEvent(menuItem, ACTION_PERFORMED, null) {})
         }
     }
+
+    /**
+     * 当前远程列表是否被聚焦
+     */
+    open fun isRemoteListFocused() = remoteFileList.focused
 
 }

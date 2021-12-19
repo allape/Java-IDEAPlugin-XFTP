@@ -268,7 +268,7 @@ class XFTP(
      * 构建远程列表右键菜单
      */
     private fun buildRemoteListContextMenu() {
-        goUpper.let {
+        cdDotDot.let {
             it.addActionListener {
                 if (isConnected() && isChannelAlive()) {
                     setCurrentRemotePath(remoteFileList.model.data[0].path)
@@ -276,7 +276,7 @@ class XFTP(
             }
             it.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.GoUpperAction))
         }
-        open.let {
+        cdOrCat.let {
             it.addActionListener {
                 if (isConnected() && isChannelAlive()) {
                     getSelectedRemoteFileList().takeIf { l -> l.isNotEmpty() }?.let { selectedFiles ->
@@ -461,13 +461,13 @@ class XFTP(
                         mv.text = "$MV_TEXT ${LinuxHelper.escapeShellString(selectedFiles[0].name)} $1"
                     }
 
-                    open.isEnabled = hasFileSelected
-                    if (open.isEnabled) {
+                    cdOrCat.isEnabled = hasFileSelected
+                    if (cdOrCat.isEnabled) {
                         val file = selectedFiles[0]
                         if (file.directory) {
-                            open.text = "$CD_TEXT ${LinuxHelper.escapeShellString(file.name)}"
+                            cdOrCat.text = "$CD_TEXT ${LinuxHelper.escapeShellString(file.name)}"
                         } else {
-                            open.text = "$CAT_TEXT ${LinuxHelper.escapeShellString(file.name)}"
+                            cdOrCat.text = "$CAT_TEXT ${LinuxHelper.escapeShellString(file.name)}"
                         }
                     }
                 } else {

@@ -7,7 +7,7 @@ import net.allape.common.XFTPManager
 class GoUpperAction : DumbAwareAction() {
     override fun actionPerformed(e: AnActionEvent) {
         XFTPManager.getCurrentSelectedWindow()?.apply {
-            performAnJMenuItemAction(goUpper)
+            if (isRemoteListFocused()) performAnJMenuItemAction(cdDotDot)
         }
     }
 }

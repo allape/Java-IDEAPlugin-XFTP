@@ -6,8 +6,8 @@ import net.allape.common.XFTPManager
 
 class NewFolderAction : DumbAwareAction() {
     override fun actionPerformed(e: AnActionEvent) {
-        XFTPManager.getCurrentSelectedWindow()?.let { window ->
-            window.performAnJMenuItemAction(window.mkdirp)
+        XFTPManager.getCurrentSelectedWindow()?.apply {
+            if (isRemoteListFocused()) performAnJMenuItemAction(mkdirp)
         }
     }
 }
