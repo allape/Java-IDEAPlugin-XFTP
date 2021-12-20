@@ -23,3 +23,5 @@
 - Shift F6 conflicts with Refactor/Rename action.
   - <= v0.10.4: Remove XFTP rename action shortcuts in Preference / Keymap.
   - \> v0.10.4: Change shortcut to Shift F7
+- Open local path selector popup while remote popup is shown, local path selector popup will disappear in a short amount of time.
+  - Because the remote list will be reloaded after the remote path selector popup became hidden, no solution for this for now...

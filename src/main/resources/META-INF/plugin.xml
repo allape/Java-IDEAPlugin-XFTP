@@ -53,8 +53,9 @@
     </description>
 
     <change-notes><![CDATA[
-        <h5>2021-10-10 ~ 2021-12-18</h5>
+        <h5>2021-10-10 ~ 2021-12-20</h5>
         <ul>
+            <li>Add icon to remote list item.</li>
             <li>Refine shortcuts and remote dropdown.</li>
             <li>Add shortcuts to action buttons.</li>
             <li>Add cp and mv into context menu of remote list.</li>
