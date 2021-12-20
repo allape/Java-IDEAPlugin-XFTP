@@ -14,7 +14,6 @@
 - ✔️️️ Operations in context menu: rm, cp, mv, touch, mkdir.
 - ✖️ Copy and Paste actions in both list...
 - ✖️ Transferring history list with retry button.
-- ✖️ Custom remote file VirtualFile.
 
 ## Known Issues
 - Connection can NOT be cancelled in connecting progress.

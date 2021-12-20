@@ -1,6 +1,8 @@
 package net.allape.xftp.component
 
-import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.icons.AllIcons
+import com.intellij.openapi.fileTypes.FileTypeManager
+import com.intellij.openapi.util.io.FileUtil
 import com.intellij.ui.DarculaColors
 import com.intellij.ui.JBColor
 import com.intellij.ui.table.JBTable
@@ -11,7 +13,6 @@ import net.allape.util.LinuxHelper
 import java.awt.Component
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
-import java.io.File
 import java.math.BigInteger
 import java.util.*
 import javax.swing.Icon
@@ -101,13 +102,25 @@ class FileTableModel(
     override fun getValueAt(rowIndex: Int, columnIndex: Int): Any? {
         try {
             val model = data[rowIndex]
+
             var icon = IconUtil.getEmptyIcon(false)
-            if (model.local) {
-                val virtualFile = LocalFileSystem.getInstance().findFileByIoFile(File(model.path))
-                if (virtualFile != null) {
-                    icon = IconUtil.computeBaseFileIcon(virtualFile)
+            if (model.directory) {
+                icon = AllIcons.Nodes.Folder
+            } else {
+                // 获取文件后缀
+                FileUtil.getExtension(model.path, "").takeIf { it.isNotEmpty() }?.let {
+                    // 根据后缀读取文件图标
+                    FileTypeManager.getInstance().getFileTypeByExtension(it.toString()).icon?.let { i ->
+                        icon = i
+                    }
                 }
             }
+//            if (model.local) {
+//                val virtualFile = LocalFileSystem.getInstance().findFileByIoFile(File(model.path))
+//                if (virtualFile != null) {
+//                    icon = IconUtil.computeBaseFileIcon(virtualFile)
+//                }
+//            }
             when (columnIndex) {
                 0 -> return icon
                 1 -> return model.name
