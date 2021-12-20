@@ -6,7 +6,6 @@ import com.intellij.openapi.util.io.FileUtil
 import com.intellij.ui.DarculaColors
 import com.intellij.ui.JBColor
 import com.intellij.ui.table.JBTable
-import com.intellij.util.IconUtil
 import net.allape.model.FileModel
 import net.allape.model.FileModelType
 import net.allape.util.LinuxHelper
@@ -103,7 +102,7 @@ class FileTableModel(
         try {
             val model = data[rowIndex]
 
-            var icon = IconUtil.getEmptyIcon(false)
+            var icon = AllIcons.FileTypes.Unknown
             if (model.directory) {
                 icon = AllIcons.Nodes.Folder
             } else {
