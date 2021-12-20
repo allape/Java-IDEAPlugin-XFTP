@@ -106,22 +106,22 @@
         <action id="XFTP.NewWindow" class="net.allape.action.NewWindowAction" text="New XFTP Explorer"
                 description="Open a new XFTP window">
             <add-to-group group-id="ToolsMenu" anchor="first"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="shift alt X"/>
+<!--            <keyboard-shortcut keymap="$default" first-keystroke="shift alt X"/>-->
         </action>
 
         <action id="XFTP.ReloadLocal" class="net.allape.action.ReloadLocalAction" text="Reload Local List"
                 description="Reload local list">
-            <keyboard-shortcut keymap="$default" first-keystroke="shift alt R"/>
+<!--            <keyboard-shortcut keymap="$default" first-keystroke="shift alt R"/>-->
         </action>
         <action id="XFTP.OpenLocalInFileManager" class="net.allape.action.OpenLocalInFileManagerAction" text="Open In File Manager"
                 description="Open current local directory in system file manager">
-            <keyboard-shortcut keymap="$default" first-keystroke="shift alt E"/>
+<!--            <keyboard-shortcut keymap="$default" first-keystroke="shift alt E"/>-->
         </action>
 
         <action id="XFTP.MakeAConnection" class="net.allape.action.MakeAConnectAction" text="Make A Connection"
                 description="Make a new connection to a server if there is no connection established">
-            <keyboard-shortcut keymap="$default" first-keystroke="control I"/>
-            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta I"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="control shift I"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta shift I"/>
         </action>
         <action id="XFTP.RemoteMemoSelectorDropdown" class="net.allape.action.RemoteMemoSelectorDropdownAction" text="Toggle Remote Path Dropdown"
                 description="Toggle visibility of remote path dropdown">
@@ -140,12 +140,12 @@
         </action>
         <action id="XFTP.NewTerminal" class="net.allape.action.NewTerminalAction" text="New Terminal"
                 description="Create new terminal tool window for current remote location">
-            <keyboard-shortcut keymap="$default" first-keystroke="shift alt N"/>
+<!--            <keyboard-shortcut keymap="$default" first-keystroke="shift alt N"/>-->
         </action>
         <action id="XFTP.ToggleVisibilityLocalList" class="net.allape.action.ToggleVisibilityLocalListAction" text="Toggle Local List"
                 description="Toggle visibility of local list">
-            <keyboard-shortcut keymap="$default" first-keystroke="control L"/>
-            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta L"/>
+<!--            <keyboard-shortcut keymap="$default" first-keystroke="control L"/>-->
+<!--            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta L"/>-->
         </action>
 
         <action id="XFTP.Open" class="net.allape.action.OpenAction" text="Open"
