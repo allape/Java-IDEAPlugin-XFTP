@@ -4,12 +4,11 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.DumbAwareAction
-import net.allape.App
-import net.allape.common.XFTPManager
+import net.allape.xftp.XFTP
 
 class NewWindowAction : DumbAwareAction(
-    "New Window",
-    "Open a new XFTP window",
+    "New XFTP Explorer",
+    "Open a new XFTP explorer",
     AllIcons.General.Add,
 ) {
 
@@ -18,10 +17,6 @@ class NewWindowAction : DumbAwareAction(
     }
 
     override fun actionPerformed(e: AnActionEvent) {
-        e.project?.let { project ->
-            XFTPManager.toolWindow.let { toolWindow ->
-                toolWindow.show { App.createTheToolWindowContent(project, toolWindow) }
-            }
-        }
+        XFTP.createWindowWithAnActionEvent(e)
     }
 }

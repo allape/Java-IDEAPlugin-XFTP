@@ -1,5 +1,6 @@
 package net.allape.xftp
 
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
@@ -19,6 +20,7 @@ import com.intellij.ssh.connectionBuilder
 import com.intellij.util.Consumer
 import com.intellij.util.ReflectionUtil
 import com.jetbrains.plugins.remotesdk.console.SshConfigConnector
+import net.allape.App
 import net.allape.action.Actions
 import net.allape.common.RemoteDataProducerWrapper
 import net.allape.common.XFTPManager
@@ -55,6 +57,15 @@ class XFTP(
         const val DOUBLE_CLICK_INTERVAL: Long = 350
         // 放入content.userData的key
         val XFTP_KEY: Key<XFTP> = Key.create(XFTP::javaClass.name)
+
+        fun createWindowWithAnActionEvent(e: AnActionEvent, showToolWindow: Boolean = true, consumer: Consumer<XFTP>? = null) {
+            e.project?.let { project ->
+                XFTPManager.toolWindow.let { toolWindow ->
+                    if (showToolWindow) toolWindow.show()
+                    App.createTheToolWindowContent(project, toolWindow).let { window -> consumer?.consume(window) }
+                }
+            }
+        }
     }
 
     private val logger = Logger.getInstance(XFTP::class.java)
@@ -74,7 +85,7 @@ class XFTP(
         setCurrentLocalPath(this.project.basePath ?: "/")
 
         // 初始化文件监听
-        this.project.messageBus.connect().subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
+        this.project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
                 for (e in events) {
                     if (e.isFromSave) {

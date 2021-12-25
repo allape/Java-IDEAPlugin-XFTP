@@ -105,7 +105,7 @@
 
     <actions>
         <action id="XFTP.NewWindow" class="net.allape.action.NewWindowAction" text="New XFTP Explorer"
-                description="Open a new XFTP window">
+                description="Open a new XFTP explorer">
             <add-to-group group-id="ToolsMenu" anchor="first"/>
 <!--            <keyboard-shortcut keymap="$default" first-keystroke="shift alt X"/>-->
         </action>
@@ -126,8 +126,8 @@
         </action>
         <action id="XFTP.RemoteMemoSelectorDropdown" class="net.allape.action.RemoteMemoSelectorDropdownAction" text="Toggle Remote Path Dropdown"
                 description="Toggle visibility of remote path dropdown">
-<!--            <keyboard-shortcut keymap="$default" first-keystroke="control DOWN"/>-->
-<!--            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta DOWN"/>-->
+            <keyboard-shortcut keymap="$default" first-keystroke="control DOWN"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta DOWN"/>
         </action>
         <action id="XFTP.ReloadRemote" class="net.allape.action.ReloadRemoteAction" text="Reload Remote List"
                 description="Reload remote list">

@@ -414,17 +414,17 @@ abstract class XFTPCore(
     /**
      * 设置当前状态为连接中
      */
-    protected open fun triggerConnecting() {}
+    open fun triggerConnecting() {}
 
     /**
      * 设置当前状态为已连接
      */
-    protected open fun triggerConnected() {}
+    open fun triggerConnected() {}
 
     /**
      * 设置当前状态为未连接
      */
-    protected open fun triggerDisconnected() {}
+    open fun triggerDisconnected() {}
 
     /**
      * 刷新本地目录

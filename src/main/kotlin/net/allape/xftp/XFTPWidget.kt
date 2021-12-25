@@ -117,17 +117,17 @@ abstract class XFTPWidget(
     // region 远程actions图标按钮
 
     // 建立连接
-    protected val explore: EnablableAction = (ActionManager.getInstance().getAction(Actions.MakeAConnectionAction) ?: MakeAConnectAction()) as EnablableAction
+    protected val explore: EnablableAction = Actions.getActionByNameWithNullSupplier(Actions.MakeAConnectionAction) { MakeAConnectAction() }
     // 显示combobox的下拉内容
-    protected val dropdown: EnablableAction = (ActionManager.getInstance().getAction(Actions.RemoteMemoSelectorDropdownAction) ?: RemoteMemoSelectorDropdownAction()) as EnablableAction
+    protected val dropdown: EnablableAction = Actions.getActionByNameWithNullSupplier(Actions.RemoteMemoSelectorDropdownAction) { RemoteMemoSelectorDropdownAction() }
     // 刷新
-    protected val reload: EnablableAction = (ActionManager.getInstance().getAction(Actions.ReloadRemoteAction) ?: ReloadRemoteAction()) as EnablableAction
+    protected val reload: EnablableAction = Actions.getActionByNameWithNullSupplier(Actions.ReloadRemoteAction) { ReloadRemoteAction() }
     // 断开连接
-    protected val suspend: EnablableAction = (ActionManager.getInstance().getAction(Actions.DisconnectAction) ?: DisconnectAction()) as EnablableAction
+    protected val suspend: EnablableAction = Actions.getActionByNameWithNullSupplier(Actions.DisconnectAction) { DisconnectAction() }
     // 命令行打开
-    protected val newTerminal: EnablableAction = (ActionManager.getInstance().getAction(Actions.NewTerminalAction) ?: NewTerminalAction()) as EnablableAction
+    protected val newTerminal: EnablableAction = Actions.getActionByNameWithNullSupplier(Actions.NewTerminalAction) { NewTerminalAction() }
     // 隐藏本地浏览器
-    protected val localToggle: EnablableAction = (ActionManager.getInstance().getAction(Actions.ToggleVisibilityLocalListAction) ?: ToggleVisibilityLocalListAction()) as EnablableAction
+    protected val localToggle: EnablableAction = Actions.getActionByNameWithNullSupplier(Actions.ToggleVisibilityLocalListAction) { ToggleVisibilityLocalListAction() }
 
     // endregion
 

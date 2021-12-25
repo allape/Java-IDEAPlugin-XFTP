@@ -13,7 +13,9 @@ class ExplorerWindowTabCloseListener(
     disposable: Disposable,
 ): BaseContentCloseListener(content, project, disposable) {
 
-    override fun disposeContent(content: Content) {}
+    override fun disposeContent(content: Content) {
+        XFTPManager.windows[content]?.dispose()
+    }
 
     override fun closeQuery(content: Content, projectClosing: Boolean): Boolean {
         if (projectClosing) return true

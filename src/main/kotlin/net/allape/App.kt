@@ -17,7 +17,7 @@ class App: ToolWindowFactory, DumbAware {
 
     companion object {
 
-        fun createTheToolWindowContent(project: Project, toolWindow: ToolWindow) {
+        fun createTheToolWindowContent(project: Project, toolWindow: ToolWindow): XFTP {
             // window实例
             val window = XFTP(project, toolWindow)
 
@@ -37,6 +37,8 @@ class App: ToolWindowFactory, DumbAware {
 
             // 放入缓存
             XFTPManager.windows[content] = window
+
+            return window
         }
     }
 
@@ -46,11 +48,11 @@ class App: ToolWindowFactory, DumbAware {
         XFTPManager.toolWindow = toolWindow
         toolWindow.addContentManagerListener(object : ContentManagerListener {
             override fun contentRemoved(event: ContentManagerEvent) {
+                super.contentRemoved(event)
                 val window = XFTPManager.windows[event.content]
                 if (window == null) {
                     logger.warn("closed an un-cached window: $event")
                 } else {
-                    window.dispose()
                     XFTPManager.windows.remove(event.content)
                 }
                 if (toolWindow.contentManager.contents.isEmpty()) {
