@@ -40,7 +40,6 @@ import java.awt.event.MouseListener
 import java.io.File
 import java.io.IOException
 import java.lang.reflect.Field
-import java.util.concurrent.Future
 import java.util.stream.Collectors
 import javax.swing.DropMode
 import javax.swing.JComponent
@@ -502,17 +501,18 @@ class XFTP(
                     null
                 ) { c ->
                     c?.let { connector ->
-                        this@XFTP.connector = connector as SshConfigConnector
                         connector.produceRemoteCredentials { data ->
                             if (data != null) {
-                                this.triggerConnecting()
                                 this.disconnect(false)
+
+                                this.triggerConnecting()
+
+                                this@XFTP.connector = connector as SshConfigConnector
                                 credentials = data
 
                                 onServerSelect?.consume(data)
 
-                                var connectionThread: Future<*>? = null
-                                connectionThread = this.application.executeOnPooledThread {
+                                this.application.executeOnPooledThread {
                                     // com.jetbrains.plugins.remotesdk.tools.RemoteTool.startRemoteProcess
                                     @Suppress("UnstableApiUsage")
                                     connectionBuilder = credentials!!.connectionBuilder(
@@ -572,7 +572,6 @@ class XFTP(
                                         override fun onCancel() {
                                             super.onCancel()
                                             cancelled = true
-                                            connectionThread?.cancel(true)
                                             logger.info("Cancelling connection of $connectionLogName...")
                                         }
                                     })
@@ -606,9 +605,7 @@ class XFTP(
         application.invokeLater {
             setRemoteButtonsEnable(true)
             unlockRemoteUIs()
-            if (credentials != null) {
-                content.displayName = getWindowName()
-            }
+            content.displayName = getWindowName()
         }
     }
 
