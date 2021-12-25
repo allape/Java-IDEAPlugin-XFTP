@@ -11,7 +11,7 @@ class MakeAConnectAction: EnablableAction(AllIcons.Webreferences.Server) {
             XFTPManager.getCurrentSelectedWindow()?.apply {
                 if (!isConnected()) {
                     connect {
-                        if (XFTPManager.toolWindow.isVisible) XFTPManager.toolWindow.show()
+                        if (!XFTPManager.toolWindow.isVisible) XFTPManager.toolWindow.show()
                     }
                 }
             }

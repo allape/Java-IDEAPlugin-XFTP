@@ -779,7 +779,7 @@ class XFTP(
                         val fileModels: MutableList<FileModel> =
                             ArrayList(files.size)
 
-                        val shortcutsForParentFolder = Actions.getActionFirstKeyStroke(Actions.GoUpperAction)?.toString()
+                        val shortcutsForParentFolder = Actions.readableKeyStroke(Actions.getActionFirstKeyStroke(Actions.GoUpperAction))
                         // 添加返回上一级目录
                         fileModels.add(getParentFolder(path, FILE_SEP, ".. ${if (shortcutsForParentFolder != null) "(${shortcutsForParentFolder})" else ""}"))
                         for (f in files) {
