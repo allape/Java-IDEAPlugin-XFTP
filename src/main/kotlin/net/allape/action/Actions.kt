@@ -1,5 +1,8 @@
 package net.allape.action
 
+import com.intellij.openapi.keymap.KeymapUtil
+import javax.swing.KeyStroke
+
 class Actions {
 
     companion object {
@@ -35,6 +38,10 @@ class Actions {
         const val NewFileAction = "XFTP.NewFile"
 
         const val NewFolderAction = "XFTP.NewFolder"
+
+        fun getActionFirstKeyStroke(actionName: String): KeyStroke? {
+            return KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(actionName))
+        }
 
     }
 

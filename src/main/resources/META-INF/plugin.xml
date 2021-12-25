@@ -126,8 +126,8 @@
         </action>
         <action id="XFTP.RemoteMemoSelectorDropdown" class="net.allape.action.RemoteMemoSelectorDropdownAction" text="Toggle Remote Path Dropdown"
                 description="Toggle visibility of remote path dropdown">
-            <keyboard-shortcut keymap="$default" first-keystroke="control DOWN"/>
-            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta DOWN"/>
+<!--            <keyboard-shortcut keymap="$default" first-keystroke="control DOWN"/>-->
+<!--            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta DOWN"/>-->
         </action>
         <action id="XFTP.ReloadRemote" class="net.allape.action.ReloadRemoteAction" text="Reload Remote List"
                 description="Reload remote list">
@@ -136,8 +136,8 @@
         </action>
         <action id="XFTP.Disconnect" class="net.allape.action.DisconnectAction" text="Disconnect"
                 description="Disconnect from current server">
-            <keyboard-shortcut keymap="$default" first-keystroke="control shift D"/>
-            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta shift D"/>
+<!--            <keyboard-shortcut keymap="$default" first-keystroke="control shift D"/>-->
+<!--            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta shift D"/>-->
         </action>
         <action id="XFTP.NewTerminal" class="net.allape.action.NewTerminalAction" text="New Terminal"
                 description="Create new terminal tool window for current remote location">
@@ -155,13 +155,13 @@
         </action>
         <action id="XFTP.GoUpper" class="net.allape.action.GoUpperAction" text="Open Parent"
                 description="Just like `cd ..`">
-            <keyboard-shortcut keymap="$default" first-keystroke="control LEFT"/>
-            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta LEFT"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="control shift LEFT"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta shift LEFT"/>
         </action>
         <action id="XFTP.Delete" class="net.allape.action.DeleteAction" text="Delete"
                 description="Delete selected file(s) or folder(s)">
             <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta BACK_SPACE"/>
-            <keyboard-shortcut keymap="$default" first-keystroke="control DELETE"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="DELETE"/>
         </action>
         <action id="XFTP.Duplicate" class="net.allape.action.DuplicateAction" text="Duplicate"
                 description="Duplicate selected file or folder">
@@ -170,7 +170,7 @@
         </action>
         <action id="XFTP.Rename" class="net.allape.action.RenameAction" text="Rename"
                 description="Rename selected file or folder">
-            <keyboard-shortcut keymap="$default" first-keystroke="shift F7"/>
+<!--            <keyboard-shortcut keymap="$default" first-keystroke="shift F7"/>-->
         </action>
         <action id="XFTP.NewFile" class="net.allape.action.NewFileAction" text="Touch A New File"
                 description="Execute touch command">
@@ -179,8 +179,8 @@
         </action>
         <action id="XFTP.NewFolder" class="net.allape.action.NewFolderAction" text="Make A Directory"
                 description="Execute mkdir command">
-            <keyboard-shortcut keymap="$default" first-keystroke="control F"/>
-            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta F"/>
+<!--            <keyboard-shortcut keymap="$default" first-keystroke="control F"/>-->
+<!--            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta F"/>-->
         </action>
     </actions>
 </idea-plugin>

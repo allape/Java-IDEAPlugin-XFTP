@@ -1,7 +1,6 @@
 package net.allape.xftp
 
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
@@ -13,9 +12,11 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.wm.ToolWindow
+import com.intellij.remote.RemoteCredentials
 import com.intellij.ssh.RemoteFileObject
 import com.intellij.ssh.SshTransportException
 import com.intellij.ssh.connectionBuilder
+import com.intellij.util.Consumer
 import com.intellij.util.ReflectionUtil
 import com.jetbrains.plugins.remotesdk.console.SshConfigConnector
 import net.allape.action.Actions
@@ -274,7 +275,7 @@ class XFTP(
                     setCurrentRemotePath(remoteFileList.model.data[0].path)
                 }
             }
-            it.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.GoUpperAction))
+            it.accelerator = Actions.getActionFirstKeyStroke(Actions.GoUpperAction)
         }
         cdOrCat.let {
             it.addActionListener {
@@ -284,7 +285,7 @@ class XFTP(
                     }
                 }
             }
-            it.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.OpenAction))
+            it.accelerator = Actions.getActionFirstKeyStroke(Actions.OpenAction)
         }
         rmRf.let { rmRf ->
             rmRf.addActionListener {
@@ -320,7 +321,7 @@ class XFTP(
                     }
                 }
             }
-            rmRf.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.DeleteAction))
+            rmRf.accelerator = Actions.getActionFirstKeyStroke(Actions.DeleteAction)
         }
         duplicate.let {
             it.addActionListener {
@@ -353,7 +354,7 @@ class XFTP(
                     }
                 }
             }
-            it.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.DuplicateAction))
+            it.accelerator = Actions.getActionFirstKeyStroke(Actions.DuplicateAction)
         }
         mv.let {
             it.addActionListener {
@@ -386,7 +387,7 @@ class XFTP(
                     }
                 }
             }
-            it.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.RenameAction))
+            it.accelerator = Actions.getActionFirstKeyStroke(Actions.RenameAction)
         }
         touch.let {
             it.addActionListener {
@@ -414,7 +415,7 @@ class XFTP(
                     }
                 }
             }
-            it.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.NewFileAction))
+            it.accelerator = Actions.getActionFirstKeyStroke(Actions.NewFileAction)
         }
         mkdirp.let {
             it.addActionListener {
@@ -436,7 +437,7 @@ class XFTP(
                     }
                 }
             }
-            it.accelerator = KeymapUtil.getKeyStroke(KeymapUtil.getActiveKeymapShortcuts(Actions.NewFolderAction))
+            it.accelerator = Actions.getActionFirstKeyStroke(Actions.NewFolderAction)
         }
 
         remoteFileListPopupMenu.addPopupMenuListener(object : PopupMenuListener {
@@ -481,7 +482,7 @@ class XFTP(
         })
     }
 
-    override fun connect() {
+    override fun connect(onServerSelect: Consumer<RemoteCredentials>?) {
         try {
             RemoteDataProducerWrapper()
                 .withProject(project)
@@ -496,6 +497,8 @@ class XFTP(
                                 this.triggerConnecting()
                                 this.disconnect(false)
                                 credentials = data
+
+                                onServerSelect?.consume(data)
 
                                 var connectionThread: Future<*>? = null
                                 connectionThread = this.application.executeOnPooledThread {
@@ -776,8 +779,9 @@ class XFTP(
                         val fileModels: MutableList<FileModel> =
                             ArrayList(files.size)
 
+                        val shortcutsForParentFolder = Actions.getActionFirstKeyStroke(Actions.GoUpperAction)?.toString()
                         // 添加返回上一级目录
-                        fileModels.add(getParentFolder(path, FILE_SEP))
+                        fileModels.add(getParentFolder(path, FILE_SEP, ".. ${if (shortcutsForParentFolder != null) "(${shortcutsForParentFolder})" else ""}"))
                         for (f in files) {
                             fileModels.add(
                                 FileModel(

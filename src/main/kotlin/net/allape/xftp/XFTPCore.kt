@@ -100,8 +100,8 @@ abstract class XFTPCore(
          * @param path 当前目录
          * @param sep 文件系统分隔符
          */
-        fun getParentFolder(path: String, sep: String): FileModel {
-            return FileModel(getParentFolderPath(path, sep), "..", true, 0, 0, false, FileModelType.NON_FILE)
+        fun getParentFolder(path: String, sep: String, name: String = ".."): FileModel {
+            return FileModel(getParentFolderPath(path, sep), name, true, 0, 0, false, FileModelType.NON_FILE)
         }
     }
 
@@ -157,7 +157,7 @@ abstract class XFTPCore(
     /**
      * 建立SFTP连接
      */
-    abstract fun connect()
+    abstract fun connect(onServerSelect: Consumer<RemoteCredentials>? = null)
 
     /**
      * 检查当前是否建立连接(但不保证连接正常, 比如长时间未使用后的socket自动关闭)
