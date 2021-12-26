@@ -4,7 +4,15 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAwareAction
 import javax.swing.Icon
 
-abstract class EnablableAction(icon: Icon? = null) : DumbAwareAction(icon) {
+abstract class MutableAction(
+    text: String? = null,
+    desc: String? = null,
+    icon: Icon? = null,
+) : DumbAwareAction(
+    text,
+    desc,
+    icon,
+) {
 
     var enabled = true
 

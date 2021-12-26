@@ -48,9 +48,9 @@ class Actions {
          * @param id AnAction名称
          * @param defaultProvider 获取到的action为null时的替代方案
          */
-        fun <T> getActionByNameWithNullSupplier(id: String, defaultProvider: Supplier<T>): T where T: AnAction{
+        fun <T> getActionByNameWithNullSupplier(id: String, defaultProvider: Supplier<T>? = null): T? where T: AnAction{
             @Suppress("UNCHECKED_CAST")
-            return (ActionManager.getInstance().getAction(id) ?: defaultProvider.get()) as T
+            return (ActionManager.getInstance().getAction(id) ?: defaultProvider?.get()) as T?
         }
 
         /**

@@ -1,27 +1,32 @@
 package net.allape.xftp
 
-import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.icons.AllIcons
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.JBMenuItem
 import com.intellij.openapi.ui.JBPopupMenu
+import com.intellij.openapi.ui.MessageDialogBuilder
+import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.ssh.RemoteFileObject
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.Consumer
-import net.allape.action.*
+import net.allape.action.Actions
+import net.allape.action.MutableAction
+import net.allape.common.XFTPManager
 import net.allape.xftp.component.FileTable
 import net.allape.xftp.component.MemoComboBox
-import java.awt.BorderLayout
-import java.awt.Dimension
-import java.awt.GridBagConstraints
-import java.awt.GridBagLayout
+import java.awt.*
 import java.awt.datatransfer.DataFlavor
 import java.awt.event.ActionEvent
+import java.io.File
+import java.io.IOException
 import java.util.function.Supplier
 import javax.swing.JComponent
 import javax.swing.JMenuItem
@@ -86,6 +91,20 @@ abstract class XFTPWidget(
         const val MKDIR_P_TEXT = "mkdir -p"
     }
 
+    // region 来自注册进ActionManager的action
+
+    private val globalReloadLocal: AnAction? = Actions.getActionByNameWithNullSupplier(Actions.ReloadLocalAction)
+    private val globalOpenLocalInFileManager: AnAction? = Actions.getActionByNameWithNullSupplier(Actions.OpenLocalInFileManagerAction)
+
+    private val globalExplorer: AnAction? = Actions.getActionByNameWithNullSupplier(Actions.MakeAConnectionAction)
+    private val globalDropdown: AnAction? = Actions.getActionByNameWithNullSupplier(Actions.RemoteMemoSelectorDropdownAction)
+    private val globalReload: AnAction? = Actions.getActionByNameWithNullSupplier(Actions.ReloadRemoteAction)
+    private val globalSuspend: AnAction? = Actions.getActionByNameWithNullSupplier(Actions.DisconnectAction)
+    private val globalNewTerminal: AnAction? = Actions.getActionByNameWithNullSupplier(Actions.NewTerminalAction)
+    private val globalLocalToggle: AnAction? = Actions.getActionByNameWithNullSupplier(Actions.ToggleVisibilityLocalListAction)
+
+    // endregion
+
     // region UI组件
 
     protected var panelWrapper = JPanel(BorderLayout())
@@ -101,8 +120,35 @@ abstract class XFTPWidget(
 
     // region 本地actions图标按钮
 
-    val reloadLocalActionButton = ActionManager.getInstance().getAction(Actions.ReloadLocalAction)
-    val openLocalInFileManager = ActionManager.getInstance().getAction(Actions.OpenLocalInFileManagerAction)
+    val reloadLocalActionButton = object : MutableAction(
+        globalReloadLocal?.templatePresentation?.text,
+        globalReloadLocal?.templatePresentation?.description,
+        globalReloadLocal?.templatePresentation?.icon,
+    ) {
+        override fun actionPerformed(e: AnActionEvent) {
+            if (enabled) {
+                reloadLocal()
+            }
+        }
+    }
+    val openLocalInFileManager = object : MutableAction(
+        globalOpenLocalInFileManager?.templatePresentation?.text,
+        globalOpenLocalInFileManager?.templatePresentation?.description,
+        globalOpenLocalInFileManager?.templatePresentation?.icon,
+    ) {
+        override fun actionPerformed(e: AnActionEvent) {
+            if (enabled) {
+                getCurrentLocalPath().let { path ->
+                    try {
+                        Desktop.getDesktop().open(File(path))
+                    } catch (ioException: IOException) {
+                        ioException.printStackTrace()
+                        XFTPManager.message("Failed to open \"$path\"", MessageType.ERROR)
+                    }
+                }
+            }
+        }
+    }
 
     // endregion
 
@@ -117,17 +163,87 @@ abstract class XFTPWidget(
     // region 远程actions图标按钮
 
     // 建立连接
-    protected val explore: EnablableAction = Actions.getActionByNameWithNullSupplier(Actions.MakeAConnectionAction) { MakeAConnectAction() }
+    val explore: MutableAction = object : MutableAction(
+        globalExplorer?.templatePresentation?.text,
+        globalExplorer?.templatePresentation?.description,
+        globalExplorer?.templatePresentation?.icon,
+    ) {
+        override fun actionPerformed(e: AnActionEvent) {
+            if (enabled && !isConnected()) {
+                connect {
+                    if (!XFTPManager.toolWindow.isVisible) XFTPManager.toolWindow.show()
+                }
+            }
+        }
+    }
     // 显示combobox的下拉内容
-    protected val dropdown: EnablableAction = Actions.getActionByNameWithNullSupplier(Actions.RemoteMemoSelectorDropdownAction) { RemoteMemoSelectorDropdownAction() }
+    val dropdown: MutableAction = object : MutableAction(
+        globalDropdown?.templatePresentation?.text,
+        globalDropdown?.templatePresentation?.description,
+        globalDropdown?.templatePresentation?.icon,
+    ) {
+        override fun actionPerformed(e: AnActionEvent) {
+            if (enabled && isConnected()) {
+                remotePath.focusAndPopup()
+            }
+        }
+    }
     // 刷新
-    protected val reload: EnablableAction = Actions.getActionByNameWithNullSupplier(Actions.ReloadRemoteAction) { ReloadRemoteAction() }
+    val reload: MutableAction = object : MutableAction(
+        globalReload?.templatePresentation?.text,
+        globalReload?.templatePresentation?.description,
+        globalReload?.templatePresentation?.icon,
+    ) {
+        override fun actionPerformed(e: AnActionEvent) {
+            if (enabled && isConnected()) {
+                reloadRemote()
+            }
+        }
+    }
     // 断开连接
-    protected val suspend: EnablableAction = Actions.getActionByNameWithNullSupplier(Actions.DisconnectAction) { DisconnectAction() }
+    val suspend: MutableAction = object : MutableAction(
+        globalSuspend?.templatePresentation?.text,
+        globalSuspend?.templatePresentation?.description,
+        globalSuspend?.templatePresentation?.icon,
+    ) {
+        override fun actionPerformed(e: AnActionEvent) {
+            if (enabled && isConnected() && isChannelAlive()) {
+                if (MessageDialogBuilder.yesNo("Disconnecting", "Do you really want to close this session?")
+                        .asWarning()
+                        .yesText("Disconnect")
+                        .ask(project)
+                ) {
+                    disconnect()
+                }
+            }
+        }
+    }
     // 命令行打开
-    protected val newTerminal: EnablableAction = Actions.getActionByNameWithNullSupplier(Actions.NewTerminalAction) { NewTerminalAction() }
+    val newTerminal: MutableAction = object : MutableAction(
+        globalNewTerminal?.templatePresentation?.text,
+        globalNewTerminal?.templatePresentation?.description,
+        globalNewTerminal?.templatePresentation?.icon,
+    ) {
+        override fun actionPerformed(e: AnActionEvent) {
+            if (enabled && isConnected()) {
+                openInNewTerminal(remotePath.getMemoItem())
+            }
+        }
+    }
     // 隐藏本地浏览器
-    protected val localToggle: EnablableAction = Actions.getActionByNameWithNullSupplier(Actions.ToggleVisibilityLocalListAction) { ToggleVisibilityLocalListAction() }
+    val localToggle: MutableAction = object : MutableAction(
+        globalLocalToggle?.templatePresentation?.text,
+        globalLocalToggle?.templatePresentation?.description,
+        globalLocalToggle?.templatePresentation?.icon,
+    ) {
+        override fun actionPerformed(e: AnActionEvent) {
+            if (enabled) {
+                val to: Boolean = !splitter.firstComponent.isVisible
+                splitter.firstComponent.isVisible = to
+                e.presentation.icon = if (to) AllIcons.Diff.ApplyNotConflictsRight else AllIcons.Diff.ApplyNotConflictsLeft
+            }
+        }
+    }
 
     // endregion
 

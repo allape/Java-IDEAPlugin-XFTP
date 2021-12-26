@@ -9,7 +9,7 @@ class ReloadLocalAction : DumbAwareAction(AllIcons.Actions.Refresh) {
 
     override fun actionPerformed(e: AnActionEvent) {
         XFTPManager.getCurrentSelectedWindow()?.apply {
-            reloadLocal()
+            this.reloadLocalActionButton.actionPerformed(e)
         }
     }
 
