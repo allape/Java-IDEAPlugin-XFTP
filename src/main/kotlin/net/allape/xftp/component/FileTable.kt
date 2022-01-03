@@ -143,6 +143,10 @@ class FileTableModel(
 
 }
 
+// TODO add fast search
+// com.intellij.ui.SpeedSearchBase
+// com.intellij.ui.FilteringTree
+
 class FileTable: JBTable(FileTableModel()) {
     
     companion object {
