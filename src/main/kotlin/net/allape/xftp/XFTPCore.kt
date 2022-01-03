@@ -534,7 +534,7 @@ abstract class XFTPCore(
 //                            .substring(0, remoteFile.name().length() - fileSuffix.length())
 //                            .replaceAll("\\.", "-") + fileSuffix;
 //                }
-                val localFile = File.createTempFile("jb-ide-xftp-", formattedFileName)
+                val localFile = File.createTempFile("jb-ide-xftp-", "-$formattedFileName")
                 application.executeOnPooledThread {
                     transfer(localFile, remoteFile, TransferType.DOWNLOAD) {
                         if (it.result == TransferResult.SUCCESS) {
