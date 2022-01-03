@@ -13,6 +13,7 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.MessageDialogBuilder
 import com.intellij.openapi.ui.MessageType
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.remote.RemoteCredentials
@@ -141,6 +142,7 @@ abstract class XFTPCore(
     fun bindContext (content: Content?) {
         content?.let {
             this.content = it
+            Disposer.register(this.content, this)
             ExplorerWindowTabCloseListener(it, project, this)
         }
     }
