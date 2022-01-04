@@ -34,7 +34,6 @@ import net.schmizz.sshj.sftp.SFTPFileTransfer
 import net.schmizz.sshj.xfer.TransferListener
 import org.jetbrains.plugins.terminal.TerminalTabState
 import org.jetbrains.plugins.terminal.TerminalView
-import org.junit.Assert
 import java.io.File
 import java.io.IOException
 import java.net.SocketException
@@ -57,7 +56,9 @@ abstract class XFTPCore(
         // 服务器文件系统分隔符
         const val FILE_SEP = "/"
         init {
-            Assert.assertTrue("FILE_SEP Only accepts one character", FILE_SEP.length == 1)
+            if (FILE_SEP.length != 1) {
+                throw IllegalArgumentException("FILE_SEP Only accepts one character")
+            }
         }
 
         // 分隔符重复替换正则
