@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "net.allape"
-version = "0.10.6"
+version = "0.10.7"
 
 repositories {
     mavenCentral()

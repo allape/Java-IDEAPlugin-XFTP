@@ -124,6 +124,7 @@ abstract class XFTPWidget(
         globalReloadLocal?.templatePresentation?.text,
         globalReloadLocal?.templatePresentation?.description,
         globalReloadLocal?.templatePresentation?.icon,
+        globalReloadLocal?.shortcutSet,
     ) {
         override fun actionPerformed(e: AnActionEvent) {
             if (enabled) {
@@ -135,6 +136,7 @@ abstract class XFTPWidget(
         globalOpenLocalInFileManager?.templatePresentation?.text,
         globalOpenLocalInFileManager?.templatePresentation?.description,
         globalOpenLocalInFileManager?.templatePresentation?.icon,
+        globalOpenLocalInFileManager?.shortcutSet,
     ) {
         override fun actionPerformed(e: AnActionEvent) {
             if (enabled) {
@@ -167,6 +169,7 @@ abstract class XFTPWidget(
         globalExplorer?.templatePresentation?.text,
         globalExplorer?.templatePresentation?.description,
         globalExplorer?.templatePresentation?.icon,
+        globalExplorer?.shortcutSet,
     ) {
         override fun actionPerformed(e: AnActionEvent) {
             if (enabled && !isConnected()) {
@@ -181,6 +184,7 @@ abstract class XFTPWidget(
         globalDropdown?.templatePresentation?.text,
         globalDropdown?.templatePresentation?.description,
         globalDropdown?.templatePresentation?.icon,
+        globalDropdown?.shortcutSet,
     ) {
         override fun actionPerformed(e: AnActionEvent) {
             if (enabled && isConnected()) {
@@ -193,6 +197,7 @@ abstract class XFTPWidget(
         globalReload?.templatePresentation?.text,
         globalReload?.templatePresentation?.description,
         globalReload?.templatePresentation?.icon,
+        globalReload?.shortcutSet,
     ) {
         override fun actionPerformed(e: AnActionEvent) {
             if (enabled && isConnected()) {
@@ -205,6 +210,7 @@ abstract class XFTPWidget(
         globalSuspend?.templatePresentation?.text,
         globalSuspend?.templatePresentation?.description,
         globalSuspend?.templatePresentation?.icon,
+        globalSuspend?.shortcutSet,
     ) {
         override fun actionPerformed(e: AnActionEvent) {
             if (enabled && isConnected() && isChannelAlive()) {
@@ -223,6 +229,7 @@ abstract class XFTPWidget(
         globalNewTerminal?.templatePresentation?.text,
         globalNewTerminal?.templatePresentation?.description,
         globalNewTerminal?.templatePresentation?.icon,
+        globalNewTerminal?.shortcutSet,
     ) {
         override fun actionPerformed(e: AnActionEvent) {
             if (enabled && isConnected()) {
@@ -235,6 +242,7 @@ abstract class XFTPWidget(
         globalLocalToggle?.templatePresentation?.text,
         globalLocalToggle?.templatePresentation?.description,
         globalLocalToggle?.templatePresentation?.icon,
+        globalLocalToggle?.shortcutSet,
     ) {
         override fun actionPerformed(e: AnActionEvent) {
             if (enabled) {
@@ -380,6 +388,7 @@ abstract class XFTPWidget(
      * @param enable 是否启用
      */
     protected fun setRemoteListContentMenuItems(enable: Boolean) {
+        cdDotDot.isEnabled = enable
         cdOrCat.isEnabled = enable
         rmRf.isEnabled = enable
         duplicate.isEnabled = enable
