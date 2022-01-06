@@ -19,8 +19,10 @@
 - Connection can NOT be cancelled in connecting progress.
   - Wait for 30s with timeout exception...x
 - `Shift F6` conflicts with Refactor/Rename action.
-  - <= v0.10.4: Remove XFTP rename action shortcuts in `Preferences / Keymap`.
+  - <= v0.10.4: Remove XFTP rename action shortcut in `Preferences / Keymap`.
   - \> v0.10.4: Change shortcut to `Shift F7`.
   - \> v0.10.5: This shortcut has been removed, but this action can be assigned in `Preferences / Keymap`.
 - Open local path selector popup while remote popup is shown, local path selector popup will disappear in a short amount of time.
   - Because the remote list will be reloaded after the remote path selector popup became hidden, no solution for this for now...
+- `Enter` key has been blocked in `Run` Tool Window...
+  - \>= v0.10.5: Remove XFTP `open` action shortcut in `Preferences / Keymap`.
