@@ -2,7 +2,6 @@ package net.allape.xftp
 
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
@@ -19,6 +18,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.Consumer
 import net.allape.action.Actions
 import net.allape.action.MutableAction
+import net.allape.action.SimpleMutableAction
 import net.allape.common.XFTPManager
 import net.allape.xftp.component.FileTable
 import net.allape.xftp.component.MemoComboBox
@@ -107,150 +107,89 @@ abstract class XFTPWidget(
 
     // region UI组件
 
-    protected var panelWrapper = JPanel(BorderLayout())
-    val splitter: JBSplitter = OnePixelSplitter("xftp-main-window", .5f)
+    private var panelWrapper = JPanel(BorderLayout())
+    private val splitter: JBSplitter = OnePixelSplitter("xftp-main-window", .5f)
 
-    protected var localWrapper = JPanel(GridBagLayout())
-    protected var localPathWrapper = JPanel(GridBagLayout())
+    private var localWrapper = JPanel(GridBagLayout())
+    private var localPathWrapper = JPanel(GridBagLayout())
     val localPath = MemoComboBox<String>(LOCAL_HISTORY_PERSISTENCE_KEY)
     protected var localFileList: FileTable = FileTable()
-    protected var localFileListWrapper: JBScrollPane = JBScrollPane(localFileList)
-    protected var localActionGroup = DefaultActionGroup()
-    protected var localActionToolBar = ActionToolbarImpl(LOCAL_TOOL_BAR_PLACE, localActionGroup, false)
+    private var localFileListWrapper: JBScrollPane = JBScrollPane(localFileList)
+    private var localActionGroup = DefaultActionGroup()
+    private var localActionToolBar = ActionToolbarImpl(LOCAL_TOOL_BAR_PLACE, localActionGroup, false)
 
     // region 本地actions图标按钮
 
-    val reloadLocalActionButton = object : MutableAction(
-        globalReloadLocal?.templatePresentation?.text,
-        globalReloadLocal?.templatePresentation?.description,
-        globalReloadLocal?.templatePresentation?.icon,
-        globalReloadLocal?.shortcutSet,
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            if (enabled) {
-                reloadLocal()
-            }
-        }
+    val reloadLocalActionButton = SimpleMutableAction(globalReloadLocal) {
+        reloadLocal()
     }
-    val openLocalInFileManager = object : MutableAction(
-        globalOpenLocalInFileManager?.templatePresentation?.text,
-        globalOpenLocalInFileManager?.templatePresentation?.description,
-        globalOpenLocalInFileManager?.templatePresentation?.icon,
-        globalOpenLocalInFileManager?.shortcutSet,
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            if (enabled) {
-                getCurrentLocalPath().let { path ->
-                    try {
-                        Desktop.getDesktop().open(File(path))
-                    } catch (ioException: IOException) {
-                        ioException.printStackTrace()
-                        XFTPManager.message("Failed to open \"$path\"", MessageType.ERROR)
-                    }
-                }
+    val openLocalInFileManager = SimpleMutableAction(globalOpenLocalInFileManager) {
+        getCurrentLocalPath().let { path ->
+            try {
+                Desktop.getDesktop().open(File(path))
+            } catch (ioException: IOException) {
+                ioException.printStackTrace()
+                XFTPManager.message("Failed to open \"$path\"", MessageType.ERROR)
             }
         }
     }
 
     // endregion
 
-    protected var remoteWrapper = JPanel(GridBagLayout())
-    protected var remotePathWrapper = JPanel(GridBagLayout())
+    private var remoteWrapper = JPanel(GridBagLayout())
+    private var remotePathWrapper = JPanel(GridBagLayout())
     val remotePath = MemoComboBox<String>(REMOTE_HISTORY_PERSISTENCE_KEY)
-    protected var remoteActionGroup = DefaultActionGroup()
-    protected var remoteActionToolBar = ActionToolbarImpl(REMOTE_TOOL_BAR_PLACE, remoteActionGroup, false)
-    protected var remoteFileList = FileTable()
-    protected var remoteFileListWrapper = JBScrollPane(remoteFileList)
+    private var remoteActionGroup = DefaultActionGroup()
+    private var remoteActionToolBar = ActionToolbarImpl(REMOTE_TOOL_BAR_PLACE, remoteActionGroup, false)
+    var remoteFileList = FileTable()
+        protected set
+    private var remoteFileListWrapper = JBScrollPane(remoteFileList)
 
     // region 远程actions图标按钮
 
     // 建立连接
-    val explore: MutableAction = object : MutableAction(
-        globalExplorer?.templatePresentation?.text,
-        globalExplorer?.templatePresentation?.description,
-        globalExplorer?.templatePresentation?.icon,
-        globalExplorer?.shortcutSet,
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            if (enabled && !isConnected()) {
-                connect {
-                    if (!XFTPManager.toolWindow.isVisible) XFTPManager.toolWindow.show()
-                }
+    val explore: MutableAction = SimpleMutableAction(globalExplorer) {
+        if (!isConnected()) {
+            connect {
+                if (!XFTPManager.toolWindow.isVisible) XFTPManager.toolWindow.show()
             }
         }
     }
     // 显示combobox的下拉内容
-    val dropdown: MutableAction = object : MutableAction(
-        globalDropdown?.templatePresentation?.text,
-        globalDropdown?.templatePresentation?.description,
-        globalDropdown?.templatePresentation?.icon,
-        globalDropdown?.shortcutSet,
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            if (enabled && isConnected()) {
-                remotePath.focusAndPopup()
-            }
+    val dropdown: MutableAction = SimpleMutableAction(globalDropdown) {
+        if (isConnected()) {
+            remotePath.focusAndPopup()
         }
     }
     // 刷新
-    val reload: MutableAction = object : MutableAction(
-        globalReload?.templatePresentation?.text,
-        globalReload?.templatePresentation?.description,
-        globalReload?.templatePresentation?.icon,
-        globalReload?.shortcutSet,
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            if (enabled && isConnected()) {
-                reloadRemote()
-            }
+    val reload: MutableAction = SimpleMutableAction(globalReload) {
+        if (isConnected()) {
+            reloadRemote()
         }
     }
     // 断开连接
-    val suspend: MutableAction = object : MutableAction(
-        globalSuspend?.templatePresentation?.text,
-        globalSuspend?.templatePresentation?.description,
-        globalSuspend?.templatePresentation?.icon,
-        globalSuspend?.shortcutSet,
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            if (enabled && isConnected() && isChannelAlive()) {
-                if (MessageDialogBuilder.yesNo("Disconnecting", "Do you really want to close this session?")
-                        .asWarning()
-                        .yesText("Disconnect")
-                        .ask(project)
-                ) {
-                    disconnect()
-                }
+    val suspend: MutableAction = SimpleMutableAction(globalSuspend) {
+        if (isConnected() && isChannelAlive()) {
+            if (MessageDialogBuilder.yesNo("Disconnecting", "Do you really want to close this session?")
+                    .asWarning()
+                    .yesText("Disconnect")
+                    .ask(project)
+            ) {
+                disconnect()
             }
         }
     }
     // 命令行打开
-    val newTerminal: MutableAction = object : MutableAction(
-        globalNewTerminal?.templatePresentation?.text,
-        globalNewTerminal?.templatePresentation?.description,
-        globalNewTerminal?.templatePresentation?.icon,
-        globalNewTerminal?.shortcutSet,
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            if (enabled && isConnected()) {
-                openInNewTerminal(remotePath.getMemoItem())
-            }
+    val newTerminal: MutableAction = SimpleMutableAction(globalNewTerminal) {
+        if (isConnected()) {
+            openInNewTerminal(remotePath.getMemoItem())
         }
     }
     // 隐藏本地浏览器
-    val localToggle: MutableAction = object : MutableAction(
-        globalLocalToggle?.templatePresentation?.text,
-        globalLocalToggle?.templatePresentation?.description,
-        globalLocalToggle?.templatePresentation?.icon,
-        globalLocalToggle?.shortcutSet,
-    ) {
-        override fun actionPerformed(e: AnActionEvent) {
-            if (enabled) {
-                val to: Boolean = !splitter.firstComponent.isVisible
-                splitter.firstComponent.isVisible = to
-                e.presentation.icon = if (to) AllIcons.Diff.ApplyNotConflictsRight else AllIcons.Diff.ApplyNotConflictsLeft
-            }
-        }
+    val localToggle: MutableAction = SimpleMutableAction(globalLocalToggle) { e ->
+        val to: Boolean = !splitter.firstComponent.isVisible
+        splitter.firstComponent.isVisible = to
+        e.presentation.icon = if (to) AllIcons.Diff.ApplyNotConflictsRight else AllIcons.Diff.ApplyNotConflictsLeft
     }
 
     // endregion
@@ -462,10 +401,5 @@ abstract class XFTPWidget(
             actionListener.actionPerformed(object : ActionEvent(menuItem, ACTION_PERFORMED, null) {})
         }
     }
-
-    /**
-     * 当前远程列表是否被聚焦
-     */
-    open fun isRemoteListFocused() = remoteFileList.focused
 
 }

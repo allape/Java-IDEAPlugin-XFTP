@@ -6,7 +6,19 @@ import com.intellij.openapi.project.DumbAwareAction
 import net.allape.common.XFTPManager
 import net.allape.xftp.XFTP
 
-class MakeAConnectAction: DumbAwareAction(AllIcons.Webreferences.Server) {
+class MakeAConnectAction: DumbAwareAction(
+    AllIcons.Webreferences.Server,
+) {
+    override fun update(e: AnActionEvent) {
+        val window = XFTPManager.getCurrentSelectedWindow()
+        if (window != null && window.isConnected()) {
+            e.presentation.text = "Focus On Remote List"
+            e.presentation.description = "Focus on remote file list of current XFTP explorer"
+        } else {
+            e.presentation.text = "Make A Connection"
+            e.presentation.description = "Make a new connection to a server if there is no connection established"
+        }
+    }
 
     override fun actionPerformed(e: AnActionEvent) {
         val window = XFTPManager.getCurrentSelectedWindow()
@@ -22,6 +34,8 @@ class MakeAConnectAction: DumbAwareAction(AllIcons.Webreferences.Server) {
     private fun makeNewConnection(window: XFTP, e: AnActionEvent) = window.apply {
         if (!isConnected()) {
             window.explore.actionPerformed(e)
+        } else {
+            window.remoteFileList.requestFocusInWindow()
         }
     }
 }

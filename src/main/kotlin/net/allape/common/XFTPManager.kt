@@ -22,7 +22,7 @@ class XFTPManager {
         /**
          * message中用到的group
          */
-        const val GROUP = "xftp"
+        private const val GROUP = "xftp"
 
         /**
          * 消息提醒

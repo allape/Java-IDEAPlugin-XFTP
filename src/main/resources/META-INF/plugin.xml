@@ -155,7 +155,7 @@
 <!--            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta L"/>-->
         </action>
 
-        <action id="XFTP.Open" class="net.allape.action.OpenAction" text="Open"
+        <!--<action id="XFTP.Open" class="net.allape.action.OpenAction" text="Open"
                 description="Open the first item of selected items">
             <keyboard-shortcut keymap="$default" first-keystroke="ENTER"/>
         </action>
@@ -176,7 +176,7 @@
         </action>
         <action id="XFTP.Rename" class="net.allape.action.RenameAction" text="Rename"
                 description="Rename selected file or folder">
-<!--            <keyboard-shortcut keymap="$default" first-keystroke="shift F7"/>-->
+&lt;!&ndash;            <keyboard-shortcut keymap="$default" first-keystroke="shift F7"/>&ndash;&gt;
         </action>
         <action id="XFTP.NewFile" class="net.allape.action.NewFileAction" text="Touch A New File"
                 description="Execute touch command">
@@ -185,8 +185,8 @@
         </action>
         <action id="XFTP.NewFolder" class="net.allape.action.NewFolderAction" text="Make A Directory"
                 description="Execute mkdir command">
-<!--            <keyboard-shortcut keymap="$default" first-keystroke="control F"/>-->
-<!--            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta F"/>-->
-        </action>
+&lt;!&ndash;            <keyboard-shortcut keymap="$default" first-keystroke="control F"/>&ndash;&gt;
+&lt;!&ndash;            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta F"/>&ndash;&gt;
+        </action>-->
     </actions>
 </idea-plugin>

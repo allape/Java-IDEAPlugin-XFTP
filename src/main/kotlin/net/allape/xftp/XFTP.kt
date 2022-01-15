@@ -35,6 +35,8 @@ import net.schmizz.sshj.sftp.SFTPClient
 import java.awt.Desktop
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
+import java.awt.event.KeyEvent
+import java.awt.event.KeyListener
 import java.awt.event.MouseEvent
 import java.awt.event.MouseListener
 import java.io.File
@@ -43,6 +45,7 @@ import java.lang.reflect.Field
 import java.util.stream.Collectors
 import javax.swing.DropMode
 import javax.swing.JComponent
+import javax.swing.KeyStroke
 import javax.swing.event.PopupMenuEvent
 import javax.swing.event.PopupMenuListener
 
@@ -285,7 +288,7 @@ class XFTP(
                     setCurrentRemotePath(remoteFileList.model.data[0].path)
                 }
             }
-            it.accelerator = Actions.getActionFirstKeyStroke(Actions.GoUpperAction)
+            it.accelerator = Actions.GoUpperActionKeymap.toKeystroke()
         }
         cdOrCat.let {
             it.addActionListener {
@@ -295,7 +298,7 @@ class XFTP(
                     }
                 }
             }
-            it.accelerator = Actions.getActionFirstKeyStroke(Actions.OpenAction)
+            it.accelerator = Actions.OpenActionKeymap.toKeystroke()
         }
         rmRf.let { rmRf ->
             rmRf.addActionListener {
@@ -331,7 +334,7 @@ class XFTP(
                     }
                 }
             }
-            rmRf.accelerator = Actions.getActionFirstKeyStroke(Actions.DeleteAction)
+            rmRf.accelerator = Actions.DeleteActionKeymap.toKeystroke()
         }
         duplicate.let {
             it.addActionListener {
@@ -364,7 +367,7 @@ class XFTP(
                     }
                 }
             }
-            it.accelerator = Actions.getActionFirstKeyStroke(Actions.DuplicateAction)
+            it.accelerator = Actions.DuplicateActionKeymap.toKeystroke()
         }
         mv.let {
             it.addActionListener {
@@ -397,7 +400,7 @@ class XFTP(
                     }
                 }
             }
-            it.accelerator = Actions.getActionFirstKeyStroke(Actions.RenameAction)
+            it.accelerator = Actions.RenameActionKeymap.toKeystroke()
         }
         touch.let {
             it.addActionListener {
@@ -425,7 +428,7 @@ class XFTP(
                     }
                 }
             }
-            it.accelerator = Actions.getActionFirstKeyStroke(Actions.NewFileAction)
+            it.accelerator = Actions.NewFileActionKeymap.toKeystroke()
         }
         mkdirp.let {
             it.addActionListener {
@@ -447,7 +450,7 @@ class XFTP(
                     }
                 }
             }
-            it.accelerator = Actions.getActionFirstKeyStroke(Actions.NewFolderAction)
+            it.accelerator = Actions.NewFolderActionKeymap.toKeystroke()
         }
 
         remoteFileListPopupMenu.addPopupMenuListener(object : PopupMenuListener {
@@ -489,6 +492,23 @@ class XFTP(
                 resetRemoteListContentMenuItemsText()
             }
             override fun popupMenuCanceled(e: PopupMenuEvent) {}
+        })
+        remoteFileList.addKeyListener(object : KeyListener {
+            override fun keyTyped(e: KeyEvent?) {}
+            override fun keyPressed(e: KeyEvent?) {
+                e?.let {
+                    when (KeyStroke.getKeyStrokeForEvent(e)) {
+                        Actions.GoUpperActionKeymap.toKeystroke() -> this@XFTP.performAnJMenuItemAction(cdDotDot)
+                        Actions.OpenActionKeymap.toKeystroke() -> this@XFTP.performAnJMenuItemAction(cdOrCat)
+                        Actions.DeleteActionKeymap.toKeystroke() -> this@XFTP.performAnJMenuItemAction(rmRf)
+                        Actions.DuplicateActionKeymap.toKeystroke() -> this@XFTP.performAnJMenuItemAction(duplicate)
+                        Actions.RenameActionKeymap.toKeystroke() -> this@XFTP.performAnJMenuItemAction(mv)
+                        Actions.NewFileActionKeymap.toKeystroke() -> this@XFTP.performAnJMenuItemAction(touch)
+                        Actions.NewFolderActionKeymap.toKeystroke() -> this@XFTP.performAnJMenuItemAction(mkdirp)
+                    }
+                }
+            }
+            override fun keyReleased(e: KeyEvent?) {}
         })
     }
 
@@ -787,9 +807,8 @@ class XFTP(
                         val fileModels: MutableList<FileModel> =
                             ArrayList(files.size)
 
-                        val shortcutsForParentFolder = Actions.readableKeyStroke(Actions.getActionFirstKeyStroke(Actions.GoUpperAction))
                         // 添加返回上一级目录
-                        fileModels.add(getParentFolder(path, FILE_SEP, ".. ${if (shortcutsForParentFolder != null) "(${shortcutsForParentFolder})" else ""}"))
+                        fileModels.add(getParentFolder(path, FILE_SEP, ".."))
                         for (f in files) {
                             fileModels.add(
                                 FileModel(

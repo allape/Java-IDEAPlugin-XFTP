@@ -2,12 +2,12 @@ package net.allape.action
 
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAwareAction
-import net.allape.common.XFTPManager
 
+@Deprecated("NewFolderAction is deprecated")
 class NewFolderAction : DumbAwareAction() {
     override fun actionPerformed(e: AnActionEvent) {
-        XFTPManager.getCurrentSelectedWindow()?.apply {
-            if (isRemoteListFocused()) performAnJMenuItemAction(mkdirp)
-        }
+//        XFTPManager.getCurrentSelectedWindow()?.apply {
+//            if (isRemoteListFocused()) performAnJMenuItemAction(mkdirp)
+//        }
     }
 }
