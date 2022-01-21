@@ -53,8 +53,9 @@
     </description>
 
     <change-notes><![CDATA[
-        <h5>2022-01-01 ~ 2022-01-04</h5>
+        <h5>2022-01-01 ~ 2022-01-21</h5>
         <ul>
+            <li>Unbind context menu actions with global actions, because some shortcuts were disturbing other actions.</li>
             <li>Fix wrong `import`s.</li>
             <li>Fix action buttons messed up while there are multiple windows.</li>
             <li>Fix file listener disposing.</li>

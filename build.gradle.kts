@@ -24,7 +24,7 @@ dependencies {
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
 intellij {
-    version.set("IU-2021.1")
+    version.set("IU-2021.3.1")
     updateSinceUntilBuild.set(false)
 }
 tasks {

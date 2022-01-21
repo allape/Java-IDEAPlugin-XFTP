@@ -12,6 +12,7 @@
 - ✔️️ Open new terminal session in current folder.
 - ✔️️️ Memo for history locations.
 - ✔️️️ Operations in context menu: rm, cp, mv, touch, mkdir.
+- ✖️ Fast search in remote list (will make version v0.11-ish).
 - ✖️ Copy and Paste actions in both list...
 - ✖️ Transferring history list with retry button.
 
@@ -26,3 +27,5 @@
   - Because the remote list will be reloaded after the remote path selector popup became hidden, no solution for this for now...
 - `Enter` key has been blocked in `Run` Tool Window...
   - \>= v0.10.5: Remove XFTP `open` action shortcut in `Preferences / Keymap`.
+  - \>= v0.10.7: All actions in content-menu of remote list will be unbound with global actions.
+- Disposing is buggy? May cause `NullPointException` while creating new connection because of "already disposed".
