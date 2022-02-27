@@ -49,9 +49,7 @@ class MemoComboBox<E>(
 ): ComboBox<MemoComboBoxPersistenceModel<E>>() {
 
     companion object {
-
         private const val DEFAULT_MAX_COUNT = 10
-
     }
 
     /**

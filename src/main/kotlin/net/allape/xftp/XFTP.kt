@@ -113,7 +113,7 @@ class XFTP(
             }
             override fun popupMenuCanceled(e: PopupMenuEvent?) {}
         })
-        localPath.addFocusListener(object : FocusListener {
+        localPath.editor.editorComponent.addFocusListener(object : FocusListener {
             override fun focusGained(e: FocusEvent?) {}
             override fun focusLost(e: FocusEvent?) {
                 fetchLocalList(localPath.getMemoItem() ?: File.separator)
@@ -176,7 +176,7 @@ class XFTP(
             override fun popupMenuCanceled(e: PopupMenuEvent?) {}
         })
 
-        remotePath.addFocusListener(object : FocusListener {
+        remotePath.editor.editorComponent.addFocusListener(object : FocusListener {
             override fun focusGained(e: FocusEvent?) {}
             override fun focusLost(e: FocusEvent?) {
                 fetchRemoteList(remotePath.getMemoItem() ?: FILE_SEP)
