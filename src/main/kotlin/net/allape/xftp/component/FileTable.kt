@@ -3,8 +3,6 @@ package net.allape.xftp.component
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.util.io.FileUtil
-import com.intellij.ui.DarculaColors
-import com.intellij.ui.JBColor
 import com.intellij.ui.table.JBTable
 import net.allape.model.FileModel
 import net.allape.model.FileModelType
@@ -192,12 +190,12 @@ class FileTable: JBTable(FileTableModel()) {
     private var lastSelectedRow: Int = -1
 
     init {
-        setSelectionBackground(
-            JBColor.namedColor(
-                "Plugins.lightSelectionBackground",
-                DarculaColors.BLUE
-            )
-        )
+//        setSelectionBackground(
+//            JBColor.namedColor(
+//                "Plugins.lightSelectionBackground",
+//                DarculaColors.BLUE
+//            )
+//        )
         setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION)
         autoCreateRowSorter = false
         border = null
