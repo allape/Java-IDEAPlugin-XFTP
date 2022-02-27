@@ -136,7 +136,7 @@ abstract class XFTPWidget(
 
     // endregion
 
-    private var remoteWrapper = JPanel(GridBagLayout())
+    protected var remoteWrapper = JPanel(GridBagLayout())
     private var remotePathWrapper = JPanel(GridBagLayout())
     val remotePath = MemoComboBox<String>(REMOTE_HISTORY_PERSISTENCE_KEY)
     private var remoteActionGroup = DefaultActionGroup()

@@ -273,9 +273,9 @@ class XFTP(
                                         executeSync("rm -Rf ${LinuxHelper.escapeShellString(file.path())}")
                                     } catch (err: java.lang.Exception) {
                                         err.printStackTrace()
-                                        XFTPManager.message(
+                                        XFTPManager.gotIt(
+                                            remoteWrapper,
                                             "Error occurred while deleting file: ${file.path()}",
-                                            MessageType.ERROR
                                         )
                                     }
                                 }
@@ -310,10 +310,10 @@ class XFTP(
                             setCurrentRemotePath(parsedFileName)
 
                             false
-                        }) {
-                            XFTPManager.message(
-                                "Error occurred while duplicating file: ${it.message}",
-                                MessageType.ERROR
+                        }) { e ->
+                            XFTPManager.gotIt(
+                                remoteWrapper,
+                                "Error occurred while duplicating file: ${e.message}",
                             )
                         }
                     }
@@ -343,10 +343,10 @@ class XFTP(
                             setCurrentRemotePath(parsedFileName)
 
                             false
-                        }) {
-                            XFTPManager.message(
-                                "Error occurred while renaming file: ${it.message}",
-                                MessageType.ERROR
+                        }) { e ->
+                            XFTPManager.gotIt(
+                                remoteWrapper,
+                                "Error occurred while renaming file: ${e.message}",
                             )
                         }
                     }
@@ -372,9 +372,9 @@ class XFTP(
 
                             false
                         }) { ex ->
-                            XFTPManager.message(
+                            XFTPManager.gotIt(
+                                remoteWrapper,
                                 "Error occurred while creating file: ${ex.message}",
-                                MessageType.ERROR
                             )
                         }
                     }
@@ -393,10 +393,10 @@ class XFTP(
                             setCurrentRemotePath(fullPath)
 
                             false
-                        }) {
-                            XFTPManager.message(
-                                "Error occurred while creating folder: ${it.message}",
-                                MessageType.ERROR
+                        }) { e ->
+                            XFTPManager.gotIt(
+                                remoteWrapper,
+                                "Error occurred while creating folder: ${e.message}",
                             )
                         }
                     }
@@ -525,16 +525,16 @@ class XFTP(
                                                     sftpClient = field[sftpChannel] as SFTPClient
                                                 } catch (e: Exception) {
                                                     e.printStackTrace()
-                                                    XFTPManager.message(
+                                                    XFTPManager.gotIt(
+                                                        remoteWrapper,
                                                         "Failed to get sftp client for this session, please try it again: ${e.message}",
-                                                        MessageType.ERROR
                                                     )
                                                 }
 
                                                 application.invokeLater { setCurrentRemotePath(sftpChannel!!.home) }
                                             } catch (e: SshTransportException) {
                                                 if (!cancelled) {
-                                                    XFTPManager.message("Failed to connect: " + e.message, MessageType.WARNING)
+                                                    XFTPManager.gotIt(remoteWrapper, "Failed to connect: " + e.message)
                                                 }
                                                 triggerDisconnected()
                                                 e.printStackTrace()
@@ -555,9 +555,9 @@ class XFTP(
         } catch (e: Exception) {
             e.printStackTrace()
             this.triggerDisconnected()
-            XFTPManager.message(
+            XFTPManager.gotIt(
+                remoteWrapper,
                 e.message ?: "Failed to create a connection, please try it later",
-                MessageType.ERROR,
             )
         }
     }
@@ -654,7 +654,7 @@ class XFTP(
         try {
             val file = File(path)
             if (!file.exists()) {
-                XFTPManager.message("$path does not exist!", MessageType.INFO)
+                XFTPManager.gotIt(localPath, "$path does not exist!")
                 // 获取第二个历史, 不存在时加载项目路径
                 if (project.basePath != null) {
                     nextDir = project.basePath
@@ -751,7 +751,7 @@ class XFTP(
                     val file = sftpChannel!!.file(path)
                     path = file.path()
                     if (!file.exists()) {
-                        XFTPManager.message("$path does not exist!", MessageType.INFO)
+                        XFTPManager.gotIt(remotePath, "$path does not exist!")
                         loadParent = getParentFolderPath(file.path(), FILE_SEP)
                     } else if (!file.isDir()) {
                         downloadFileAndEdit(file)
