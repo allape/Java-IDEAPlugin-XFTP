@@ -250,6 +250,7 @@ abstract class XFTPWidget(
 
         localActionGroup.add(reloadLocalActionButton)
         localActionGroup.add(openLocalInFileManager)
+        localActionToolBar.targetComponent = panelWrapper
     }
 
     /**
@@ -278,6 +279,7 @@ abstract class XFTPWidget(
             Separator.create(),
             localToggle,
         )
+        remoteActionToolBar.targetComponent = panelWrapper
 
         resetRemoteListContentMenuItemsText()
         remoteFileListPopupMenu.add(cdDotDot)

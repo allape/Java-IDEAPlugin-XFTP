@@ -31,14 +31,15 @@ import net.allape.model.TransferType
 import net.allape.util.LinuxHelper
 import net.allape.util.Maps
 import net.allape.xftp.component.FileNameTextFieldDialog
+import net.allape.xftp.component.IDoubleClickListener
 import net.schmizz.sshj.sftp.SFTPClient
 import java.awt.Desktop
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
+import java.awt.event.FocusEvent
+import java.awt.event.FocusListener
 import java.awt.event.KeyEvent
 import java.awt.event.KeyListener
-import java.awt.event.MouseEvent
-import java.awt.event.MouseListener
 import java.io.File
 import java.io.IOException
 import java.lang.reflect.Field
@@ -55,8 +56,6 @@ class XFTP(
 ) : XFTPWidget(project, toolWindow) {
 
     companion object {
-        // 双击间隔, 毫秒
-        const val DOUBLE_CLICK_INTERVAL: Long = 350
         // 放入content.userData的key
         val XFTP_KEY: Key<XFTP> = Key.create(XFTP::javaClass.name)
 
@@ -71,17 +70,6 @@ class XFTP(
     }
 
     private val logger = Logger.getInstance(XFTP::class.java)
-
-    private var clickWatcher: Long = System.currentTimeMillis()
-
-    // 上一次选择文件
-    private var lastFile: FileModel? = null
-
-    // 当前选中的本地文件
-    private var currentLocalFile: FileModel? = null
-
-    // 当前选中的远程文件
-    private var currentRemoteFile: FileModel? = null
 
     init {
         setCurrentLocalPath(this.project.basePath ?: "/")
@@ -122,42 +110,22 @@ class XFTP(
                 remoteFileList.clearSelection()
             }
             override fun popupMenuWillBecomeInvisible(e: PopupMenuEvent?) {
-                fetchLocalList(localPath.getMemoItem() ?: FILE_SEP)
             }
             override fun popupMenuCanceled(e: PopupMenuEvent?) {}
         })
-        localPath.addActionListener {
-            if (it.actionCommand == "comboBoxEdited") {
-                fetchRemoteList(localPath.getMemoItem() ?: FILE_SEP)
+        localPath.addFocusListener(object : FocusListener {
+            override fun focusGained(e: FocusEvent?) {}
+            override fun focusLost(e: FocusEvent?) {
+                fetchLocalList(localPath.getMemoItem() ?: File.separator)
             }
-        }
-
-        localFileList.selectionModel.addListSelectionListener {
-            localFileList.model.data.let { allRemoteFiles ->
-                localFileList.selectedRow.let { currentSelectRow ->
-                    if (currentSelectRow != -1) {
-                        lastFile = currentLocalFile
-                        currentLocalFile = allRemoteFiles[currentSelectRow]
-                    }
-                }
-            }
-        }
-        // 监听双击, 双击后打开文件或文件夹
-        localFileList.addMouseListener(object : MouseListener {
-            override fun mouseClicked(e: MouseEvent) {
-                if (e.button == MouseEvent.BUTTON1) {
-                    val now = System.currentTimeMillis()
-                    if (lastFile != null && lastFile === currentLocalFile && now - clickWatcher < DOUBLE_CLICK_INTERVAL) {
-                        setCurrentLocalPath(currentLocalFile!!.path)
-                    }
-                    clickWatcher = now
-                }
-            }
-            override fun mousePressed(e: MouseEvent) {}
-            override fun mouseReleased(e: MouseEvent) {}
-            override fun mouseEntered(e: MouseEvent) {}
-            override fun mouseExited(e: MouseEvent) {}
         })
+
+        localFileList.addDoubleClickListener(object : IDoubleClickListener {
+            override fun onDoubleClick(file: FileModel) {
+                setCurrentLocalPath(file.path)
+            }
+        })
+
         localFileList.dragEnabled = true
         localFileList.transferHandler = object : FileTransferHandler<File>() {
             override fun createTransferable(c: JComponent?): Transferable {
@@ -196,47 +164,31 @@ class XFTP(
     }
 
     override fun bindRemoteUI() {
+        setRemoteButtonsEnable(false)
         remotePath.isEnabled = false
+
         remotePath.addPopupMenuListener(object : PopupMenuListener {
             override fun popupMenuWillBecomeVisible(e: PopupMenuEvent?) {
                 localFileList.clearSelection()
                 remoteFileList.clearSelection()
             }
-            override fun popupMenuWillBecomeInvisible(e: PopupMenuEvent?) {
-                fetchRemoteList(remotePath.getMemoItem() ?: FILE_SEP)
-            }
+            override fun popupMenuWillBecomeInvisible(e: PopupMenuEvent?) {}
             override fun popupMenuCanceled(e: PopupMenuEvent?) {}
         })
-        remotePath.addActionListener {
-            if (it.actionCommand == "comboBoxEdited") {
+
+        remotePath.addFocusListener(object : FocusListener {
+            override fun focusGained(e: FocusEvent?) {}
+            override fun focusLost(e: FocusEvent?) {
                 fetchRemoteList(remotePath.getMemoItem() ?: FILE_SEP)
             }
-        }
-        setRemoteButtonsEnable(false)
-
-        remoteFileList.selectionModel.addListSelectionListener {
-            val allRemoteFiles: List<FileModel> = remoteFileList.model.data
-            val currentSelectRow = remoteFileList.selectedRow
-            if (currentSelectRow != -1) {
-                lastFile = currentRemoteFile
-                currentRemoteFile = allRemoteFiles[currentSelectRow]
-            }
-        }
-        remoteFileList.addMouseListener(object : MouseListener {
-            override fun mouseClicked(e: MouseEvent) {
-                if (e.button == MouseEvent.BUTTON1) {
-                    val now = System.currentTimeMillis()
-                    if (lastFile != null && lastFile === currentRemoteFile && now - clickWatcher < DOUBLE_CLICK_INTERVAL) {
-                        setCurrentRemotePath(currentRemoteFile!!.path)
-                    }
-                    clickWatcher = now
-                }
-            }
-            override fun mousePressed(e: MouseEvent) {}
-            override fun mouseReleased(e: MouseEvent) {}
-            override fun mouseEntered(e: MouseEvent) {}
-            override fun mouseExited(e: MouseEvent) {}
         })
+
+        remoteFileList.addDoubleClickListener(object : IDoubleClickListener {
+            override fun onDoubleClick(file: FileModel) {
+                setCurrentRemotePath(file.path)
+            }
+        })
+
         remoteFileList.dragEnabled = true
         remoteFileList.dropMode = DropMode.ON
         remoteFileList.transferHandler = object : FileTransferHandler<RemoteFileObject?>() {
@@ -696,6 +648,7 @@ class XFTP(
      * 加载指定路径的本地文件列表
      */
     private fun fetchLocalList(targetPath: String) {
+        logger.info("fetch local path \"$targetPath\"")
         var path = targetPath.ifEmpty { File.separator }
         var nextDir: String? = null
         try {
@@ -787,6 +740,7 @@ class XFTP(
      */
     private fun fetchRemoteList(targetPath: String) {
         if (targetPath.isEmpty()) return
+        logger.info("fetch remote path \"$targetPath\"")
         application.executeOnPooledThread {
             if (this.isChannelAlive()) {
                 lockRemoteUIs()

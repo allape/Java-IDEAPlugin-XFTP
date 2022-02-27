@@ -12,6 +12,8 @@ import net.allape.util.LinuxHelper
 import java.awt.Component
 import java.awt.event.FocusEvent
 import java.awt.event.FocusListener
+import java.awt.event.MouseEvent
+import java.awt.event.MouseListener
 import java.math.BigInteger
 import java.util.*
 import javax.swing.Icon
@@ -147,9 +149,15 @@ class FileTableModel(
 // com.intellij.ui.SpeedSearchBase
 // com.intellij.ui.FilteringTree
 
+interface IDoubleClickListener {
+    fun onDoubleClick(file: FileModel)
+}
+
 class FileTable: JBTable(FileTableModel()) {
     
     companion object {
+        // 双击间隔, 毫秒
+        const val DOUBLE_CLICK_INTERVAL: Long = 350
         /**
          * 排序文件
          * @param files 需要排序的文件
@@ -175,7 +183,14 @@ class FileTable: JBTable(FileTableModel()) {
 
     var focused: Boolean = false
         private set
-    
+
+    private val doubleClickListeners: MutableList<IDoubleClickListener> = mutableListOf()
+
+    // 双击点击监听
+    private var clickWatcher: Long = System.currentTimeMillis()
+
+    private var lastSelectedRow: Int = -1
+
     init {
         setSelectionBackground(
             JBColor.namedColor(
@@ -213,10 +228,31 @@ class FileTable: JBTable(FileTableModel()) {
             override fun focusGained(e: FocusEvent?) {
                 focused = true
             }
-
             override fun focusLost(e: FocusEvent?) {
                 focused = false
             }
+        })
+
+        selectionModel.addListSelectionListener {
+            if (!it.valueIsAdjusting) {
+                lastSelectedRow = selectedRow
+            }
+        }
+
+        addMouseListener(object : MouseListener {
+            override fun mouseClicked(e: MouseEvent?) {
+                if (selectedRow != -1 && lastSelectedRow == selectedRow && doubleClickListeners.size > 0) {
+                    val now = System.currentTimeMillis()
+                    if (now - clickWatcher < DOUBLE_CLICK_INTERVAL) {
+                        doubleClickListeners.forEach { l -> l.onDoubleClick(model.data[selectedRow]) }
+                    }
+                    clickWatcher = now
+                }
+            }
+            override fun mousePressed(e: MouseEvent?) {}
+            override fun mouseReleased(e: MouseEvent?) {}
+            override fun mouseEntered(e: MouseEvent?) {}
+            override fun mouseExited(e: MouseEvent?) {}
         })
     }
 
@@ -244,6 +280,13 @@ class FileTable: JBTable(FileTableModel()) {
             files.add(fileModel)
         }
         return files
+    }
+
+    /**
+     * 添加双击监听器
+     */
+    fun addDoubleClickListener(doubleClickListener: IDoubleClickListener) {
+        doubleClickListeners.add(doubleClickListener)
     }
 
     override fun getModel(): FileTableModel {
