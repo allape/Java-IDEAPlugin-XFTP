@@ -19,6 +19,8 @@
 ## Known Issues
 - Connection can NOT be cancelled in connecting progress.
   - Wait for 30s with timeout exception...x
+- Any remote operation after the session is bad, disconnected or expired, might make the remote buttons unable to perform any action
+  - Working on this...
 - `Shift F6` conflicts with Refactor/Rename action.
   - <= v0.10.4: Remove XFTP rename action shortcut in `Preferences / Keymap`.
   - \> v0.10.4: Change shortcut to `Shift F7`.
