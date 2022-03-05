@@ -23,7 +23,7 @@ class MakeAConnectAction: DumbAwareAction(
     override fun actionPerformed(e: AnActionEvent) {
         val window = XFTPManager.getCurrentSelectedWindow()
         if (window == null) {
-            XFTP.createWindowWithAnActionEvent(e, false) {
+            XFTP.createWindowWithAnActionEvent(false) {
                 makeNewConnection(it, e)
             }
         } else {

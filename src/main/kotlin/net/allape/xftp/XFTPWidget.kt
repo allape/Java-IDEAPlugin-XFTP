@@ -5,7 +5,6 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.JBMenuItem
 import com.intellij.openapi.ui.JBPopupMenu
 import com.intellij.openapi.ui.MessageDialogBuilder
@@ -36,9 +35,8 @@ import javax.swing.JPanel
  * 纯UI组件
  */
 abstract class XFTPWidget(
-    project: Project,
     toolWindow: ToolWindow,
-) : XFTPCore(project, toolWindow) {
+) : XFTPCore(toolWindow) {
 
     companion object {
         private fun defaultConfig(): GridBagConstraints {
@@ -173,7 +171,7 @@ abstract class XFTPWidget(
             if (MessageDialogBuilder.yesNo("Disconnecting", "Do you really want to close this session?")
                     .asWarning()
                     .yesText("Disconnect")
-                    .ask(project)
+                    .ask(XFTPManager.getCurrentProject())
             ) {
                 disconnect()
             }

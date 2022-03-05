@@ -10,7 +10,6 @@ import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.MessageDialogBuilder
 import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.util.Disposer
@@ -44,7 +43,6 @@ class TransferException(message: String): RuntimeException(message)
 class TransferCancelledException(message: String): RuntimeException(message)
 
 abstract class XFTPCore(
-    val project: Project,
     val toolWindow: ToolWindow,
 ) : Disposable {
 
@@ -124,13 +122,14 @@ abstract class XFTPCore(
         protected set
 
     // 传输历史记录topic的publisher
-    protected val historyTopicHandler: HistoryTopicHandler = project.messageBus.syncPublisher(HistoryTopicHandler.HISTORY_TOPIC)
+    protected val historyTopicHandler: HistoryTopicHandler = XFTPManager.getCurrentProject()
+        .messageBus.syncPublisher(HistoryTopicHandler.HISTORY_TOPIC)
 
     // 传输历史
-    protected val history: ArrayList<Transfer> = ArrayList(COLLECTION_SIZE)
+    private val history: ArrayList<Transfer> = ArrayList(COLLECTION_SIZE)
 
     // 传输中的
-    protected val transferring: ArrayList<Transfer> = ArrayList(COLLECTION_SIZE)
+    private val transferring: ArrayList<Transfer> = ArrayList(COLLECTION_SIZE)
 
     // 修改中的远程文件, 用于文件修改后自动上传 key: remote file, value: local file
     protected val remoteEditingFiles: HashMap<RemoteFileObject, String> = HashMap(COLLECTION_SIZE)
@@ -144,7 +143,7 @@ abstract class XFTPCore(
         content?.let {
             this.content = it
             Disposer.register(this.content, this)
-            ExplorerWindowTabCloseListener(it, project, this)
+            ExplorerWindowTabCloseListener(it, this)
         }
     }
 
@@ -259,7 +258,7 @@ abstract class XFTPCore(
             }
 
             ProgressManager.getInstance().run(object : Task.Backgroundable(
-                project,
+                XFTPManager.getCurrentProject(),
                 if (type === TransferType.UPLOAD) "Uploading" else "Downloading",
             ) {
                 override fun run(indicator: ProgressIndicator) {
@@ -383,8 +382,8 @@ abstract class XFTPCore(
             if (it && credentials != null) {
                 val state = TerminalTabState()
                 state.myWorkingDirectory = path
-                TerminalView.getInstance(project).createNewSession(
-                    SshTerminalDirectRunner(project, credentials, Charset.defaultCharset()),
+                TerminalView.getInstance(XFTPManager.getCurrentProject()).createNewSession(
+                    SshTerminalDirectRunner(XFTPManager.getCurrentProject(), credentials, Charset.defaultCharset()),
                     state
                 )
             }
@@ -462,9 +461,9 @@ abstract class XFTPCore(
         }
         NonProjectFileWritingAccessProvider.allowWriting(listOf(virtualFile))
         application.invokeLater {
-            FileEditorManager.getInstance(project).openTextEditor(
+            FileEditorManager.getInstance(XFTPManager.getCurrentProject()).openTextEditor(
                 OpenFileDescriptor(
-                    project,
+                    XFTPManager.getCurrentProject(),
                     virtualFile,
                     0
                 ),
@@ -488,7 +487,7 @@ abstract class XFTPCore(
                         "Do you still want to download and edit it?"
                     ).asWarning()
                         .yesText("Edit")
-                        .ask(project)
+                        .ask(XFTPManager.getCurrentProject())
                 ) {
                     return@invokeLater
                 }
@@ -512,7 +511,7 @@ abstract class XFTPCore(
                                     .asWarning()
                                     .noText("Replace")
                                     .yesText("Open")
-                                    .ask(project)
+                                    .ask(XFTPManager.getCurrentProject())
                             ) {
                                 openFileInEditor(oldCachedFile)
                                 return@invokeLater

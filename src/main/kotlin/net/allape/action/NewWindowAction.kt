@@ -17,6 +17,6 @@ class NewWindowAction : DumbAwareAction(
     }
 
     override fun actionPerformed(e: AnActionEvent) {
-        XFTP.createWindowWithAnActionEvent(e)
+        XFTP.createWindowWithAnActionEvent()
     }
 }

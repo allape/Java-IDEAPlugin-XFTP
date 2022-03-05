@@ -3,11 +3,11 @@ package net.allape.xftp.component
 import com.intellij.ide.ui.newItemPopup.NewItemPopupUtil
 import com.intellij.ide.ui.newItemPopup.NewItemSimplePopupPanel
 import com.intellij.openapi.application.Experiments
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.InputValidatorEx
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.util.Consumer
+import net.allape.common.XFTPManager
 import net.allape.xftp.XFTPCore
 import java.awt.event.InputEvent
 import java.util.*
@@ -15,15 +15,15 @@ import java.util.*
 /**
  * @sample [com.intellij.ide.actions.CreateFileAction]
  */
-class FileNameTextFieldDialog(private val project: Project) {
+class FileNameTextFieldDialog {
 
     fun openDialog (isDirectory: Boolean, value: String? = null, consumer: Consumer<String>) {
         val validator = FileNameValidator(isDirectory, value)
         if (Experiments.getInstance().isFeatureEnabled("show.create.new.element.in.popup")) {
-            createLightWeightPopup(validator, value, consumer).showCenteredInCurrentWindow(project)
+            createLightWeightPopup(validator, value, consumer).showCenteredInCurrentWindow(XFTPManager.getCurrentProject())
         } else {
             Messages.showInputDialog(
-                this.project, "Create something new",
+                XFTPManager.getCurrentProject(), "Create something new",
                 "New ${if (isDirectory) "Folder" else "File"}", null, value, validator
             )
         }

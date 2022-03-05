@@ -31,3 +31,4 @@
   - \>= v0.10.5: Remove XFTP `open` action shortcut in `Preferences / Keymap`.
   - \>= v0.10.7: All actions in content-menu of remote list will be unbound with global actions.
 - Disposing is buggy? May cause `NullPointException` while creating new connection because of "already disposed".
+  - Open a XFTP explorer, then change a project within the same Window, then this bug will be revived, working on this...
