@@ -2,7 +2,6 @@ package net.allape.common
 
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.Notifications
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.ui.popup.Balloon
@@ -12,6 +11,7 @@ import com.intellij.ui.content.Content
 import net.allape.xftp.XFTP
 import java.awt.Point
 import javax.swing.JComponent
+
 
 class XFTPManager {
 
@@ -67,11 +67,6 @@ class XFTPManager {
                 windows[content]
             }
         }
-
-        /**
-         * 获取当前project
-         */
-        fun getCurrentProject(): Project = ProjectManager.getInstance().defaultProject
 
     }
 

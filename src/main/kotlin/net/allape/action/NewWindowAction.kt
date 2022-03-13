@@ -2,6 +2,7 @@ package net.allape.action
 
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.openapi.project.DumbAwareAction
 import net.allape.xftp.XFTP
@@ -17,6 +18,8 @@ class NewWindowAction : DumbAwareAction(
     }
 
     override fun actionPerformed(e: AnActionEvent) {
-        XFTP.createWindowWithAnActionEvent()
+        e.getData(CommonDataKeys.PROJECT)?.let {
+            XFTP.createWindowWithAnActionEvent(it)
+        }
     }
 }

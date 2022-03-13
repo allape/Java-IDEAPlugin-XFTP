@@ -10,6 +10,7 @@ import com.intellij.openapi.fileEditor.impl.NonProjectFileWritingAccessProvider
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.MessageDialogBuilder
 import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.util.Disposer
@@ -43,6 +44,7 @@ class TransferException(message: String): RuntimeException(message)
 class TransferCancelledException(message: String): RuntimeException(message)
 
 abstract class XFTPCore(
+    val project: Project,
     val toolWindow: ToolWindow,
 ) : Disposable {
 
@@ -122,7 +124,7 @@ abstract class XFTPCore(
         protected set
 
     // 传输历史记录topic的publisher
-    protected val historyTopicHandler: HistoryTopicHandler = XFTPManager.getCurrentProject()
+    protected val historyTopicHandler: HistoryTopicHandler = project
         .messageBus.syncPublisher(HistoryTopicHandler.HISTORY_TOPIC)
 
     // 传输历史
@@ -143,7 +145,7 @@ abstract class XFTPCore(
         content?.let {
             this.content = it
             Disposer.register(this.content, this)
-            ExplorerWindowTabCloseListener(it, this)
+            ExplorerWindowTabCloseListener(project, it, this)
         }
     }
 
@@ -258,7 +260,7 @@ abstract class XFTPCore(
             }
 
             ProgressManager.getInstance().run(object : Task.Backgroundable(
-                XFTPManager.getCurrentProject(),
+                project,
                 if (type === TransferType.UPLOAD) "Uploading" else "Downloading",
             ) {
                 override fun run(indicator: ProgressIndicator) {
@@ -382,8 +384,8 @@ abstract class XFTPCore(
             if (it && credentials != null) {
                 val state = TerminalTabState()
                 state.myWorkingDirectory = path
-                TerminalView.getInstance(XFTPManager.getCurrentProject()).createNewSession(
-                    SshTerminalDirectRunner(XFTPManager.getCurrentProject(), credentials, Charset.defaultCharset()),
+                TerminalView.getInstance(project).createNewSession(
+                    SshTerminalDirectRunner(project, credentials, Charset.defaultCharset()),
                     state
                 )
             }
@@ -461,9 +463,9 @@ abstract class XFTPCore(
         }
         NonProjectFileWritingAccessProvider.allowWriting(listOf(virtualFile))
         application.invokeLater {
-            FileEditorManager.getInstance(XFTPManager.getCurrentProject()).openTextEditor(
+            FileEditorManager.getInstance(project).openTextEditor(
                 OpenFileDescriptor(
-                    XFTPManager.getCurrentProject(),
+                    project,
                     virtualFile,
                     0
                 ),
@@ -487,7 +489,7 @@ abstract class XFTPCore(
                         "Do you still want to download and edit it?"
                     ).asWarning()
                         .yesText("Edit")
-                        .ask(XFTPManager.getCurrentProject())
+                        .ask(project)
                 ) {
                     return@invokeLater
                 }
@@ -511,7 +513,7 @@ abstract class XFTPCore(
                                     .asWarning()
                                     .noText("Replace")
                                     .yesText("Open")
-                                    .ask(XFTPManager.getCurrentProject())
+                                    .ask(project)
                             ) {
                                 openFileInEditor(oldCachedFile)
                                 return@invokeLater

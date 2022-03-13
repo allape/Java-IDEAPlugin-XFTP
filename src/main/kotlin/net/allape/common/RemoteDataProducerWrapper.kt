@@ -12,6 +12,7 @@ import com.intellij.openapi.ui.popup.util.BaseListPopupStep
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.remote.RemoteConnectionType
 import com.intellij.remote.RemoteConnector
+import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.Consumer
 import com.jetbrains.plugins.remotesdk.RemoteSdkBundle
 import com.jetbrains.plugins.remotesdk.console.RemoteConnectionSettingsForm
@@ -143,10 +144,12 @@ class RemoteDataProducerWrapper : RemoteDataProducer() {
             if (myActionEvent != null && myActionEvent.inputEvent is KeyEvent) {
                 popup.showInFocusCenter()
             } else {
-                popup.showInScreenCoordinates(
-                    WindowManager.getInstance().getIdeFrame(myProject)!!.component,
-                    MouseInfo.getPointerInfo().location
-                )
+                val comp = WindowManager.getInstance().getIdeFrame(myProject)?.component
+                if (comp == null) {
+                    popup.show(RelativePoint(MouseInfo.getPointerInfo().location))
+                } else {
+                    popup.showInScreenCoordinates(comp, MouseInfo.getPointerInfo().location)
+                }
             }
         } else {
             popup.showInFocusCenter()

@@ -17,9 +17,9 @@ class App: ToolWindowFactory, DumbAware {
 
     companion object {
 
-        fun createTheToolWindowContent(toolWindow: ToolWindow): XFTP {
+        fun createTheToolWindowContent(project: Project, toolWindow: ToolWindow): XFTP {
             // window实例
-            val window = XFTP(toolWindow)
+            val window = XFTP(project, toolWindow)
 
             //获取内容工厂的实例
             val contentFactory = ContentFactory.SERVICE.getInstance()
@@ -68,6 +68,6 @@ class App: ToolWindowFactory, DumbAware {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         // 默认创建一个XFTP窗口
-        createTheToolWindowContent(toolWindow)
+        createTheToolWindowContent(project, toolWindow)
     }
 }

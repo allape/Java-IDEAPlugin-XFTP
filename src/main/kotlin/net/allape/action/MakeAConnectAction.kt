@@ -2,6 +2,7 @@ package net.allape.action
 
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.project.DumbAwareAction
 import net.allape.common.XFTPManager
 import net.allape.xftp.XFTP
@@ -20,14 +21,20 @@ class MakeAConnectAction: DumbAwareAction(
         }
     }
 
+    /**
+     * @see [com.jetbrains.plugins.remotesdk.console.RunSshConsoleAction.actionPerformed]
+     */
     override fun actionPerformed(e: AnActionEvent) {
-        val window = XFTPManager.getCurrentSelectedWindow()
-        if (window == null) {
-            XFTP.createWindowWithAnActionEvent(false) {
-                makeNewConnection(it, e)
+        e.getData(CommonDataKeys.PROJECT)?.let { project ->
+            val window = XFTPManager.getCurrentSelectedWindow()
+            if (window == null) {
+
+                XFTP.createWindowWithAnActionEvent(project, false) {
+                    makeNewConnection(it, e)
+                }
+            } else {
+                makeNewConnection(window, e)
             }
-        } else {
-            makeNewConnection(window, e)
         }
     }
 

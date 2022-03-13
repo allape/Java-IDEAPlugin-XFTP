@@ -4,6 +4,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.MessageDialogBuilder
 import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.util.Key
@@ -49,17 +50,18 @@ import javax.swing.event.PopupMenuEvent
 import javax.swing.event.PopupMenuListener
 
 class XFTP(
+    project: Project,
     toolWindow: ToolWindow,
-) : XFTPWidget(toolWindow) {
+) : XFTPWidget(project, toolWindow) {
 
     companion object {
         // 放入content.userData的key
         val XFTP_KEY: Key<XFTP> = Key.create(XFTP::javaClass.name)
 
-        fun createWindowWithAnActionEvent(showToolWindow: Boolean = true, consumer: Consumer<XFTP>? = null) {
+        fun createWindowWithAnActionEvent(project: Project, showToolWindow: Boolean = true, consumer: Consumer<XFTP>? = null) {
             XFTPManager.toolWindow.let { toolWindow ->
                 if (showToolWindow) toolWindow.show()
-                App.createTheToolWindowContent(toolWindow).let { window -> consumer?.consume(window) }
+                App.createTheToolWindowContent(project, toolWindow).let { window -> consumer?.consume(window) }
             }
         }
     }
@@ -67,10 +69,10 @@ class XFTP(
     private val logger = Logger.getInstance(XFTP::class.java)
 
     init {
-        setCurrentLocalPath(XFTPManager.getCurrentProject().basePath ?: "/")
+        setCurrentLocalPath(project.basePath ?: "/")
 
         // 初始化文件监听
-        XFTPManager.getCurrentProject().messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
+        project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
                 for (e in events) {
                     if (e.isFromSave) {
@@ -258,7 +260,7 @@ class XFTP(
                             .asWarning()
                             .yesText("Delete")
                             .noText("Cancel")
-                            .ask(XFTPManager.getCurrentProject())
+                            .ask(project)
                     ) {
                         executeOnPooledThreadWithRemoteUILocked({
                             // 开启一个ExecChannel来删除非空的文件夹
@@ -291,7 +293,7 @@ class XFTP(
                     val file = files[0]
                     val isDir = file.isDir()
 
-                    FileNameTextFieldDialog().openDialog(isDir, file.name()) { filename ->
+                    FileNameTextFieldDialog(project).openDialog(isDir, file.name()) { filename ->
                         executeOnPooledThreadWithRemoteUILocked({
                             val parsedFileName = joinWithCurrentRemotePath(filename.trim())
 
@@ -324,7 +326,7 @@ class XFTP(
                     val file = files[0]
                     val isDir = file.isDir()
 
-                    FileNameTextFieldDialog().openDialog(isDir, file.name()) { filename ->
+                    FileNameTextFieldDialog(project).openDialog(isDir, file.name()) { filename ->
                         executeOnPooledThreadWithRemoteUILocked({
                             val parsedFileName = joinWithCurrentRemotePath(filename.trim())
 
@@ -352,7 +354,7 @@ class XFTP(
         touch.let {
             it.addActionListener {
                 if (isConnected() && isChannelAlive()) {
-                    FileNameTextFieldDialog().openDialog(false) { filename ->
+                    FileNameTextFieldDialog(project).openDialog(false) { filename ->
                         executeOnPooledThreadWithRemoteUILocked({
                             val parsedFileName = joinWithCurrentRemotePath(filename.trim())
 
@@ -380,7 +382,7 @@ class XFTP(
         mkdirp.let {
             it.addActionListener {
                 if (isConnected() && isChannelAlive()) {
-                    FileNameTextFieldDialog().openDialog(true) { filename ->
+                    FileNameTextFieldDialog(project).openDialog(true) { filename ->
                         executeOnPooledThreadWithRemoteUILocked({
                             val fullPath = joinWithCurrentRemotePath(filename.trim())
                             sftpClient!!.mkdirs(fullPath)
@@ -462,7 +464,7 @@ class XFTP(
     override fun connect(onServerSelect: Consumer<RemoteCredentials>?) {
         try {
             RemoteDataProducerWrapper()
-                .withProject(XFTPManager.getCurrentProject())
+                .withProject(project)
                 .produceRemoteDataWithConnector(
                     null,
                     null
@@ -483,7 +485,7 @@ class XFTP(
                                     // com.jetbrains.plugins.remotesdk.tools.RemoteTool.startRemoteProcess
                                     @Suppress("UnstableApiUsage")
                                     connectionBuilder = credentials!!.connectionBuilder(
-                                        XFTPManager.getCurrentProject(),
+                                        project,
                                         ProgressManager.getGlobalProgressIndicator(),
                                         true
                                     ).withConnectionTimeout(30L)
@@ -492,7 +494,7 @@ class XFTP(
                                     logger.info("Start to connect to $connectionLogName...")
 
                                     ProgressManager.getInstance().run(object : Task.Backgroundable(
-                                        XFTPManager.getCurrentProject(),
+                                        project,
                                         "Connecting to " + getWindowName(),
                                         // 暂时不允许取消
                                         true
@@ -651,8 +653,8 @@ class XFTP(
             if (!file.exists()) {
                 XFTPManager.gotIt(localPath, "$path does not exist!")
                 // 获取第二个历史, 不存在时加载项目路径
-                if (XFTPManager.getCurrentProject().basePath != null) {
-                    nextDir = XFTPManager.getCurrentProject().basePath
+                if (project.basePath != null) {
+                    nextDir = project.basePath
                 } else if (!path.equals(File.separator)) {
                     nextDir = File.separator
                 }
@@ -666,7 +668,7 @@ class XFTP(
                         )
                             .asWarning()
                             .yesText("Edit")
-                            .ask(XFTPManager.getCurrentProject())
+                            .ask(project)
                     ) {
                         openFileInEditor(file)
                     }
@@ -682,7 +684,7 @@ class XFTP(
                         )
                             .asWarning()
                             .yesText("Open")
-                            .ask(XFTPManager.getCurrentProject())
+                            .ask(project)
                     ) {
                         try {
                             Desktop.getDesktop().open(file)

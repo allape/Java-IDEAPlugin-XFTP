@@ -8,9 +8,10 @@ import com.intellij.ui.content.Content
 import net.allape.common.XFTPManager
 
 class ExplorerWindowTabCloseListener(
+    private val project: Project,
     private val content: Content,
     disposable: Disposable,
-): BaseContentCloseListener(content, XFTPManager.getCurrentProject(), disposable) {
+): BaseContentCloseListener(content, project, disposable) {
 
     override fun disposeContent(content: Content) {
         try {
@@ -27,10 +28,10 @@ class ExplorerWindowTabCloseListener(
             MessageDialogBuilder.yesNo("A server is connected", "Do you really want to close this tab?")
                 .asWarning()
                 .yesText("Close")
-                .ask(XFTPManager.getCurrentProject())
+                .ask(project)
         } else true
     }
 
     override fun canClose(project: Project): Boolean =
-        project === XFTPManager.getCurrentProject() && closeQuery(content, true)
+        project === this.project && closeQuery(content, true)
 }
