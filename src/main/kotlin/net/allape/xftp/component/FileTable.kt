@@ -1,5 +1,7 @@
 package net.allape.xftp.component
 
+import com.intellij.codeInsight.hints.presentation.MouseButton
+import com.intellij.codeInsight.hints.presentation.mouseButton
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.util.io.FileUtil
@@ -239,12 +241,14 @@ class FileTable: JBTable(FileTableModel()) {
 
         addMouseListener(object : MouseListener {
             override fun mouseClicked(e: MouseEvent?) {
-                if (selectedRow != -1 && lastSelectedRow == selectedRow && doubleClickListeners.size > 0) {
-                    val now = System.currentTimeMillis()
-                    if (now - clickWatcher < DOUBLE_CLICK_INTERVAL) {
-                        doubleClickListeners.forEach { l -> l.onDoubleClick(model.data[selectedRow]) }
+                if (e?.mouseButton == MouseButton.Left) {
+                    if (selectedRow != -1 && lastSelectedRow == selectedRow && doubleClickListeners.size > 0) {
+                        val now = System.currentTimeMillis()
+                        if (now - clickWatcher < DOUBLE_CLICK_INTERVAL) {
+                            doubleClickListeners.forEach { l -> l.onDoubleClick(model.data[selectedRow]) }
+                        }
+                        clickWatcher = now
                     }
-                    clickWatcher = now
                 }
             }
             override fun mousePressed(e: MouseEvent?) {}
