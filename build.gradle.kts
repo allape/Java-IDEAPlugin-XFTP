@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "net.allape"
-version = "0.10.8"
+version = "0.10.9"
 
 repositories {
     mavenCentral()
@@ -24,14 +24,25 @@ dependencies {
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
 intellij {
-    version.set("IU-2021.3.1")
+    version.set("IU-2021.3.2")
     updateSinceUntilBuild.set(false)
 }
 tasks {
     patchPluginXml {
-        sinceBuild.set("211.000")
+        sinceBuild.set("2021.3.2")
     }
 }
 tasks.getByName<Test>("test") {
     useJUnitPlatform()
 }
+
+// TODO for future downgrade compatibility
+//sourceSets {
+//    main {
+//        @Suppress("DEPRECATION")
+//        withConvention(org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet::class) {
+//            kotlin.srcDir("src/main/kotlin")
+//            kotlin.exclude("net/allape/common/XFTPManager.kt")
+//        }
+//    }
+//}

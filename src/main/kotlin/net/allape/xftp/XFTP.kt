@@ -14,7 +14,6 @@ import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.remote.RemoteCredentials
 import com.intellij.ssh.RemoteFileObject
-import com.intellij.ssh.SshTransportException
 import com.intellij.ssh.connectionBuilder
 import com.intellij.util.Consumer
 import com.intellij.util.ReflectionUtil
@@ -529,7 +528,7 @@ class XFTP(
                                                 }
 
                                                 application.invokeLater { setCurrentRemotePath(sftpChannel!!.home) }
-                                            } catch (e: SshTransportException) {
+                                            } catch (e: Exception) {
                                                 if (!cancelled) {
                                                     XFTPManager.gotIt(remoteWrapper, "Failed to connect: " + e.message)
                                                 }
