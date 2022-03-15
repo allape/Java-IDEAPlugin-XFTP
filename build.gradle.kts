@@ -29,7 +29,7 @@ intellij {
 }
 tasks {
     patchPluginXml {
-        sinceBuild.set("2021.3.2")
+        sinceBuild.set("213.6777.52")
     }
 }
 tasks.getByName<Test>("test") {
