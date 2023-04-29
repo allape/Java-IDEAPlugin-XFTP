@@ -2,13 +2,15 @@ package net.allape.common
 
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.Notifications
-import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.MessageType
 import com.intellij.openapi.ui.popup.Balloon
+import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.openapi.wm.ToolWindow
+import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.ui.GotItTooltip
-import com.intellij.ui.content.Content
 import net.allape.xftp.XFTP
+import net.allape.xftp.XFTPPanel
 import java.awt.Point
 import javax.swing.JComponent
 
@@ -16,14 +18,10 @@ import javax.swing.JComponent
 class XFTPManager {
 
     companion object {
-
-        lateinit var toolWindow: ToolWindow
+        const val TOOL_WINDOW_ID = "XFTP"
 
         // 默认的窗口名称
         const val DEFAULT_NAME = "Explorer"
-
-        // 当前打开的窗口
-        val windows: HashMap<Content, XFTP> = HashMap(10)
 
         /**
          * message中用到的group
@@ -49,7 +47,7 @@ class XFTPManager {
         fun gotIt(component: JComponent, message: String) {
 //            JBPopupFactory.getInstance().createComponentPopupBuilder(component, component).setTitle("啊哈").setAdText(message)
 //            GotItMessage.createMessage("A", message).setShowCallout(false).show(RelativePoint(component, Point(0,0)), Balloon.Position.above)
-            val tooltips = GotItTooltip(GOT_IT_ID, message, ProjectManager.getInstance().defaultProject)
+            val tooltips = GotItTooltip(GOT_IT_ID, message, getCurrentSelectedWindow())
             tooltips.showCondition =  { true }
             tooltips
                 .withTimeout(3000)
@@ -59,15 +57,22 @@ class XFTPManager {
                 }
         }
 
-        /**
-         * 获取当前选中的窗口, 可能为null
-         */
         fun getCurrentSelectedWindow(): XFTP? {
-            return toolWindow.contentManager.selectedContent?.let { content ->
-                windows[content]
+            return getCurrentProjectToolWindow()?.let { toolWindow ->
+                val selectedComponent = toolWindow.contentManager.selectedContent?.component as XFTPPanel?
+                return selectedComponent?.xftp
             }
         }
 
+        fun getCurrentProject(): Project? {
+            return IdeFocusManager.getGlobalInstance().lastFocusedFrame?.project
+        }
+
+        fun getCurrentProjectToolWindow(): ToolWindow? {
+            return getCurrentProject()?.let { project ->
+                return ToolWindowManager.getInstance(project).getToolWindow(TOOL_WINDOW_ID)
+            }
+        }
     }
 
 }

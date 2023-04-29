@@ -55,11 +55,6 @@ abstract class XFTPCore(
     companion object {
         // 服务器文件系统分隔符
         const val FILE_SEP = "/"
-        init {
-            if (FILE_SEP.length != 1) {
-                throw IllegalArgumentException("FILE_SEP Only accepts one character")
-            }
-        }
 
         // 分隔符重复替换正则
         val duplicateRegex = Regex("$FILE_SEP$FILE_SEP+")
@@ -72,7 +67,7 @@ abstract class XFTPCore(
         const val COLLECTION_SIZE = 100
 
         // 当前用户本地home目录
-        val USER_HOME: String = System.getProperty("user.home")
+//        val USER_HOME: String = System.getProperty("user.home")
 
         // 最大可打开文件
         const val EDITABLE_FILE_SIZE = (2 * 1024 * 1024).toLong()
@@ -525,7 +520,7 @@ abstract class XFTPCore(
                 }
             try {
                 val formattedFileName = remoteFile.name()
-                // 所有点"."开头的文件名可能导致本地fs错误
+                // 所有点 "." 开头的文件名可能导致本地fs错误
 //                if (remoteFile.name().startsWith(".")) {
 //                    formattedFileName = remoteFile.name().replaceAll("\\.", "-");
 //                } else {

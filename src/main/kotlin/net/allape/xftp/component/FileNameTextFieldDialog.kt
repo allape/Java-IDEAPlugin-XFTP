@@ -60,7 +60,7 @@ class FileNameValidator(
     private var errorText: String? = null
 
     override fun checkInput(inputString: String?): Boolean {
-        if (inputString == null || inputString.isEmpty()) {
+        if (inputString.isNullOrEmpty()) {
             errorText = "$objectName name can NOT be empty"
             return false
         }

@@ -107,7 +107,7 @@ abstract class XFTPWidget(
 
     // region UI组件
 
-    private var panelWrapper = JPanel(BorderLayout())
+    protected lateinit var panelWrapper: XFTPPanel
     private val splitter: JBSplitter = OnePixelSplitter("xftp-main-window", .5f)
 
     private var localWrapper = JPanel(GridBagLayout())
@@ -151,7 +151,9 @@ abstract class XFTPWidget(
     val explore: MutableAction = SimpleMutableAction(globalExplorer) {
         if (!isConnected()) {
             connect {
-                if (!XFTPManager.toolWindow.isVisible) XFTPManager.toolWindow.show()
+                XFTPManager.getCurrentProjectToolWindow()?.let { toolWindow ->
+                    if (!toolWindow.isVisible) toolWindow.show()
+                }
             }
         }
     }

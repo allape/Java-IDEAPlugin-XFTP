@@ -1,5 +1,6 @@
 package net.allape.action
 
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.ShortcutSet
@@ -40,6 +41,9 @@ class SimpleMutableAction(
     from?.templatePresentation?.icon,
     from?.shortcutSet,
 ) {
+    override fun getActionUpdateThread(): ActionUpdateThread {
+        return ActionUpdateThread.EDT
+    }
 
     override fun update(e: AnActionEvent) {
         super.update(e)

@@ -12,6 +12,7 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.wm.ToolWindow
+import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.remote.RemoteCredentials
 import com.intellij.ssh.RemoteFileObject
 import com.intellij.ssh.connectionBuilder
@@ -58,7 +59,7 @@ class XFTP(
         val XFTP_KEY: Key<XFTP> = Key.create(XFTP::javaClass.name)
 
         fun createWindowWithAnActionEvent(project: Project, showToolWindow: Boolean = true, consumer: Consumer<XFTP>? = null) {
-            XFTPManager.toolWindow.let { toolWindow ->
+            ToolWindowManager.getInstance(project).getToolWindow(XFTPManager.TOOL_WINDOW_ID)?.let { toolWindow ->
                 if (showToolWindow) toolWindow.show()
                 App.createTheToolWindowContent(project, toolWindow).let { window -> consumer?.accept(window) }
             }
@@ -90,6 +91,8 @@ class XFTP(
             }
         })
 
+
+        panelWrapper = XFTPPanel(this)
         buildUI()
     }
 

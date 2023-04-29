@@ -1,6 +1,7 @@
 package net.allape.action
 
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.project.DumbAwareAction
@@ -10,6 +11,10 @@ import net.allape.xftp.XFTP
 class MakeAConnectAction: DumbAwareAction(
     AllIcons.Webreferences.Server,
 ) {
+    override fun getActionUpdateThread(): ActionUpdateThread {
+        return ActionUpdateThread.EDT
+    }
+
     override fun update(e: AnActionEvent) {
         val window = XFTPManager.getCurrentSelectedWindow()
         if (window != null && window.isConnected()) {

@@ -70,7 +70,7 @@ class MemoComboBox<E>(
     /**
      * 当前组件是否获取了焦点
      */
-    private var focued: Boolean = false
+    private var focused: Boolean = false
 
     init {
         setRenderer(ComboBoxCellRenderer())
@@ -80,7 +80,7 @@ class MemoComboBox<E>(
         val propertiesComponent = PropertiesComponent.getInstance()
         try {
             val persistedJson = propertiesComponent.getValue(persistenceKey)
-            if (persistedJson != null && persistedJson.isNotEmpty()) {
+            if (!persistedJson.isNullOrEmpty()) {
                 val listType = object : TypeToken<List<MemoComboBoxPersistenceModel<E>?>?>() {}.type
                 (dataModel as DefaultComboBoxModel<MemoComboBoxPersistenceModel<E>?>)
                     .addAll(Gson().fromJson(persistedJson, listType))
@@ -93,7 +93,7 @@ class MemoComboBox<E>(
         // 初始化focus监听
         addFocusListener(object : FocusListener {
             override fun focusGained(e: FocusEvent?) {
-                focued = true
+                focused = true
                 if (popupAfterGainedFocus) {
                     popupAfterGainedFocus = false
                     // FIXME 因为马上设置为true时, 因为焦点获取延时的问题, 会导致popup马上关闭
@@ -103,7 +103,7 @@ class MemoComboBox<E>(
                 }
             }
             override fun focusLost(e: FocusEvent?) {
-                focued = false
+                focused = false
             }
         })
     }
@@ -170,7 +170,7 @@ class MemoComboBox<E>(
         if (isPopupVisible) {
             isPopupVisible = false
         } else {
-            if (focued) {
+            if (focused) {
                 isPopupVisible = true
             } else {
                 popupAfterGainedFocus = true
