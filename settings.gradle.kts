@@ -1,2 +1,8 @@
-rootProject.name = "xftp-kt"
+pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
 
+rootProject.name = "xftp-kt"

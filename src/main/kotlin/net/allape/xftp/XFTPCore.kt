@@ -21,7 +21,6 @@ import com.intellij.ssh.ConnectionBuilder
 import com.intellij.ssh.RemoteFileObject
 import com.intellij.ssh.channels.SftpChannel
 import com.intellij.ui.content.Content
-import com.intellij.util.Consumer
 import com.jetbrains.plugins.remotesdk.console.SshConfigConnector
 import com.jetbrains.plugins.remotesdk.console.SshTerminalDirectRunner
 import net.allape.common.HistoryTopicHandler
@@ -33,11 +32,12 @@ import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.sftp.SFTPFileTransfer
 import net.schmizz.sshj.xfer.TransferListener
 import org.jetbrains.plugins.terminal.TerminalTabState
-import org.jetbrains.plugins.terminal.TerminalView
+import org.jetbrains.plugins.terminal.TerminalToolWindowManager
 import java.io.File
 import java.io.IOException
 import java.net.SocketException
 import java.nio.charset.Charset
+import java.util.function.Consumer
 import kotlin.math.roundToInt
 
 class TransferException(message: String): RuntimeException(message)
@@ -241,7 +241,7 @@ abstract class XFTPCore(
         val resultConsumerProxy = Consumer<Transfer> {
             transferring.remove(transfer)
             historyTopicHandler.before(HistoryTopicHandler.HAction.RERENDER)
-            resultConsumer?.consume(transfer)
+            resultConsumer?.accept(transfer)
         }
 
         try {
@@ -323,15 +323,15 @@ abstract class XFTPCore(
                         }
 
                         transfer.result = TransferResult.SUCCESS
-                        resultConsumerProxy.consume(transfer)
+                        resultConsumerProxy.accept(transfer)
                     } catch (e: TransferCancelledException) {
                         transfer.result = TransferResult.CANCELLED
                         transfer.exception = e.message ?: "cancelled"
-                        resultConsumerProxy.consume(transfer)
+                        resultConsumerProxy.accept(transfer)
                     } catch (e: Exception) {
                         transfer.result = TransferResult.FAIL
                         transfer.exception = e.message ?: "failed"
-                        resultConsumerProxy.consume(transfer)
+                        resultConsumerProxy.accept(transfer)
 
                         e.printStackTrace()
                         XFTPManager.message(
@@ -351,7 +351,7 @@ abstract class XFTPCore(
         } catch (e: Exception) {
             transfer.result = TransferResult.FAIL
             transfer.exception = e.message ?: "transfer failed"
-            resultConsumerProxy.consume(transfer)
+            resultConsumerProxy.accept(transfer)
 
             e.printStackTrace()
         }
@@ -384,7 +384,7 @@ abstract class XFTPCore(
             if (it && credentials != null) {
                 val state = TerminalTabState()
                 state.myWorkingDirectory = path
-                TerminalView.getInstance(project).createNewSession(
+                TerminalToolWindowManager.getInstance(project).createNewSession(
                     SshTerminalDirectRunner(project, credentials, Charset.defaultCharset()),
                     state
                 )

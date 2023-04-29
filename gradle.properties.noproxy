@@ -1,0 +1,7 @@
+kotlin.stdlib.default.dependency=false
+kotlin.incremental.useClasspathSnapshot=false
+#systemProp.http.proxyHost=127.0.0.1
+#systemProp.http.proxyPort=1087
+#systemProp.https.proxyHost=127.0.0.1
+#systemProp.https.proxyPort=1087
+org.gradle.jvmargs=-Xmx4096m

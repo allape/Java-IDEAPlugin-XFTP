@@ -15,7 +15,6 @@ import com.intellij.ssh.RemoteFileObject
 import com.intellij.ui.JBSplitter
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.util.Consumer
 import net.allape.action.Actions
 import net.allape.action.MutableAction
 import net.allape.action.SimpleMutableAction
@@ -27,6 +26,7 @@ import java.awt.datatransfer.DataFlavor
 import java.awt.event.ActionEvent
 import java.io.File
 import java.io.IOException
+import java.util.function.Consumer
 import java.util.function.Supplier
 import javax.swing.JComponent
 import javax.swing.JMenuItem
@@ -387,7 +387,7 @@ abstract class XFTPWidget(
                 requiredReload = callback.get()
             } catch (err: Exception) {
                 err.printStackTrace()
-                errConsumer?.consume(err)
+                errConsumer?.accept(err)
             }
             unlockRemoteUIs()
             if (requiredReload) reloadRemote()

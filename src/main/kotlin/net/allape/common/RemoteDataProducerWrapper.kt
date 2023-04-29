@@ -13,9 +13,8 @@ import com.intellij.openapi.wm.WindowManager
 import com.intellij.remote.RemoteConnectionType
 import com.intellij.remote.RemoteConnector
 import com.intellij.ui.awt.RelativePoint
-import com.intellij.util.Consumer
 import com.jetbrains.plugins.remotesdk.RemoteSdkBundle
-import com.jetbrains.plugins.remotesdk.console.RemoteConnectionSettingsForm
+import com.jetbrains.plugins.remotesdk.console.NonSpecifiedRemoteConnector
 import com.jetbrains.plugins.remotesdk.console.RemoteConnectionUtil
 import com.jetbrains.plugins.remotesdk.console.RemoteDataProducer
 import com.jetbrains.plugins.remotesdk.console.SshConfigConnector
@@ -23,6 +22,7 @@ import java.awt.Component
 import java.awt.MouseInfo
 import java.awt.event.KeyEvent
 import java.lang.reflect.Method
+import java.util.function.Consumer
 
 class RemoteDataProducerWrapper : RemoteDataProducer() {
 
@@ -84,7 +84,7 @@ class RemoteDataProducerWrapper : RemoteDataProducer() {
     ) {
         val connector = getRemoteConnector(RemoteConnectionType.SSH_CONFIG, id, additionalData)
         if (connector != null && connector is SshConfigConnector) {
-            consumer.consume(connector)
+            consumer.accept(connector)
         } else {
             ApplicationManager.getApplication().invokeAndWait { selectConnectorInPopup(consumer) }
         }
@@ -97,7 +97,7 @@ class RemoteDataProducerWrapper : RemoteDataProducer() {
                 getSuperProject(), getEmptyConnectorsMessageProxy(),
                 (NO_HOST_TO_CONNECT_SUPPLIER.get() as String)
             )
-        } else if (connectors.size == 1 && connectors[0] === RemoteConnectionSettingsForm.NONE_CONNECTOR) {
+        } else if (connectors.size == 1 && connectors[0] === NonSpecifiedRemoteConnector) {
             this.openSSHConfigurationsSettings()
         } else {
             connectors.sortWith { c1: RemoteConnector, c2: RemoteConnector ->
@@ -126,7 +126,7 @@ class RemoteDataProducerWrapper : RemoteDataProducer() {
             override fun onChosen(selected: RemoteConnector, finalChoice: Boolean): PopupStep<*>? {
                 if (selected is SshConfigConnector) {
                     ApplicationManager.getApplication().invokeLater {
-                        consumer.consume(selected)
+                        consumer.accept(selected)
                     }
                 } else {
                     this@RemoteDataProducerWrapper.openSSHConfigurationsSettings()

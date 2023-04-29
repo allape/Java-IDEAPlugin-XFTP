@@ -7,10 +7,10 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.InputValidatorEx
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.JBPopup
-import com.intellij.util.Consumer
 import net.allape.xftp.XFTPCore
 import java.awt.event.InputEvent
 import java.util.*
+import java.util.function.Consumer
 
 /**
  * @sample [com.intellij.ide.actions.CreateFileAction]
@@ -36,11 +36,11 @@ class FileNameTextFieldDialog(
         val nameField = contentPanel.textField
         if (value != null) nameField.text = value
         return NewItemPopupUtil.createNewItemPopup("New ${validator.objectName.replaceFirstChar { it.uppercaseChar() }}", contentPanel, nameField).also { popup ->
-            contentPanel.applyAction = Consumer { event: InputEvent? ->
+            contentPanel.applyAction = com.intellij.util.Consumer { event: InputEvent? ->
                 val name = nameField.text
                 if (validator.checkInput(name) && validator.canClose(name)) {
                     popup.closeOk(event)
-                    consumer.consume(name)
+                    consumer.accept(name)
                 } else {
                     contentPanel.setError(validator.getErrorText(name))
                 }

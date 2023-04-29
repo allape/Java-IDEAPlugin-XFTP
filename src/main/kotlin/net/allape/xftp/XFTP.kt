@@ -15,7 +15,6 @@ import com.intellij.openapi.wm.ToolWindow
 import com.intellij.remote.RemoteCredentials
 import com.intellij.ssh.RemoteFileObject
 import com.intellij.ssh.connectionBuilder
-import com.intellij.util.Consumer
 import com.intellij.util.ReflectionUtil
 import com.jetbrains.plugins.remotesdk.console.SshConfigConnector
 import net.allape.App
@@ -41,6 +40,7 @@ import java.awt.event.KeyListener
 import java.io.File
 import java.io.IOException
 import java.lang.reflect.Field
+import java.util.function.Consumer
 import java.util.stream.Collectors
 import javax.swing.DropMode
 import javax.swing.JComponent
@@ -60,7 +60,7 @@ class XFTP(
         fun createWindowWithAnActionEvent(project: Project, showToolWindow: Boolean = true, consumer: Consumer<XFTP>? = null) {
             XFTPManager.toolWindow.let { toolWindow ->
                 if (showToolWindow) toolWindow.show()
-                App.createTheToolWindowContent(project, toolWindow).let { window -> consumer?.consume(window) }
+                App.createTheToolWindowContent(project, toolWindow).let { window -> consumer?.accept(window) }
             }
         }
     }
@@ -468,7 +468,7 @@ class XFTP(
                     null,
                     null
                 ) { c ->
-                    c?.let { connector ->
+                    c.let { connector ->
                         connector.produceRemoteCredentials { data ->
                             if (data != null) {
                                 this.disconnect(false)
@@ -478,7 +478,7 @@ class XFTP(
                                 this@XFTP.connector = connector as SshConfigConnector
                                 credentials = data
 
-                                onServerSelect?.consume(data)
+                                onServerSelect?.accept(data)
 
                                 this.application.executeOnPooledThread {
                                     // com.jetbrains.plugins.remotesdk.tools.RemoteTool.startRemoteProcess

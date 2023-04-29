@@ -1,11 +1,11 @@
 plugins {
-    kotlin("jvm") version "1.5.30"
-    id("org.jetbrains.intellij") version "1.1.6"
-    java
+    id("java")
+    id("org.jetbrains.kotlin.jvm") version "1.8.20"
+    id("org.jetbrains.intellij") version "1.13.3"
 }
 
 group = "net.allape"
-version = "0.10.9"
+version = "0.10.10"
 
 repositories {
     mavenCentral()
@@ -15,25 +15,29 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.6.0")
     implementation("com.google.code.gson:gson:2.9.0")
 
-    compileOnly(files("/Applications/IntelliJ IDEA.app/Contents/plugins/remote-run/lib/remote-run.jar"))
+    compileOnly(files("/Applications/IntelliJ IDEA.app/Contents/plugins/remoteRun/lib/remoteRun.jar"))
     compileOnly(files("/Applications/IntelliJ IDEA.app/Contents/plugins/terminal/lib/terminal.jar"))
-
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")
 }
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
 intellij {
-    version.set("IU-2021.3.2")
-    updateSinceUntilBuild.set(false)
+    version.set("IU-2023.1.1")
+//    updateSinceUntilBuild.set(false)
 }
 tasks {
     patchPluginXml {
-        sinceBuild.set("213.6777.52")
+        sinceBuild.set("230.*")
+//        untilBuild.set("232.*")
     }
-}
-tasks.getByName<Test>("test") {
-    useJUnitPlatform()
+
+    // Set the JVM compatibility versions
+    withType<JavaCompile> {
+        sourceCompatibility = "17"
+        targetCompatibility = "17"
+    }
+    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+        kotlinOptions.jvmTarget = "17"
+    }
 }
 
 // TODO for future downgrade compatibility

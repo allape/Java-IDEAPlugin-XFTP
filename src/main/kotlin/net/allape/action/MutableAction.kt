@@ -4,7 +4,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.ShortcutSet
 import com.intellij.openapi.project.DumbAwareAction
-import com.intellij.util.Consumer
+import java.util.function.Consumer
 import javax.swing.Icon
 
 abstract class MutableAction(
@@ -53,7 +53,7 @@ class SimpleMutableAction(
 
     override fun actionPerformed(e: AnActionEvent) {
         if (enabled) {
-            consumer.consume(e)
+            consumer.accept(e)
         }
     }
 
