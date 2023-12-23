@@ -1,11 +1,11 @@
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "1.9.0"
-    id("org.jetbrains.intellij") version "1.15.0"
+    id("org.jetbrains.intellij") version "1.16.1"
 }
 
 group = "net.allape"
-version = "0.10.11"
+version = "0.10.12"
 
 repositories {
     mavenCentral()
@@ -21,12 +21,12 @@ dependencies {
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
 intellij {
-    version.set("IU-2023.2")
-//    updateSinceUntilBuild.set(false)
+    version.set("IU-2023.3")
+    updateSinceUntilBuild.set(true)
 }
 tasks {
     patchPluginXml {
-        sinceBuild.set("232")
+//        sinceBuild.set("232")
 //        untilBuild.set("233")
     }
 
