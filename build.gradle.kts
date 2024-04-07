@@ -1,18 +1,18 @@
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "1.9.0"
-    id("org.jetbrains.intellij") version "1.16.1"
+    id("org.jetbrains.kotlin.jvm") version "1.9.23"
+    id("org.jetbrains.intellij") version "1.17.3"
 }
 
 group = "net.allape"
-version = "0.10.12"
+version = "0.10.13"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.0")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
     implementation("com.google.code.gson:gson:2.10.1")
 
     compileOnly(files("/Applications/IntelliJ IDEA.app/Contents/plugins/remoteRun/lib/remoteRun.jar"))
@@ -21,7 +21,7 @@ dependencies {
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
 intellij {
-    version.set("IU-2023.3")
+    version.set("IU-2024.1")
     updateSinceUntilBuild.set(true)
 }
 tasks {
