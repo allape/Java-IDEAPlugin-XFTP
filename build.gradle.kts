@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "net.allape"
-version = "0.10.14"
+version = "0.10.15"
 
 repositories {
     mavenCentral()
@@ -25,7 +25,7 @@ intellij {
 tasks {
     patchPluginXml {
         sinceBuild.set("241")
-        untilBuild.set("242.*")
+        untilBuild.set("999.*")
     }
 
     withType<JavaCompile> {
