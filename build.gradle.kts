@@ -5,7 +5,12 @@ plugins {
 }
 
 group = "net.allape"
-version = "0.10.16"
+version = "0.11.0-beta.1"
+
+val userHome = System.getProperty("user.home") ?: "/Users/Shared"
+val ideVersion = "IU-2024.1"
+val ideHome =
+    "$userHome/.gradle/caches/modules-2/files-2.1/com.jetbrains.intellij.idea/ideaIU/2024.1/ff15cc0aec80b20c4893865e77af9ebd34cf540c/ideaIU-2024.1"
 
 repositories {
     mavenCentral()
@@ -15,17 +20,17 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:2.0.0")
     implementation("com.google.code.gson:gson:2.10")
 
-    compileOnly(files("/Applications/IntelliJ IDEA.app/Contents/plugins/remoteRun/lib/remoteRun.jar"))
-    compileOnly(files("/Applications/IntelliJ IDEA.app/Contents/plugins/terminal/lib/terminal.jar"))
+    compileOnly(files("$ideHome/plugins/remoteRun/lib/remoteRun.jar"))
+    compileOnly(files("$ideHome/plugins/terminal/lib/terminal.jar"))
 }
 
 intellij {
-    version.set("IU-2024.1")
+    version.set(ideVersion)
 }
 tasks {
     patchPluginXml {
         sinceBuild.set("241")
-        untilBuild.set("251.*")
+        untilBuild.set("264.*")
     }
 
     withType<JavaCompile> {
